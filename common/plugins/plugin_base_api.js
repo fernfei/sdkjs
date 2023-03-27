@@ -397,6 +397,21 @@ window.startPluginApi = function() {
 
     var Plugin = window["Asc"]["plugin"];
 
+	Plugin._checkPluginOnWindow = function(isWindowSupport)
+	{
+		if (this.windowID && !isWindowSupport)
+		{
+			console.log("This method does not allow in window frame");
+			return true;
+		}
+		if (!this.windowID && true === isWindowSupport)
+		{
+			console.log("This method is allow only in window frame");
+			return true;
+		}
+		return false;
+	};
+
 	/***********************************************************************
 	 * METHODS
 	 */
@@ -434,6 +449,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.executeCommand = function(type, data, callback)
     {
+		if (this._checkPluginOnWindow() && 0 !== type.indexOf("onmouse")) return;
+
         window.Asc.plugin.info.type = type;
         window.Asc.plugin.info.data = data;
 
@@ -465,6 +482,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.executeMethod = function(name, params, callback)
     {
+		if (this._checkPluginOnWindow()) return;
+
         if (window.Asc.plugin.isWaitMethod === true)
         {
             if (undefined === this.executeMethodStack)
@@ -509,6 +528,9 @@ window.startPluginApi = function() {
 	 */
 	Plugin.resizeWindow = function(width, height, minW, minH, maxW, maxH)
     {
+		// TODO: resize with window ID
+		if (this._checkPluginOnWindow()) return;
+
         if (undefined === minW) minW = 0;
         if (undefined === minH) minH = 0;
         if (undefined === maxW) maxW = 0;
@@ -557,6 +579,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.callCommand = function(func, isClose, isCalc, callback)
     {
+		if (this._checkPluginOnWindow()) return;
+
         var _txtFunc = "var Asc = {}; Asc.scope = " + JSON.stringify(window.Asc.scope) + "; var scope = Asc.scope; (" + func.toString() + ")();";
         var _type = (isClose === true) ? "close" : "command";
         window.Asc.plugin.info.recalculate = (false === isCalc) ? false : true;
@@ -576,6 +600,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.callModule = function(url, callback, isClose)
     {
+		if (this._checkPluginOnWindow()) return;
+
         var _isClose = isClose;
         var _client = new XMLHttpRequest();
         _client.open("GET", url);
@@ -603,6 +629,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.loadModule = function(url, callback)
     {
+		if (this._checkPluginOnWindow()) return;
+
         var _client = new XMLHttpRequest();
         _client.open("GET", url);
 
@@ -691,6 +719,8 @@ window.startPluginApi = function() {
 	 */
 	Plugin.createInputHelper = function()
     {
+		if (this._checkPluginOnWindow()) return;
+
         window.Asc.plugin.ih = new window.Asc.inputHelper(window.Asc.plugin);
     };
 	/**
@@ -702,7 +732,38 @@ window.startPluginApi = function() {
 	 */
 	Plugin.getInputHelper = function()
 	{
+		if (this._checkPluginOnWindow()) return;
+
 		return window.Asc.plugin.ih;
+	};
+
+	/**
+	 * sendToPlugin
+	 * @memberof Plugin
+	 * @alias sendToPlugin
+	 * @description Send message from window to plugin
+	 * @return {InputHelper} Input helper object
+	 */
+	Plugin.sendToPlugin = function(name, data)
+	{
+		if (this._checkPluginOnWindow(true)) return;
+
+		window.Asc.plugin.info.type = "messageToPlugin";
+		window.Asc.plugin.info.eventName = name;
+		window.Asc.plugin.info.data = data;
+		window.Asc.plugin.info.windowID = this.windowID;
+
+		var _message = "";
+		try
+		{
+			_message = JSON.stringify(window.Asc.plugin.info);
+		}
+		catch(err)
+		{
+			return false;
+		}
+		window.plugin_sendMessage(_message);
+		return true;
 	};
 
 };

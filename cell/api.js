@@ -669,7 +669,7 @@ var editor;
 
 		if (window["AscDesktopEditor"] && window["AscDesktopEditor"]["IsLocalFile"]()) {
 			// TODO: add translations
-			window["AscDesktopEditor"]["OpenFilenameDialog"]("(*xml)", false, function (_file) {
+			window["AscDesktopEditor"]["OpenFilenameDialog"]("(*.xml)", false, function (_file) {
 				let file = _file;
 				if (Array.isArray(file)) {
 					file = file[0];
@@ -5150,9 +5150,9 @@ var editor;
       var ws = this.wb.getWorksheet();
       return ws.objectRender.controller.getImageDataFromSelection();
   };
-  spreadsheet_api.prototype.putImageToSelection = function(sImageSrc, nWidth, nHeight) {
+  spreadsheet_api.prototype.putImageToSelection = function(sImageSrc, nWidth, nHeight, replaceMode) {
       var ws = this.wb.getWorksheet();
-      return ws.objectRender.controller.putImageToSelection(sImageSrc, nWidth, nHeight);
+      return ws.objectRender.controller.putImageToSelection(sImageSrc, nWidth, nHeight, replaceMode);
   };
 
 
@@ -8472,6 +8472,32 @@ var editor;
 		return this.wbModel.checkUserProtectedRangeName(checkName);
 	};
 
+	spreadsheet_api.prototype.asc_SetSheetViewType = function(val) {
+		if (this.collaborativeEditing.getGlobalLock() || !this.canEdit()) {
+			return;
+		}
+		let wb = this.wb;
+		if (!wb) {
+			return;
+		}
+		var ws = this.wb.getWorksheet();
+		//val -> window['Asc']['c_oAscESheetViewType']
+		return ws.setSheetViewType(val);
+	};
+
+	spreadsheet_api.prototype.asc_GetSheetViewType = function(index) {
+		let sheetIndex = (undefined !== index && null !== index) ? index : this.wbModel.getActive();
+		let ws = this.wbModel.getWorksheet(sheetIndex);
+		let res = null;
+		if (ws && ws.sheetViews) {
+			var sheetView = ws.sheetViews[0];
+			if (sheetView) {
+				res = sheetView.view;
+			}
+		}
+		return res == null ? AscCommonExcel.ESheetViewType.normal : res;
+	};
+
   /*
    * Export
    * -----------------------------------------------------------------------------
@@ -9006,14 +9032,9 @@ var editor;
 
   prot["onWorksheetChange"] = prot.onWorksheetChange;  
 
-
   prot["asc_addCellWatches"]               = prot.asc_addCellWatches;
   prot["asc_deleteCellWatches"]            = prot.asc_deleteCellWatches;
   prot["asc_getCellWatches"]               = prot.asc_getCellWatches;
-
-
-
-
 
   prot["asc_getExternalReferences"] = prot.asc_getExternalReferences;
   prot["asc_updateExternalReferences"] = prot.asc_updateExternalReferences;
@@ -9030,7 +9051,8 @@ var editor;
   prot["asc_deleteUserProtectedRange"]    = prot.asc_deleteUserProtectedRange;
   prot["asc_getUserProtectedRanges"]      = prot.asc_getUserProtectedRanges;
   prot["asc_checkUserProtectedRangeName"] = prot.asc_checkUserProtectedRangeName;
-
+  prot["asc_SetSheetViewType"]   = prot.asc_SetSheetViewType;
+  prot["asc_GetSheetViewType"]   = prot.asc_GetSheetViewType;
 
 
 

@@ -1729,10 +1729,10 @@
 		CColorModifiers.prototype.getShadeOrTint = function() {
 			const M = this.Mods;
 			if(M.length === 1 && M[0].name === "lumMod" && M[0].val > 0) {//shade
-				return -M[0].val;
+				return -(100000 - M[0].val);
 			}
 			if(M.length === 2 && M[0].name === "lumMod" && M[0].val > 0 && M[1].name === "lumOff" && M[1].val > 0) {
-				return M[0].val;
+				return (100000 - M[0].val);
 			}
 			return null;
 		};
@@ -1743,10 +1743,10 @@
 			if(this.Mods.length === 1) {
 				let oMod = this.Mods[0];
 				if(oMod.name === "wordTint") {
-					return oMod.val / 255;
+					return (255 - oMod.val) / 255;
 				}
 				if(oMod.name === "wordShade") {
-					return -oMod.val / 255;
+					return -(255 - oMod.val) / 255;
 				}
 			}
 			let nVal = this.getShadeOrTint();
@@ -8916,6 +8916,27 @@
 				fCallback(this.spTree[nSp]);
 			}
 		};
+		CSld.prototype.handleAllContents = function(fCallback) {
+			this.forEachSp(function(oSp) {
+				if (oSp.handleAllContents) {
+					oSp.handleAllContents(fCallback);
+				}
+			});
+		};
+		CSld.prototype.refreshAllContentsFields = function() {
+			this.handleAllContents(RefreshContentAllFields);
+		};
+
+		function RefreshContentAllFields(oContent) {
+			if(!oContent) {
+				return;
+			}
+			if(!oContent.RecalcAllFields) {
+				return;
+			}
+			oContent.RecalcAllFields();
+		}
+
 
 		function CSpTree(oSlideObject) {
 			CBaseNoIdObject.call(this);
@@ -15411,6 +15432,7 @@
 		window['AscFormat'].CVariantArray = CVariantArray;
 		window['AscFormat'].CVariantVStream = CVariantVStream;
 		window['AscFormat'].fRGBAToHexString = fRGBAToHexString;
+		window['AscFormat'].RefreshContentAllFields = RefreshContentAllFields;
 		window['AscFormat'].szPh_full = szPh_full;
 		window['AscFormat'].szPh_half = szPh_half;
 		window['AscFormat'].szPh_quarter = szPh_quarter;

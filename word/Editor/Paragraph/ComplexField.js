@@ -49,6 +49,7 @@ function ParaFieldChar(Type, LogicDocument)
 	this.Use           = true;
 	this.CharType      = undefined === Type ? fldchartype_Begin : Type;
 	this.ComplexField  = (this.CharType === fldchartype_Begin) ? new CComplexField(LogicDocument) : null;
+	this.fldData   = null;
 	this.Run           = null;
 	this.X             = 0;
 	this.Y             = 0;
@@ -84,6 +85,7 @@ ParaFieldChar.prototype.Copy = function()
 		oChar.SetComplexField(oComplexField);
 		oComplexField.ReplaceChar(oChar);
 	}
+	//todo fldData
 
 	return oChar;
 };
@@ -154,11 +156,13 @@ ParaFieldChar.prototype.Write_ToBinary = function(Writer)
 	// Long : CharType
 	Writer.WriteLong(this.Type);
 	Writer.WriteLong(this.CharType);
+	//todo fldData
 };
 ParaFieldChar.prototype.Read_FromBinary = function(Reader)
 {
 	// Long : CharType
 	this.Init(Reader.GetLong(), editor.WordControl.m_oLogicDocument);
+	//todo fldData
 };
 ParaFieldChar.prototype.SetParent = function(oParent)
 {
@@ -376,7 +380,16 @@ CComplexField.prototype.IsCurrent = function()
 };
 CComplexField.prototype.IsUpdate = function()
 {
-	return this.StartUpdate;
+	return (this.StartUpdate > 0);
+};
+CComplexField.prototype.StartCharsUpdate = function()
+{
+	++this.StartUpdate;
+};
+CComplexField.prototype.FinishCharsUpdate = function()
+{
+	if (this.StartUpdate > 0)
+		--this.StartUpdate;
 };
 CComplexField.prototype.SetInstruction = function(oParaInstr)
 {
@@ -459,7 +472,7 @@ CComplexField.prototype.Update = function(isCreateHistoryPoint, isNeedRecalculat
 		this.LogicDocument.StartAction();
 	}
 
-	this.StartUpdate = true;
+	this.StartCharsUpdate();
 	switch (this.Instruction.GetType())
 	{
 		case fieldtype_PAGE:
@@ -498,7 +511,7 @@ CComplexField.prototype.Update = function(isCreateHistoryPoint, isNeedRecalculat
 		case fieldtype_ADDIN:
 			break;
 	}
-	this.StartUpdate = false;
+	this.FinishCharsUpdate();
 
 	if (false !== isNeedRecalculate)
 		this.LogicDocument.Recalculate();

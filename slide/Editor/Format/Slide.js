@@ -325,16 +325,17 @@ AscFormat.InitClass(Slide, AscFormat.CBaseFormatObject, AscDFH.historyitem_type_
         return copy;
     };
     Slide.prototype.handleAllContents = function(fCallback){
-        var sp_tree = this.cSld.spTree;
-        for(var i = 0; i < sp_tree.length; ++i){
-            if (sp_tree[i].handleAllContents){
-                sp_tree[i].handleAllContents(fCallback);
-            }
-        }
+        this.cSld.handleAllContents(fCallback);
         if(this.notesShape){
             this.notesShape.handleAllContents(fCallback);
         }
     };
+	Slide.prototype.refreshAllContentsFields = function() {
+		this.cSld.refreshAllContentsFields();
+		if(this.notesShape){
+			this.notesShape.handleAllContents(AscFormat.RefreshContentAllFields);
+		}
+	};
     Slide.prototype.Search = function(Engine, Type ){
         var sp_tree = this.cSld.spTree;
         for(var i = 0; i < sp_tree.length; ++i){

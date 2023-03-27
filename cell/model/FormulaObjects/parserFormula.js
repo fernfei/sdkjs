@@ -8391,7 +8391,7 @@ function parserFormula( formula, parent, _ws ) {
 						if (value.isOneElement()) {
 							// single row with single element
 							value = value.getFirstElement();
-						} else if (valueDimensions.col !== 1 && valueDimensions.row  === 1) {
+						} else if (valueDimensions.col !== 1 && valueDimensions.row === 1) {
 							// single row with many elements
 							value = _getValueInRange(value, 0, j);
 						} else if (valueDimensions.col === 1 && valueDimensions.row !== 1) {
@@ -8568,6 +8568,9 @@ function parserFormula( formula, parent, _ws ) {
 						case cElementType.cellsRange3D:
 							_3DRefTmp = parserHelp.is3DRef.call(parserHelp, formula2, refPos.start);
 							if (_3DRefTmp[0]) {
+								if ((_3DRefTmp[3] || refPos.oper.externalLink) && _3DRefTmp[3] !== refPos.oper.externalLink) {
+									return false;
+								}
 								if (cElementType.cell3D === refPos.oper.type) {
 									if (_3DRefTmp[1] !== refPos.oper.getWS().getName()) {
 										return false;

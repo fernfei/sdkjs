@@ -338,7 +338,8 @@ CTableCell.prototype =
 			var bFirstCol = false;
 			if (true === TableLook.IsFirstCol())
 			{
-				var oTableStyle = this.Get_Styles().Get(this.Row.Table.Get_TableStyle());
+				var oStyles = this.Get_Styles();
+				var oTableStyle = oStyles && oStyles.Get(this.Row.Table.Get_TableStyle());
 				if (oTableStyle && styletype_Table === oTableStyle.Get_Type() && oTableStyle.TableFirstCol)
 				{
 					var oCondStyle = oTableStyle.TableFirstCol;

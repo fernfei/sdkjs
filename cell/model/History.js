@@ -112,6 +112,8 @@ function (window, undefined) {
 
 	window['AscCH'].historyitem_Worksheet_ChangeUserProtectedRange = 60;
 
+	window['AscCH'].historyitem_Worksheet_SetSheetViewType = 61;
+
 	window['AscCH'].historyitem_RowCol_Fontname = 1;
 	window['AscCH'].historyitem_RowCol_Fontsize = 2;
 	window['AscCH'].historyitem_RowCol_Fontcolor = 3;

@@ -956,7 +956,8 @@ var c_oSer_FldSimpleType = {
 	Content: 0,
 	Instr: 1,
 	FFData: 2,
-	CharType: 3
+	CharType: 3,
+	PrivateData: 4
 };
 var c_oSerProp_RevisionType = {
     Author: 0,
@@ -5639,6 +5640,11 @@ function BinaryDocumentTableWriter(memory, doc, oMapCommentId, oNumIdMap, copyPa
 		this.bs.WriteItem(c_oSer_FldSimpleType.CharType, function() {
 			oThis.memory.WriteByte(fldChar.CharType);
 		});
+		if (null !== fldChar.fldData) {
+			this.bs.WriteItem(c_oSer_FldSimpleType.PrivateData, function () {
+				oThis.memory.WriteString3(fldChar.fldData);
+			});
+		}
 	};
 	this.WriteFldSimple = function (Instr, oFFData, fWriteContent)
     {
@@ -11646,10 +11652,12 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
 		for (let commentId in this.oCurComments)
 			this.oCurComments[commentId] += text;
 	};
-	this.ReadFldChar = function (type, length, run) {
+	this.ReadFldChar = function (type, length, paraField) {
 		var res = c_oSerConstants.ReadOk;
 		if (c_oSer_FldSimpleType.CharType === type) {
-			run.AddToContentToEnd(new ParaFieldChar(this.stream.GetUChar(), this.oReadResult.logicDocument));
+			paraField.Init(this.stream.GetUChar(), paraField.LogicDocument);
+		} else if (c_oSer_FldSimpleType.PrivateData === type) {
+			paraField.fldData = this.stream.GetString2LE(length);
 		} else
 			res = c_oSerConstants.ReadUnknown;
 		return res;
@@ -11676,6 +11684,8 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
 		// 		return oThis.ReadFFData(t, l, FFData);
 		// 	});
 		// 	oFldSimpleObj.ParaField.FFData = FFData;
+		// } else  if (c_oSer_FldSimpleType.PrivateData === type) {
+		// 	oFldSimpleObj.ParaField.fldData = this.stream.GetString2LE(length);
 		} else if (c_oSer_FldSimpleType.Content === type) {
 			if(null != oFldSimpleObj.ParaField) {
 				res = this.bcr.Read1(length, function (t, l) {
@@ -11986,9 +11996,11 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
         }
 		else if(c_oSerRunType.fldChar === type)
 		{
+			let paraField = new ParaFieldChar(undefined, this.oReadResult.logicDocument)
 			res = this.bcr.Read1(length, function(t, l){
-				return oThis.ReadFldChar(t,l,run);
+				return oThis.ReadFldChar(t,l,paraField);
 			});
+			run.AddToContentToEnd(paraField);
 		}
 		else if(c_oSerRunType.instrText === type || c_oSerRunType.delInstrText === type)
 		{

@@ -298,16 +298,7 @@ AscFormat.InitClass(SlideLayout, AscFormat.CBaseFormatObject, AscDFH.historyitem
         if(slide){
             if(slide.num !== this.lastRecalcSlideIndex){
                 this.lastRecalcSlideIndex = slide.num;
-                this.handleAllContents(function (oContent) {
-                    if(oContent){
-                        if(oContent.AllFields && oContent.AllFields.length > 0){
-                            for(var j = 0; j < oContent.AllFields.length; j++){
-                                oContent.AllFields[j].RecalcInfo.Measure = true;
-                                oContent.AllFields[j].Refresh_RecalcData2();
-                            }
-                        }
-                    }
-                });
+                this.cSld.refreshAllContentsFields();
                 this.recalculate();
 
             }

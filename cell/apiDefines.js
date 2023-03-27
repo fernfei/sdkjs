@@ -347,7 +347,8 @@ var c_oAscVisibleAreaOleEditorBorderColor = new CColor(32, 139, 255);
     Resize      : 4,
     Promote     : 8,
     Dash        : 16,
-    DashThick   : 32
+    DashThick   : 32,
+    ResizeRange : 64
   };
 
   var docChangedType = {
@@ -426,7 +427,8 @@ var c_oAscPopUpSelectorType = {
   var c_oAscChangePrintAreaType = {
       set: 0,
       clear: 1,
-      add: 2
+      add: 2,
+      change: 3
   };
 
   //поля header/footer

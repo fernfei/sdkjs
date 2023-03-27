@@ -5,6 +5,7 @@
 			"common/userinfo_parser.js",
 			"common/browser.js",
 			"common/skin.js",
+			"common/errorCodes.js",
 			"common/commonDefines.js",
 			"common/docscoapicommon.js",
 			"common/docscoapi.js",

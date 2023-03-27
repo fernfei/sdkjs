@@ -647,7 +647,7 @@
 
 		let num          = this.Numbering.GetNum(numId);
 		let styleManager = this.Document.GetStyleManager();
-		if (num && !styleManager.HaveHeadingsNum())
+		if (num)
 		{
 			num.LinkWithHeadings(styleManager);
 

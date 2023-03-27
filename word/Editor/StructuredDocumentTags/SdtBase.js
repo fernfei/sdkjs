@@ -736,6 +736,11 @@ CSdtBase.prototype.GetAllSubForms = function(arrForms)
  */
 CSdtBase.prototype.IsCurrentComplexForm = function()
 {
+	// Текущая форма есть только в режиме заполнения. В режиме редактирования не даем заполнять форму
+	let logicDocument = this.GetLogicDocument();
+	if (logicDocument && logicDocument.IsDocumentEditor() && !logicDocument.IsFillingFormMode())
+		return false;
+	
 	if (this.IsCurrent())
 		return true;
 
@@ -1011,4 +1016,12 @@ CSdtBase.prototype.CheckOFormUserMaster = function()
 		return true;
 	
 	return logicDocument.CheckOFormUserMaster(this);
+};
+/**
+ * Проверяем, можно ли ставить курсор внутрь
+ */
+CSdtBase.prototype.CanPlaceCursorInside = function()
+{
+	let logicDocument = this.GetLogicDocument();
+	return (!this.IsPicture() && (!this.IsForm() || !logicDocument || logicDocument.IsFillingOFormMode()))
 };

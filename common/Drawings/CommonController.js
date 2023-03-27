@@ -1159,45 +1159,13 @@
 					this.checkSelectedObjectsAndCallback(function () {
 						cropObject.checkSrcRect();
 						if (cropObject.createCropObject()) {
-							var oBlipFill = cropObject.getBlipFill();
-							if (oBlipFill) {
-								var oImgP = new Asc.asc_CImgProperty();
-								oImgP.ImageUrl = oBlipFill.RasterImageId;
-								var oSize = oImgP.asc_getOriginSize(this.getEditorApi());
-								var oShapeDrawer = new AscCommon.CShapeDrawer();
-								oShapeDrawer.bIsCheckBounds = true;
-								oShapeDrawer.Graphics = new AscFormat.CSlideBoundsChecker();
-								cropObject.check_bounds(oShapeDrawer);
-								var bounds_w = oShapeDrawer.max_x - oShapeDrawer.min_x;
-								var bounds_h = oShapeDrawer.max_y - oShapeDrawer.min_y;
-								var dScale = bounds_w / oSize.Width;
-								var dTestHeight = oSize.Height * dScale;
-								var srcRect = new AscFormat.CSrcRect();
-								if (dTestHeight <= bounds_h) {
-									srcRect.l = 0;
-									srcRect.r = 100;
-									srcRect.t = -100 * (bounds_h - dTestHeight) / 2.0 / dTestHeight;
-									srcRect.b = 100 - srcRect.t;
-								} else {
-									srcRect.t = 0;
-									srcRect.b = 100;
-									dScale = bounds_h / oSize.Height;
-									var dTestWidth = oSize.Width * dScale;
-									srcRect.l = -100 * (bounds_w - dTestWidth) / 2.0 / dTestWidth;
-									srcRect.r = 100 - srcRect.l;
-								}
-								cropObject.setSrcRect(srcRect);
-								var oParent = cropObject.parent;
-								if (oParent && oParent.Check_WrapPolygon) {
-									oParent.Check_WrapPolygon();
-								}
-								this.selection.cropSelection = cropObject;
-								this.sendCropState();
-								if (this.drawingObjects && this.drawingObjects.showDrawingObjects) {
-									this.drawingObjects.showDrawingObjects();
-								}
-								this.updateOverlay();
+							cropObject.cropFit();
+							this.selection.cropSelection = cropObject;
+							this.sendCropState();
+							if (this.drawingObjects && this.drawingObjects.showDrawingObjects) {
+								this.drawingObjects.showDrawingObjects();
 							}
+							this.updateOverlay();
 						}
 					}, [], false);
 				},
@@ -1215,36 +1183,7 @@
 					this.checkSelectedObjectsAndCallback(function () {
 						cropObject.checkSrcRect();
 						if (cropObject.createCropObject()) {
-							var oImgP = new Asc.asc_CImgProperty();
-							oImgP.ImageUrl = cropObject.getBlipFill().RasterImageId;
-							var oSize = oImgP.asc_getOriginSize(this.getEditorApi());
-							var oShapeDrawer = new AscCommon.CShapeDrawer();
-							oShapeDrawer.bIsCheckBounds = true;
-							oShapeDrawer.Graphics = new AscFormat.CSlideBoundsChecker();
-							cropObject.check_bounds(oShapeDrawer);
-							var bounds_w = oShapeDrawer.max_x - oShapeDrawer.min_x;
-							var bounds_h = oShapeDrawer.max_y - oShapeDrawer.min_y;
-							var dScale = bounds_w / oSize.Width;
-							var dTestHeight = oSize.Height * dScale;
-							var srcRect = new AscFormat.CSrcRect();
-							if (dTestHeight >= bounds_h) {
-								srcRect.l = 0;
-								srcRect.r = 100;
-								srcRect.t = -100 * (bounds_h - dTestHeight) / 2.0 / dTestHeight;
-								srcRect.b = 100 - srcRect.t;
-							} else {
-								srcRect.t = 0;
-								srcRect.b = 100;
-								dScale = bounds_h / oSize.Height;
-								var dTestWidth = oSize.Width * dScale;
-								srcRect.l = -100 * (bounds_w - dTestWidth) / 2.0 / dTestWidth;
-								srcRect.r = 100 - srcRect.l;
-							}
-							cropObject.setSrcRect(srcRect);
-							var oParent = cropObject.parent;
-							if (oParent && oParent.Check_WrapPolygon) {
-								oParent.Check_WrapPolygon();
-							}
+							cropObject.cropFill();
 							this.selection.cropSelection = cropObject;
 							this.sendCropState();
 							if (this.drawingObjects && this.drawingObjects.showDrawingObjects) {
@@ -4317,16 +4256,16 @@
 					var nAx;
 					if (aAx.length === aAxSettings.length) {
 						for (nAx = 0; nAx < aAx.length; ++nAx) {
-							aAx[nAx].setMenuProps(aAxSettings[nAx]);
 							oChartSpace.checkElementChartStyle(aAx[nAx]);
+							aAx[nAx].setMenuProps(aAxSettings[nAx]);
 						}
 					}
 					aAx = oOrderedAxes.getVerticalAxes();
 					aAxSettings = oProps.getVertAxesProps();
 					if (aAx.length === aAxSettings.length) {
 						for (nAx = 0; nAx < aAx.length; ++nAx) {
-							aAx[nAx].setMenuProps(aAxSettings[nAx]);
 							oChartSpace.checkElementChartStyle(aAx[nAx]);
+							aAx[nAx].setMenuProps(aAxSettings[nAx]);
 						}
 					}
 
@@ -4582,6 +4521,12 @@
 							return AscFormat.CreateSurfaceChart(chartSeries, bUseCache, options, true, false);
 						case c_oAscChartTypeSettings.contourWireframe:
 							return AscFormat.CreateSurfaceChart(chartSeries, bUseCache, options, true, true);
+						case c_oAscChartTypeSettings.radar:
+							return AscFormat.CreateRadarChart(chartSeries, bUseCache, options, false, false);
+						case c_oAscChartTypeSettings.radarMarker:
+							return AscFormat.CreateRadarChart(chartSeries, bUseCache, options, true, false);
+						case c_oAscChartTypeSettings.radarFilled:
+							return AscFormat.CreateRadarChart(chartSeries, bUseCache, options, false, true);
 						case c_oAscChartTypeSettings.comboAreaBar:
 						case c_oAscChartTypeSettings.comboBarLine:
 						case c_oAscChartTypeSettings.comboBarLineSecondary:
@@ -6533,11 +6478,32 @@
 
 				endTrackNewShape: function () {
 					this.curState.bStart = this.curState.bStart !== false;
-					var bRet = AscFormat.StartAddNewShape.prototype.onMouseUp.call(this.curState, {
-						ClickCount: 1,
-						X: 0,
-						Y: 0
-					}, 0, 0, 0);
+					let aTracks = this.arrTrackObjects;
+					let bNewShape = false;
+					let bRet = false;
+					if (aTracks.length > 0) {
+						let nT;
+						for (nT = 0; nT < aTracks.length; ++nT) {
+							let oTrack = aTracks[nT];
+							if (!oTrack.getShape) {
+								break;
+							}
+						}
+						if (nT === aTracks.length) {
+							bNewShape = true;
+						}
+						if (bNewShape) {
+							bRet = AscFormat.StartAddNewShape.prototype.onMouseUp.call(this.curState, {
+								ClickCount : 1,
+								X : 0,
+								Y : 0
+							}, 0, 0, 0);
+						}
+						else {
+							this.curState.onMouseUp({ClickCount : 1, X : 0, Y : 0}, 0, 0, 0);
+							bRet = true;
+						}
+					}
 					if (bRet === false && this.document) {
 						var oElement = this.document.Content[this.document.CurPos.ContentPos];
 						if (oElement) {
@@ -7219,11 +7185,8 @@
 								break;
 							}
 							case AscDFH.historyitem_type_ChartSpace: {
-								var type_subtype = drawing.getTypeSubType();
 								new_chart_props =
 									{
-										type: type_subtype.type,
-										subtype: type_subtype.subtype,
 										styleId: drawing.style,
 										w: drawing.extX,
 										h: drawing.extY,
@@ -7628,35 +7591,26 @@
 
 				getFormatPainterData: function () {
 					let oTargetDocContent = this.getTargetDocContent();
-					if (oTargetDocContent) {
-						let oTextPr = oTargetDocContent.GetDirectTextPr();
-						let oParaPr = oTargetDocContent.GetDirectParaPr();
-						return new CDocumentFormatPainterData(oTextPr, oParaPr, null);
-					}
+					if (oTargetDocContent)
+						return oTargetDocContent.GetFormattingPasteData();
+
 					let aSelectedObjects = this.getSelectedArray();
 					if (aSelectedObjects.length === 1) {
 						let oDrawing = aSelectedObjects[0];
-						if (oDrawing.isShape() || oDrawing.isImage()) {
-							return new CDocumentFormatPainterData(null, null, oDrawing);
-						}
+						if (oDrawing.isShape() || oDrawing.isImage())
+							return new AscCommon.CDrawingFormattingPasteData(oDrawing);
+
 						if (oDrawing.isTable()) {
 							let oTable = oDrawing.graphicObject;
-							let oCell = oTable.CurCell;
-							if (oCell) {
-								let oContent = oCell.Content;
-								let oTextPr = oContent.GetDirectTextPr();
-								let oParaPr = oContent.GetDirectParaPr();
-								return new CDocumentFormatPainterData(oTextPr, oParaPr, null);
-							}
+							let oCell = oTable.GetCurCell();
+							if (oCell)
+								return oCell.GetContent().GetFormattingPasteData();
 						} else if (oDrawing.isChart()) {
 							let oChartTitle = oDrawing.getChartTitle();
 							if (oChartTitle) {
 								let oContent = oChartTitle.getDocContent();
-								if (oContent) {
-									let oTextPr = oContent.GetDirectTextPr();
-									let oParaPr = oContent.GetDirectParaPr();
-									return new CDocumentFormatPainterData(oTextPr, oParaPr, null);
-								}
+								if (oContent)
+									return oContent.GetFormattingPasteData();
 							}
 						}
 					}
@@ -8908,7 +8862,7 @@
 						"height": nHeight
 					};
 				},
-				putImageToSelection: function (sImageUrl, nWidth, nHeight) {
+				putImageToSelection: function (sImageUrl, nWidth, nHeight, replaceMode) {
 					let spTree = this.getDrawingArray();
 					let selectedObjects = this.getSelectedArray();
 					const nPageIndex = 0;
@@ -8924,7 +8878,7 @@
 								let oSp = spTree[nSp];
 								if (oSp === oFirstSelectedObject) {
 									if (oSp.isImage()) {
-										oSp.replacePictureData(sImageUrl, _w, _h);
+										oSp.replacePictureData(sImageUrl, _w, _h, false, replaceMode);
 										if (oSp.group) {
 											oController.selection.groupSelection.resetInternalSelection();
 											oSp.group.selectObject(oSp, 0);
@@ -10483,7 +10437,7 @@
 
 				this.drawingObjects.swapTrackObjects();
 				this.drawingObjects.changeCurrentState(new GeometryEditState(this.drawingObjects, this.majorObject, this.startX, this.startY));
-				this.checkFormatPainterOnMouseEvent();
+				this.drawingObjects.checkFormatPainterOnMouseEvent();
 				this.drawingObjects.OnMouseMove(e, x, y, pageIndex);
 			}
 		};
@@ -10574,7 +10528,7 @@
 				} else {
 					this.drawingObjects.addPreTrackObject(new AscFormat.EditShapeGeometryTrack(this.drawing, this.drawingObjects));
 					this.drawingObjects.changeCurrentState(new PreGeometryEditState(this.drawingObjects, this.drawing, x, y, oHit));
-					this.checkFormatPainterOnMouseEvent();
+					this.drawingObjects.checkFormatPainterOnMouseEvent();
 					return true;
 				}
 			}

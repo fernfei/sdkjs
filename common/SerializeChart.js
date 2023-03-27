@@ -5071,6 +5071,11 @@ BinaryChartWriter.prototype.WriteCT_PlotArea = function (oVal, oChart) {
                 oThis.WriteCT_DoughnutChart(chart);
             });
         }
+        else if (chart instanceof AscFormat.CRadarChart) {
+	        this.bs.WriteItem(c_oserct_plotareaRADARCHART, function () {
+		        oThis.WriteCT_RadarChart(chart);
+	        });
+        }
         else if (chart instanceof AscFormat.CLineChart) {
             if(!oChart.view3D) {
                 this.bs.WriteItem(c_oserct_plotareaLINECHART, function () {
@@ -5112,11 +5117,6 @@ BinaryChartWriter.prototype.WriteCT_PlotArea = function (oVal, oChart) {
         // oThis.WriteCT_Pie3DChart(chart);
         // });
         // }
-        else if (chart instanceof AscFormat.CRadarChart) {
-            this.bs.WriteItem(c_oserct_plotareaRADARCHART, function () {
-                oThis.WriteCT_RadarChart(chart);
-            });
-        }
         else if (chart instanceof AscFormat.CScatterChart) {
             this.bs.WriteItem(c_oserct_plotareaSCATTERCHART, function () {
                 oThis.WriteCT_ScatterChart(chart);
@@ -11166,9 +11166,8 @@ BinaryChartReader.prototype.ReadCT_PlotArea = function (type, length, val, aChar
             return oThis.ReadCT_RadarChart(t, l, oNewVal, aChartWithAxis);
         });
         //radar -> line
-        var line = oNewVal.convertToLineChart();
-		this.CorrectChartWithAxis(oNewVal, line, aChartWithAxis);
-        val.addChart(line);
+        //var line = this.ConvertRadarToLine(oNewVal, aChartWithAxis);
+        val.addChart(oNewVal);
     }
     else if (c_oserct_plotareaSCATTERCHART === type) {
         var oNewVal = new AscFormat.CScatterChart();

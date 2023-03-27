@@ -4874,7 +4874,12 @@
 				oResult = new ApiSection(oReader.SectPrFromJSON(oParsedObj));
 				break;
 			case "numbering":
-				oResult = new ApiNumbering(oReader.NumberingFromJSON(oParsedObj));
+				oReader.parsedNumbering = oParsedObj;
+				let sNumId		= Object.keys(oParsedObj["num"])[0];
+				let sAddedNumId	= oReader.NumberingFromJSON(sNumId);
+				let oNum		= oDocument.Document.GetNumbering().GetNum(sAddedNumId);
+
+				oResult = new ApiNumbering(oNum);
 				break;
 			case "textPr":
 				oResult = oParsedObj["bFromDocument"] ? new ApiTextPr(null, oReader.TextPrFromJSON(oParsedObj)) : new ApiTextPr(null, oReader.TextPrDrawingFromJSON(oParsedObj));
@@ -5569,6 +5574,10 @@
 				if (oElm.IsUseInDocument())
 					continue;
 
+				if (oElm.Parent != null) {
+					oElm.SetParent(private_GetLogicDocument());
+				}
+
 				oSelectedContent.Add(new AscCommonWord.CSelectedElement(oElm, true));
 			}
 		}
@@ -5580,7 +5589,7 @@
 		if (this.Document.IsSelectionUse())
 		{
 			this.Document.Start_SilentMode();
-			this.Document.Remove(1, false, false, isInline);
+			this.Document.Remove(1, false, false, true);
 			this.Document.End_SilentMode();
 			this.Document.RemoveSelection(true);
 		}
@@ -6951,7 +6960,7 @@
         oLogicDocument.Statistics.SymbolsWOSpaces = 0;
         oLogicDocument.Statistics.SymbolsWhSpaces = 0;
 
-		oLogicDocument.Statistics.Update_Pages(this.Pages.length);
+		oLogicDocument.Statistics.Update_Pages(oLogicDocument.Pages.length);
 		for (let CurPage = 0, PagesCount = oLogicDocument.Pages.length; CurPage < PagesCount; ++CurPage)
 		{
 			oLogicDocument.DrawingObjects.documentStatistics(CurPage, oLogicDocument.Statistics);
@@ -12100,7 +12109,7 @@
 		let oJSON = bFromDocument ? oWriter.SerTextPr(this.TextPr) : oWriter.SerTextPrDrawing(this.TextPr);
 		if (bWriteStyles)
 			oJSON["styles"] = oWriter.SerWordStylesForWrite();
-		return JSON.stringify();
+		return JSON.stringify(oJSON);
 	};
 
 
@@ -12774,7 +12783,9 @@
 	ApiNumbering.prototype.ToJSON = function()
 	{
 		var oWriter = new AscJsonConverter.WriterToJSON();
-		return JSON.stringify(oWriter.SerNumbering(this.Num));
+		oWriter.SerNumbering(this.Num);
+
+		return JSON.stringify(oWriter.jsonWordNumberings);
 	};
 
 	//------------------------------------------------------------------------------------------------------------------

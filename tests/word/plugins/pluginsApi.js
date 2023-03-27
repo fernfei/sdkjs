@@ -131,7 +131,88 @@ $(function () {
 		
 		PluginsApi.pluginMethod_SetEditingRestrictions("readOnly");
 		assert.strictEqual(logicDocument.CanEdit(), false, "Set read only restriction and check if we can edit document");
+		
+		// Set to none to pass subsequent tests
+		PluginsApi.pluginMethod_SetEditingRestrictions("none");
 	});
+	
+	QUnit.test("Test CurrenWord/CurrentSentence", function(assert)
+	{
+		AscTest.ClearDocument();
+		let p = MoveToNewParagraph();
+		AscTest.EnterText("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "Lorem", "Check current word at the start of the paragraph");
+		AscTest.MoveCursorRight(false, false, 6);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "ipsum", "Move cursor right(6) and check current word on the left edge of the word");
+		AscTest.MoveCursorRight(false, false, 5);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "ipsum", "Move cursor right(5) and check current word on the right edge of the word");
+		AscTest.MoveCursorToParagraph(p, false);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), ".", "Check current word at the end of the paragraph");
+		AscTest.MoveCursorLeft(false, false, 1);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "laborum", "Move cursor left and check current word");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(),
+			"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+			"Check current sentence at the start of the paragraph");
+		
+		AscTest.MoveCursorToParagraph(p, false);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(),
+			"",
+			"Check current sentence at the end of the paragraph");
+		
+		AscTest.MoveCursorLeft(false, false, 5);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(),
+			"Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+			"Move cursor left(5) and check current sentence");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		AscTest.MoveCursorRight(false, false, 123);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(),
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+			"Move to the start of the second sentence and check it");
+		
+		AscTest.ClearDocument();
+		p = MoveToNewParagraph();
+		AscTest.EnterText("Test text");
+		AscTest.MoveCursorToParagraph(p, true);
+		AscTest.MoveCursorRight(false, false, 2);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "Test", "Add new paragraph and check current word");
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(), "Test text", "Check current sentence");
+		
+		logicDocument.AddFieldWithInstruction("PAGE");
+		AscTest.Recalculate();
+		AscTest.MoveCursorToParagraph(p, true);
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentWord(), "Te", "Add hidden complex field in the middle of word 'Test' and check current word");
+		assert.strictEqual(PluginsApi.pluginMethod_GetCurrentSentence(), "Te1st text", "Check current sentence");
+		
+		
+		AscTest.ClearDocument();
+		p = MoveToNewParagraph();
+		AscTest.EnterText("Test text");
+
+		AscTest.MoveCursorToParagraph(p, true);
+		PluginsApi.pluginMethod_ReplaceCurrentWord("First");
+		assert.strictEqual(AscTest.GetParagraphText(p), "First text", "Replace current word at the start of the paragraph");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		AscTest.MoveCursorRight(false, false, 2);
+		PluginsApi.pluginMethod_ReplaceCurrentWord("Second");
+		assert.strictEqual(AscTest.GetParagraphText(p), "Second text", "Replace current word at the second position of the paragraph");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		AscTest.MoveCursorRight(false, false, 3);
+		PluginsApi.pluginMethod_ReplaceCurrentWord("123", "afterCursor");
+		assert.strictEqual(AscTest.GetParagraphText(p), "Sec123 text", "Replace the part of the word after cursor");
+		
+		AscTest.MoveCursorToParagraph(p, true);
+		AscTest.MoveCursorRight(false, false, 3);
+		PluginsApi.pluginMethod_ReplaceCurrentWord("654", "beforeCursor");
+		assert.strictEqual(AscTest.GetParagraphText(p), "654123 text", "Replace the part of the word before cursor");
+		
+	})
 	
 	
 });

@@ -4900,6 +4900,14 @@
                     if(this.isHBarType(nType)) {
                         return null;
                     }
+	                if(this.isRadarChart(nType)) {
+		                if(this.isRadarChart(nCurChartType)) {
+			                return oChart;
+		                }
+		                else {
+			                return null;
+		                }
+	                }
                     if(this.isScatterType(nCurChartType)) {
                         if(this.isScatterType(nType)) {
                             return oChart;
@@ -5482,6 +5490,47 @@
         oLineChart.addAxes(aAxes);
         this.addChartWithAxes(oLineChart);
     };
+	CPlotArea.prototype.createRadarChart = function(nType, aSeries, aAxes, oOldChart) {
+		let oRadarChart = new AscFormat.CRadarChart();
+		let nRadarStyle;
+		if(nType === Asc.c_oAscChartTypeSettings.radarFilled) {
+			nRadarStyle = AscFormat.RADAR_STYLE_FILLED;
+		}
+		else {
+			nRadarStyle = AscFormat.RADAR_STYLE_MARKER;
+		}
+		oRadarChart.mergeWithoutSeries(oOldChart);
+		oRadarChart.setRadarStyle(nRadarStyle);
+		var nSeries, oSeries;
+		for(nSeries = 0; nSeries < aSeries.length; ++nSeries) {
+			oSeries = new AscFormat.CRadarSeries();
+			aSeries[nSeries].fillObject(oSeries);
+			oSeries.changeChartType(nType);
+			oRadarChart.addSer(oSeries);
+		}
+		oRadarChart.addAxes(aAxes);
+		this.parent.check3DOptions(false, false);
+		return oRadarChart;
+	};
+	CPlotArea.prototype.switchToRadar = function(nType) {
+		if(!this.parent) {
+			return;
+		}
+		const aCharts = this.charts;
+		if(aCharts.length < 1) {
+			return;
+		}
+		if(aCharts.length === 1) {
+			if(aCharts[0].tryChangeType(nType)) {
+				return;
+			}
+		}
+		const aSeries = this.getAllSeries();
+		const aAxes = this.createRegularAxes(this.getAxisNumFormatByType(nType, aSeries), false);
+		const oRadarChart = this.createRadarChart(nType, aSeries, aAxes, this.charts[0]);
+		oRadarChart.addAxes(aAxes);
+		this.addChartWithAxes(oRadarChart);
+	};
     CPlotArea.prototype.createPieChart = function(nType, aSeries, oOldChart) {
         var oPieChart = new AscFormat.CPieChart();
         oPieChart.mergeWithoutSeries(oOldChart);
@@ -5733,6 +5782,9 @@
         }
         else if(this.isStockChart(nType)) {
             this.switchToStockChart(nType);
+        }
+		else if(this.isRadarChart(nType)) {
+			this.switchToRadar(nType);
         }
     };
     CPlotArea.prototype.getAllSeries = function() {
@@ -6040,6 +6092,14 @@
         }
         return false;
     };
+    CPlotArea.prototype.isRadarType = function(nType) {
+        if(Asc.c_oAscChartTypeSettings.radar === nType
+            || Asc.c_oAscChartTypeSettings.radarMarker === nType
+            || Asc.c_oAscChartTypeSettings.radarFilled === nType) {
+            return true
+        }
+        return false;
+    };
     CPlotArea.prototype.isScatterType = function(nType) {
         return isScatterChartType(nType);
     };
@@ -6048,6 +6108,9 @@
             return true
         }
         return false;
+    };
+    CPlotArea.prototype.isRadarChart = function(nType) {
+      return this.isRadarType(nType);
     };
     CPlotArea.prototype.setDlblsProps = function(oProps) {
         for(var nChart = 0; nChart < this.charts.length; ++nChart) {
@@ -6259,7 +6322,8 @@
             nType === Asc.c_oAscChartTypeSettings.scatterSmoothMarker ||
             nType === Asc.c_oAscChartTypeSettings.lineNormalMarker ||
             nType === Asc.c_oAscChartTypeSettings.lineStackedMarker ||
-            nType === Asc.c_oAscChartTypeSettings.lineStackedPerMarker) {
+            nType === Asc.c_oAscChartTypeSettings.lineStackedPerMarker ||
+            nType === Asc.c_oAscChartTypeSettings.radarMarker) {
             return true;
         }
         return false;
@@ -6285,7 +6349,9 @@
             nType === Asc.c_oAscChartTypeSettings.lineNormalMarker ||
             nType === Asc.c_oAscChartTypeSettings.lineStackedMarker ||
             nType === Asc.c_oAscChartTypeSettings.lineStackedPerMarker ||
-            nType === Asc.c_oAscChartTypeSettings.line3d) {
+            nType === Asc.c_oAscChartTypeSettings.line3d ||
+            nType === Asc.c_oAscChartTypeSettings.radar ||
+            nType === Asc.c_oAscChartTypeSettings.radarMarker) {
             return true;
         }
         return false;
@@ -6775,6 +6841,9 @@
                 }
                 else if(oPlotArea.isStockChart(nType)) {
                     oNewChart = oPlotArea.createStockChart(nType, [oSeries], aNewAxes, this);
+                }
+                else if(oPlotArea.isRadarChart(nType)) {
+                    oNewChart = oPlotArea.createRadarChart(nType, [oSeries], aNewAxes, this);
                 }
             }
         }
@@ -7568,6 +7637,9 @@
     CAxisBase.prototype.isHorizontal = function() {
         return this.axPos === AX_POS_B || this.axPos === AX_POS_T;
     };
+    CAxisBase.prototype.isVertical = function() {
+        return this.axPos === AX_POS_L || this.axPos === AX_POS_R;
+    };
     CAxisBase.prototype.getGridlinesSetting = function() {
         if(!this.majorGridlines && !this.minorGridlines)
             return Asc.c_oAscGridLinesSettings.none;
@@ -7826,6 +7898,44 @@
             }
         }
     };
+	CAxisBase.prototype.getAllCharts = function() {
+		let oPlotArea = this.parent;
+		if(!oPlotArea)
+			return [];
+		return oPlotArea.getChartsForAxis(this);
+	};
+	CAxisBase.prototype.isRadarAxis = function() {
+		let aCharts = this.getAllCharts();
+		for(let nChart = 0; nChart < aCharts.length; ++nChart) {
+			if(aCharts[nChart].getObjectType() === AscDFH.historyitem_type_RadarChart) {
+				return true;
+			}
+		}
+		return false;
+	};
+	CAxisBase.prototype.isRadarCategories = function() {
+		if(this.isRadarAxis()) {
+			let nType = this.getObjectType();
+			if(nType === AscDFH.historyitem_type_CatAx ||
+				nType === AscDFH.historyitem_type_DateAx) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	CAxisBase.prototype.isRadarValues = function() {
+		if(this.isRadarAxis()) {
+			let nType = this.getObjectType();
+			if(nType === AscDFH.historyitem_type_ValAx) {
+				return true;
+			}
+		}
+		return false;
+	};
+	CAxisBase.prototype.isSeriesAxis = function() {
+		return this.getObjectType() === AscDFH.historyitem_type_SerAx;
+	};
 
     function getBaseLog(x, y) {
         return Math.log(y) / Math.log(x);
@@ -7926,6 +8036,7 @@
         ret.putLabel(this.getLabelSetting());
         ret.putNumFmt(new AscCommon.asc_CAxNumFmt(this));
         ret.putAuto(this.auto !== false);
+	    ret.putIsRadarAxis(this.isRadarAxis());
         return ret;
     };
     CCatAx.prototype.setMenuProps = function(props) {
@@ -8429,6 +8540,7 @@
         ret.putGridlines(this.getGridlinesSetting());
         ret.putLabel(this.getLabelSetting());
         ret.putNumFmt(new AscCommon.asc_CAxNumFmt(this));
+	    ret.putIsRadarAxis(this.isRadarAxis());
         return ret;
     };
     CValAx.prototype.setMenuProps = function(props) {
@@ -12034,11 +12146,11 @@
     };
 
     function CRadarChart() {
-        CChartBase.call(this);
+        CLineChart.call(this);
         this.radarStyle = null;
     }
 
-    InitClass(CRadarChart, CChartBase, AscDFH.historyitem_type_RadarChart);
+    InitClass(CRadarChart, CLineChart, AscDFH.historyitem_type_RadarChart);
     CRadarChart.prototype.getEmptySeries = function() {
         return new CRadarSeries();
     };
@@ -12094,11 +12206,11 @@
         History.CanAddChanges() && History.Add(new CChangesDrawingsLong(this, AscDFH.historyitem_RadarChart_SetRadarStyle, this.radarStyle, pr));
         this.radarStyle = pr;
     };
-    CRadarChart.prototype.isMarkerChart = function() {
-        return false;
-    };
+	CRadarChart.prototype.isFilled = function() {
+		return AscFormat.RADAR_STYLE_FILLED === this.radarStyle;
+	};
     CRadarChart.prototype.convertToLineChart = function() {
-        var bMarkerNull = AscFormat.RADAR_STYLE_FILLED == this.radarStyle;
+        var bMarkerNull = this.isFilled();
         var oLine = new AscFormat.CLineChart();
         oLine.setGrouping(AscFormat.GROUPING_STANDARD);
         if (null != this.varyColors)
@@ -12140,9 +12252,92 @@
         oLine.setSmooth(false);
         return oLine;
     };
+	CRadarChart.prototype.getChartType = function() {
+		if(this.isFilled()) {
+			return Asc.c_oAscChartTypeSettings.radarFilled;
+		}
+		if(this.isMarkerChart()) {
+			return Asc.c_oAscChartTypeSettings.radarMarker;
+		}
+		return Asc.c_oAscChartTypeSettings.radar;
+	};
+	CRadarChart.prototype.setDLbls = function(oPr) {
+		if(oPr) {
+			if(oPr.dLblPos !== null) {
+				oPr.setDLblPos(null);
+			}
+		}
+		CChartBase.prototype.setDLbls.call(this, oPr);
+	};
+	CRadarChart.prototype.tryChangeType = function(nType) {
+		if(!this.parent) {
+			return false;
+		}
+		if(!this.parent.isRadarType(nType)) {
+			return false;
+		}
+		if(nType === this.getChartType()) {
+			return true;
+		}
+		let nRadarStyle;
+		if(nType === Asc.c_oAscChartTypeSettings.radarFilled) {
+			nRadarStyle = AscFormat.RADAR_STYLE_FILLED;
+		}
+		else {
+			nRadarStyle = AscFormat.RADAR_STYLE_MARKER;//excel uses this style for no marker chart
+		}
+		if(this.radarStyle !== nRadarStyle) {
+			this.setRadarStyle(nRadarStyle);
+		}
+		const aSeries = this.series;
+
+		for(let nSer = 0; nSer < aSeries.length; ++nSer) {
+			aSeries[nSer].changeChartType(nType);
+		}
+		this.checkValAxesFormatByType(nType);
+		this.parent.check3DOptions(nType);
+		return true;
+	};
+	CRadarChart.prototype.getLineParams = function() {
+		let nFlag = 0;//
+		let bShowMarker = false;
+		let bNoLine = true;
+		let aSeries = this.series, oSeries;
+		let nSer;
+		if(this.radarStyle === AscFormat.RADAR_STYLE_MARKER) {
+			for(nSer = 0; nSer < aSeries.length; ++nSer) {
+				oSeries = aSeries[nSer];
+				if(!oSeries.marker) {
+					bShowMarker = true;
+					break;
+				}
+				if(oSeries.marker.symbol !== AscFormat.SYMBOL_NONE) {
+					bShowMarker = true;
+					break;
+				}
+			}
+		}
+		for(nSer = 0; nSer < aSeries.length; ++nSer) {
+			oSeries = aSeries[nSer];
+			if(!oSeries.hasNoFillLine()) {
+				bNoLine = false;
+				break;
+			}
+		}
+		if(bShowMarker) {
+			nFlag |= 1;
+		}
+		if(bNoLine) {
+			nFlag |= 2;
+		}
+		return nFlag;
+	};
+	CRadarChart.prototype.setGrouping = function(val) {
+
+	};
 
     function CRadarSeries() {
-        CSeriesBase.call(this);
+        CLineSeries.call(this);
         this.cat = null;
         this.dLbls = null;
         this.dPt = [];
@@ -12151,7 +12346,7 @@
 
     }
 
-    InitClass(CRadarSeries, CSeriesBase, AscDFH.historyitem_type_RadarSeries);
+    InitClass(CRadarSeries, CLineSeries, AscDFH.historyitem_type_RadarSeries);
     CRadarSeries.prototype.getChildren = function() {
         var aRet = CSeriesBase.prototype.getChildren(this);
         aRet.push(this.dLbls);
@@ -12167,34 +12362,50 @@
             oCopy.setMarker(this.marker.createDuplicate());
         }
     };
-    CRadarSeries.prototype.setCat = function(pr) {
-        History.CanAddChanges() && History.Add(new CChangesDrawingsObject(this, AscDFH.historyitem_RadarSeries_SetCat, this.cat, pr));
-        this.cat = pr;
-        this.onChangeDataRefs();
-        this.setParentToChild(pr);
-    };
     CRadarSeries.prototype.setDLbls = function(pr) {
-        History.CanAddChanges() && History.Add(new CChangesDrawingsObject(this, AscDFH.historyitem_RadarSeries_SetDLbls, this.dLbls, pr));
-        this.dLbls = pr;
-        this.setParentToChild(pr);
+	    if(pr) {
+		    if(pr.dLblPos !== null) {
+			    pr.setDLblPos(null);
+		    }
+	    }
+	    CLineSeries.prototype.setDLbls.call(this, pr);
     };
-    CRadarSeries.prototype.addDPt = function(pr) {
-        History.CanAddChanges() && History.Add(new CChangesDrawingsContent(this, AscDFH.historyitem_RadarSeries_SetDPt, this.dPt.length, [pr], true));
-        this.dPt.push(pr);
-        this.setParentToChild(pr);
-    };
-    CRadarSeries.prototype.setMarker = function(pr) {
-        History.CanAddChanges() && History.Add(new CChangesDrawingsObject(this, AscDFH.historyitem_RadarSeries_SetCat, this.marker, pr));
-        this.marker = pr;
-        this.setParentToChild(pr);
-    };
-    CRadarSeries.prototype.setVal = function(pr) {
-        History.CanAddChanges() && History.Add(new CChangesDrawingsObject(this, AscDFH.historyitem_RadarSeries_SetCat, this.val, pr));
-        this.val = pr;
-        this.onChangeDataRefs();
-        this.setParentToChild(pr);
-    };
-
+	CRadarSeries.prototype.changeChartType = function(nType) {
+		let oSpPr = this.spPr;
+		if(nType === Asc.c_oAscChartTypeSettings.radarFilled) {
+			if(!oSpPr) {
+				oSpPr = new AscFormat.CSpPr();
+				this.setSpPr(oSpPr);
+			}
+			oSpPr.setLn(AscFormat.CreateNoFillLine());
+		}
+		else {
+			if(oSpPr) {
+				if(this.hasNoFillLine()) {
+					if(oSpPr.ln) {
+						oSpPr.setLn(null);
+					}
+				}
+				if(oSpPr.Fill) {
+					oSpPr.setFill(null);
+				}
+			}
+		}
+		if(nType === Asc.c_oAscChartTypeSettings.radarMarker) {
+			if(this.marker) {
+				this.setMarker(null);
+			}
+		}
+		else {
+			if(!this.marker) {
+				this.setMarker(new CMarker());
+			}
+			let oMarker = this.marker;
+			if(oMarker.symbol !== AscFormat.SYMBOL_NONE) {
+				oMarker.setSymbol(AscFormat.SYMBOL_NONE);
+			}
+		}
+	};
     var ORIENTATION_MAX_MIN = 0;
     var ORIENTATION_MIN_MAX = 1;
 

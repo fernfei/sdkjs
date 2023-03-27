@@ -4447,9 +4447,9 @@ background-repeat: no-repeat;\
 	{
 		return this.WordControl.m_oLogicDocument.getImageDataFromSelection();
 	};
-	asc_docs_api.prototype.putImageToSelection = function(sImageSrc, nWidth, nHeight)
+	asc_docs_api.prototype.putImageToSelection = function(sImageSrc, nWidth, nHeight, replaceMode)
 	{
-		return this.WordControl.m_oLogicDocument.putImageToSelection(sImageSrc, nWidth, nHeight);
+		return this.WordControl.m_oLogicDocument.putImageToSelection(sImageSrc, nWidth, nHeight, replaceMode);
 	};
 
 	asc_docs_api.prototype.getPluginContextMenuInfo = function ()
@@ -6857,7 +6857,7 @@ background-repeat: no-repeat;\
 		{
 			return null;
 		}
-		return oPresentation.GetFormatPainterData();
+		return oPresentation.GetFormattingPasteData();
 	};
 	asc_docs_api.prototype.SetPaintFormat = function(value)
 	{

@@ -545,6 +545,17 @@ function (window, undefined)
 
 	CMobileTouchManager.prototype.onTouchStart = function(e)
 	{
+		let activeElement = document.activeElement;
+		if (activeElement && activeElement.nodeName)
+		{
+			let nameActive = activeElement.nodeName.toUpperCase();
+			if ("INPUT" == nameActive || "TEXTAREA" == nameActive)
+			{
+				if (activeElement !== AscCommon.g_inputContext.HtmlArea)
+					activeElement.blur();
+			}
+		}
+
 		var _e = e.touches ? e.touches[0] : e;
 		this.IsTouching = true;
 		AscCommon.g_inputContext.enableVirtualKeyboard();

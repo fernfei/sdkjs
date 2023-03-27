@@ -809,7 +809,17 @@
 
     CDrawingDocContent.prototype.isDocumentContentInSmartArtShape = function () {
         return this.Parent && this.Parent.parent && this.Parent.parent.isObjectInSmartArt && this.Parent.parent.isObjectInSmartArt();
-    }
+    };
+
+	CDrawingDocContent.prototype.RecalcAllFields = function() {
+		const aFields = this.AllFields;
+		for(let nField = 0; nField < aFields.length; ++nField)
+		{
+			let oField = aFields[nField];
+			oField.RecalcMeasure();
+			oField.Refresh_RecalcData2();
+		}
+	};
     // TODO: сделать по-нормальному!!!
     function CDocument_prototype_private_GetElementPageIndexByXY(ElementPos, X, Y, PageIndex)
     {

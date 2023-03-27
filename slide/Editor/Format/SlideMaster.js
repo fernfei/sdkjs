@@ -161,27 +161,18 @@ MasterSlide.prototype.Read_FromBinary2 = function (r) {
     this.theme = AscFormat.readObject(r);
 };
 MasterSlide.prototype.draw = function (graphics, slide) {
-    if(slide){
-        if(slide.num !== this.lastRecalcSlideIndex){
-            this.lastRecalcSlideIndex = slide.num;
-            this.handleAllContents(function (oContent) {
-                if(oContent){
-                    if(oContent.AllFields && oContent.AllFields.length > 0){
-                        for(var j = 0; j < oContent.AllFields.length; j++){
-                            oContent.AllFields[j].RecalcInfo.Measure = true;
-                            oContent.AllFields[j].Refresh_RecalcData2();
-                        }
-                    }
-                }
-            });
-            this.recalculate();
-
-        }
-    }
-    for (var i = 0; i < this.cSld.spTree.length; ++i) {
-        if (this.cSld.spTree[i].isPlaceholder && !this.cSld.spTree[i].isPlaceholder())
-            this.cSld.spTree[i].draw(graphics);
-    }
+	if(slide) {
+		if(slide.num !== this.lastRecalcSlideIndex) {
+			this.lastRecalcSlideIndex = slide.num;
+			this.cSld.refreshAllContentsFields();
+			this.recalculate();
+		}
+	}
+	this.cSld.forEachSp(function(oSp) {
+		if (!oSp.isPlaceholder()) {
+			oSp.draw(graphics);
+		}
+	});
 };
 MasterSlide.prototype.getMatchingLayout = function (type, matchingName, cSldName, themeFlag) {
     var layoutType = type;

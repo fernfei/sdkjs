@@ -450,6 +450,7 @@ function (window, undefined) {
 
 		this.UserProtectedRange = 165;
 		this.UserProtectedRangeChange = 166;
+		this.UserProtectedRangeUserInfo = 167;
 
 		this.externalReference = 170;
 
@@ -612,6 +613,8 @@ function (window, undefined) {
 					return new Asc.CUserProtectedRange();
 				case this.UserProtectedRangeChange:
 					return new AscCommonExcel.UndoRedoData_UserProtectedRange();
+				case this.UserProtectedRangeUserInfo:
+					return new Asc.CUserProtectedRangeUserInfo();
 			}
 			return null;
 		};
@@ -3361,6 +3364,15 @@ function (window, undefined) {
 				ws.editUserProtectedRanges(Data.to, Data.from);
 			} else {
 				ws.editUserProtectedRanges(Data.from, Data.to);
+			}
+		} else if (AscCH.historyitem_Worksheet_SetSheetViewType === Type) {
+			//накатываем только при открытии
+			/*if (this.wb.bCollaborativeChanges) {
+				ws.setTopLeftCell(Data.to ? new Asc.Range(Data.to.c1, Data.to.r1, Data.to.c2, Data.to.r2) : null);
+			}*/
+			//except - apply changes in other user
+			if (window["NATIVE_EDITOR_ENJINE"] || !wb.oApi.isDocumentLoadComplete || !wb.bCollaborativeChanges) {
+				ws.setSheetViewType(bUndo ? Data.from : Data.to);
 			}
 		}
 	};

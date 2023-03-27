@@ -476,7 +476,7 @@ function handleShapeImage(drawing, drawingObjectsController, e, x, y, group, pag
         if(bWord/* && (!drawing.txWarpStruct || drawingObjectsController.curState.startTargetTextObject === drawing || drawing.haveSelectedDrawingInContent && drawing.haveSelectedDrawingInContent())*/)
         {
             if(drawing.getObjectType() === AscDFH.historyitem_type_Shape &&
-                drawing.isForm() && drawing.getInnerForm() && drawing.getInnerForm().IsPicture())
+                drawing.isForm() && drawing.getInnerForm() && !drawing.getInnerForm().CanPlaceCursorInside())
             {
                 return drawingObjectsController.handleMoveHit(drawing, e, x, y, group, false, pageIndex, bWord);
             }
@@ -1843,7 +1843,7 @@ function handleInlineShapeImage(drawing, drawingObjectsController, e, x, y, page
         if(drawing.bWordShape /*&& (!drawing.txWarpStruct || drawingObjectsController.curState.startTargetTextObject === drawing || drawing.haveSelectedDrawingInContent && drawing.haveSelectedDrawingInContent())*/)
         {
             if(drawing.getObjectType() === AscDFH.historyitem_type_Shape &&
-                drawing.isForm() && drawing.getInnerForm() && drawing.getInnerForm().IsPicture())
+                drawing.isForm() && drawing.getInnerForm() && !drawing.getInnerForm().CanPlaceCursorInside())
             {
                 return handleInlineHitNoText(drawing, drawingObjectsController, e, x, y, pageIndex, false);
             }
