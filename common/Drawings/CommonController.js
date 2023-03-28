@@ -6504,6 +6504,15 @@
 							bRet = true;
 						}
 					}
+					else
+					{
+						bRet = AscFormat.StartAddNewShape.prototype.onMouseUp.call(this.curState, {
+							ClickCount : 1,
+							X : 0,
+							Y : 0
+						}, 0, 0, 0);
+					}
+					
 					if (bRet === false && this.document) {
 						var oElement = this.document.Content[this.document.CurPos.ContentPos];
 						if (oElement) {

@@ -1231,10 +1231,9 @@
 			startMainTest((oEvent) =>
 			{
 				const oController = getController();
-				oController.changeCurrentState(new AscFormat.StartAddNewShape(oController, 'rect'));
-
+				oGlobalLogicDocument.StartAddShape('rect', true);
 				onKeyDown(oEvent);
-				oAssert.true(oController.curState instanceof AscFormat.NullState, 'Check reset add new shape');
+				oAssert.true(!oController.checkTrackDrawings(), 'Check reset add new shape');
 			}, oMainShortcutTypes.checkResetAddShape);
 		});
 
