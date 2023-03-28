@@ -903,13 +903,14 @@
 			{
 				oFormInfo = aFormsInfo[i];
 
+				let oRect	= oFormInfo["rect"];
 				let nScaleY = this.drawingPages[oFormInfo["page"]].H / this.file.pages[oFormInfo["page"]].H;
 				let nScaleX = this.drawingPages[oFormInfo["page"]].W / this.file.pages[oFormInfo["page"]].W;
 
-				aRect = [oFormInfo["x1"] * nScaleX, oFormInfo["y1"] * nScaleY, oFormInfo["x2"] * nScaleX, oFormInfo["y2"] * nScaleY];
+				aRect = [oRect["x1"] * nScaleX, oRect["y1"] * nScaleY, oRect["x2"] * nScaleX, oRect["y2"] * nScaleY];
 				
 				oForm = this.doc.private_addField(oFormInfo["name"], oFormInfo["type"], oFormInfo["page"], aRect);
-				oForm._origRect = [oFormInfo["x1"], oFormInfo["y2"], oFormInfo["x2"], oFormInfo["y1"]];
+				oForm._origRect = [oRect["x1"], oRect["y1"], oRect["x2"], oRect["y2"]];
 
 				if (!oForm) {
 					console.log(Error("Error while reading form, index " + i));
@@ -941,16 +942,16 @@
 				{
 					oForm.SetBorderWidth(oFormInfo["borderWidth"]);
 				}
-				else
+				if (oFormInfo["BC"] != null)
 				{
-					if (oFormInfo["BC"] == null)
-						oForm.SetBorderWidth(0);
-					else
-						oForm.SetBorderColor(oFormInfo["BC"]);
+					oForm.SetBorderColor(oFormInfo["BC"]);
 				}
+				else
+					oForm.SetBorderWidth(0);
 
 				if (oFormInfo["AP"] != null) {
 					oForm._apIdx = oFormInfo["AP"]["i"];
+					oForm.SetDrawFromStream(true);
 				}
 
 				// members
@@ -1446,26 +1447,31 @@
 					oThis.mouseDownFieldObject.UpdateScroll(false)
 
 				if (oThis.mouseDownFieldObject.type !== "checkbox" && oThis.mouseDownFieldObject.type !== "radiobutton") {
-					oThis.mouseDownFieldObject._needDrawHighlight = true;
-
-					if (oThis.mouseDownFieldObject._needApplyToAll) {
-						oThis.mouseDownFieldObject.ApplyValueForAll(oFieldToSkip);
-						oThis.mouseDownFieldObject._needApplyToAll = false;
-						oThis.mouseDownFieldObject = null;
+					if (oThis.mouseDownFieldObject.IsChanged() == false) {
+						oThis.mouseDownFieldObject.SetDrawFromStream(true);
+						oThis.mouseDownFieldObject._needDrawHighlight = true;
 						oThis._paintForms();
 					}
-					else if (oThis.mouseDownFieldObject.IsNeedRevertShiftView()) {
-						oThis.mouseDownFieldObject.RevertContentViewToOriginal();
-						oThis.mouseDownFieldObject.AddToRedraw();
-						oThis.mouseDownFieldObject = null;
-						oThis._paintForms();
+					else {
+						oThis.mouseDownFieldObject._needDrawHighlight = true;
+						if (oThis.mouseDownFieldObject._needApplyToAll) {
+							oThis.mouseDownFieldObject.ApplyValueForAll(oFieldToSkip);
+							oThis.mouseDownFieldObject._needApplyToAll = false;
+							oThis.mouseDownFieldObject = null;
+							oThis._paintForms();
+						}
+						else if (oThis.mouseDownFieldObject.IsNeedRevertShiftView()) {
+							oThis.mouseDownFieldObject.RevertContentViewToOriginal();
+							oThis.mouseDownFieldObject.AddToRedraw();
+							oThis.mouseDownFieldObject = null;
+							oThis._paintForms();
+						}
+						else if (oThis.mouseDownFieldObject._actions.Format && oThis.mouseDownFieldObject.value != "") {
+							oThis.mouseDownFieldObject.AddToRedraw();
+							oThis.mouseDownFieldObject = null;
+							oThis._paintForms();
+						}
 					}
-					else if (oThis.mouseDownFieldObject._actions.Format && oThis.mouseDownFieldObject.value != "") {
-						oThis.mouseDownFieldObject = null;
-						oThis.mouseDownFieldObject.AddToRedraw();
-						oThis._paintForms();
-					}
-
 					oThis.Api.WordControl.m_oDrawingDocument.TargetEnd();
 					oThis._paintFormsHighlight();
 				}
@@ -1488,6 +1494,12 @@
 						oThis._paintFormsHighlight();
 						oThis.mouseDownFieldObject.onMouseDown(AscCommon.global_mouseEvent.X, AscCommon.global_mouseEvent.Y, e);
 						if (oThis.mouseDownFieldObject._actions.Format) {
+							/*
+								to do
+								при щелчке по форме с установленным форматом, чтобы отобразить неформатированный, перерисоываются все формы
+								нужно переделать чтобы можно было увидеть неформатированный контент не отрисовывая заново все формы
+							*/
+							oThis.mouseDownFieldObject.AddToRedraw();
 							oThis._paintForms();
 						}
 							
@@ -1500,7 +1512,12 @@
 						oThis._paintFormsHighlight();
 						oThis.mouseDownFieldObject.onMouseDown(AscCommon.global_mouseEvent.X, AscCommon.global_mouseEvent.Y, e);
 						if (oThis.mouseDownFieldObject._actions.Format) {
-							oThis._paintForms();
+							/*
+								to do
+								при щелчке по форме с установленным форматом, чтобы отобразить неформатированный, перерисоываются все формы
+								нужно переделать чтобы можно было увидеть неформатированный контент не отрисовывая заново все формы
+							*/
+							oThis.mouseDownFieldObject.AddToRedraw();
 						}
 
 						oThis.Api.WordControl.m_oDrawingDocument.TargetStart();
@@ -2477,10 +2494,33 @@
 					this.pagesInfo.pages[i].pageZoom = this.zoom;
 				}
 				
+				if (this.pagesInfo.pages[i].fields != null) {
+					let bFromStream = this.pagesInfo.pages[i].fields.find(function(field) {
+						if (field.IsNeedDrawFromStream() == true)
+							return true;
+					});
+					
+					if (bFromStream) {
+						tmpCanvas			= document.createElement('canvas');
+						tmpCanvas.width		= w;
+						tmpCanvas.height	= h;
+						tmpCanvasCtx		= tmpCanvas.getContext('2d');
+						tmpCanvasCtx.drawImage(page.ImageForms, 0, 0, page.ImageForms.width, page.ImageForms.height);
+
+						this.pagesInfo.pages[i].fields.forEach(function(field) {
+							// если форма не менялась, рисуем внешний вид из потока
+							if (field.IsNeedDrawFromStream() == true)
+								field.DrawOriginView(tmpCanvasCtx);
+						});
+					}
+					else
+						tmpCanvas = page.ImageForms;
+				}
+
 				let x = ((xCenter * AscCommon.AscBrowser.retinaPixelRatio) >> 0) - (w >> 1);
 				let y = ((page.Y - yPos) * AscCommon.AscBrowser.retinaPixelRatio) >> 0;
-				
-				ctx.drawImage(page.ImageForms, 0, 0, page.ImageForms.width, page.ImageForms.height, x, y, w, h);
+
+				ctx.drawImage(tmpCanvas, 0, 0, page.ImageForms.width, page.ImageForms.height, x, y, w, h);
 			}
 
 			if (this.mouseDownFieldObject && this.mouseDownFieldObject.UpdateScroll)

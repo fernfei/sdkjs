@@ -294,9 +294,10 @@
 
         this._apIdx = -1; // индекс формы на странице в исходном файле (в массиве метода getInteractiveForms), используется для получения appearance
         
-        this._needDrawHighlight = false;
+        this._needDrawHighlight = true;
         this._needRecalc        = false;
         this._wasChanged        = false; // была ли изменена форма
+        this._bDrawFromStream   = false; // нужно ли рисовать из стрима
 
         private_getViewer().ImageMap = {};
         private_getViewer().InitDocument = function() {return};
@@ -438,16 +439,22 @@
     };
 
     CBaseField.prototype.DrawHighlight = function(oCtx) {
-        let oViewer = private_getViewer();
-        let nScale = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
+        let oViewer     = private_getViewer();
+        let nScale      = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
 
+        let X       = Math.round(this._pagePos.x * nScale);
+        let Y       = Math.round(this._pagePos.y * nScale);
+        let nWidth  = Math.round(this._pagePos.w * nScale);
+        let nHeight = Math.round(this._pagePos.h * nScale);
+        
+        oCtx.globalAlpha = 0.6; 
         if (this.type == "button" && this._buttonPressed) {
             oCtx.fillStyle = `rgb(${BUTTON_PRESSED.r}, ${BUTTON_PRESSED.g}, ${BUTTON_PRESSED.b})`;
-            oCtx.fillRect(this._pagePos.x * nScale, this._pagePos.y * nScale, this._pagePos.w * nScale, this._pagePos.h * nScale);
+            oCtx.fillRect(X, Y, nWidth, nHeight);
         }
         else {
             oCtx.fillStyle = `rgb(${FIELDS_HIGHLIGHT.r}, ${FIELDS_HIGHLIGHT.g}, ${FIELDS_HIGHLIGHT.b})`;
-            oCtx.fillRect(this._pagePos.x * nScale, this._pagePos.y * nScale, this._pagePos.w * nScale, this._pagePos.h * nScale);
+            oCtx.fillRect(X, Y, nWidth, nHeight);
         }
     };
 
@@ -460,22 +467,23 @@
             return;
         }
 
-        let X       = this._pagePos.x * nScale;
-        let Y       = this._pagePos.y * nScale;
-        let nWidth  = this._pagePos.w * nScale;
-        let nHeight = this._pagePos.h * nScale;
+        let X       = Math.round(this._pagePos.x * nScale) + nLineWidth / 2;
+        let Y       = Math.round(this._pagePos.y * nScale) + nLineWidth / 2;
+        let nWidth  = Math.round(this._pagePos.w * nScale) - nLineWidth;
+        let nHeight = Math.round(this._pagePos.h * nScale) - nLineWidth;
 
         let color = {
             r: this._borderColor[0] * 255,
             g: this._borderColor[1] * 255,
             b: this._borderColor[2] * 255
         }
+        oCtx.strokeStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+
         switch (this._borderStyle) {
             case BORDER_TYPES.solid:
                 oCtx.setLineDash([]);
                 oCtx.beginPath();
                 oCtx.rect(X, Y, nWidth, nHeight);
-                oCtx.strokeStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 oCtx.stroke();
                 break;
             case BORDER_TYPES.beveled:
@@ -494,7 +502,7 @@
                 oCtx.lineTo(X + nWidth - nLineWidth / 2, Y + nHeight - nLineWidth / 2);
                 oCtx.lineTo(X + nWidth - nLineWidth / 2, Y + nHeight - nLineWidth - nLineWidth / 2);
 
-                oCtx.fillStyle = "gray";
+                oCtx.fillStyle = "rgb(192, 192, 192)";
                 oCtx.closePath();
                 oCtx.fill();
 
@@ -508,7 +516,7 @@
                 oCtx.lineTo(X + nWidth - nLineWidth / 2, Y + nHeight - nLineWidth);
                 oCtx.lineTo(X + nWidth - nLineWidth - nLineWidth / 2, Y + nHeight - nLineWidth);
 
-                oCtx.fillStyle = "gray";
+                oCtx.fillStyle = "rgb(192, 192, 192)";
                 oCtx.closePath();
                 oCtx.fill();
 
@@ -594,12 +602,7 @@
 
         // draw comb cells
         if ((this._borderStyle == BORDER_TYPES.solid || this._borderStyle == BORDER_TYPES.dashed) && (this.type == "text" && this._comb == true)) {
-            let oMargins = this.GetBordersWidth(true);
-            let nWidth = (this._rect[2] - this._rect[0]) * 0.98 - oMargins.left - oMargins.right;
-            
-            let nCombWidth = (nWidth / this._charLimit) * nScale;
-            X = X + (this._rect[2] - this._rect[0]) * 0.01 + oMargins.left;
-
+            let nCombWidth = (nWidth / this._charLimit);
             let nIndentX = nCombWidth;
             
             for (let i = 0; i < this._charLimit - 1; i++) {
@@ -610,8 +613,8 @@
             }
         }
     };
-    CBaseField.prototype.SetNeedRecalc = function(isChanged) {
-        if (isChanged == false) {
+    CBaseField.prototype.SetNeedRecalc = function(bRecalc) {
+        if (bRecalc == false) {
             this._needRecalc = false;
         }
         else {
@@ -621,10 +624,18 @@
     };
     CBaseField.prototype.SetWasChanged = function(isChanged) {
         this._wasChanged = isChanged;
+        this.SetDrawFromStream(!isChanged);
     };
     CBaseField.prototype.IsChanged = function() {
         return this._wasChanged;  
     };
+    CBaseField.prototype.IsNeedDrawFromStream = function() {
+        return this._bDrawFromStream;
+    };
+    CBaseField.prototype.SetDrawFromStream = function(bFromStream) {
+        this._bDrawFromStream = bFromStream;
+    };
+
     CBaseField.prototype.AddToRedraw = function() {
         let oViewer = private_getViewer();
         oViewer.pagesInfo.pages[this._page].needRedrawForms = true;
@@ -2028,10 +2039,10 @@
     CTextField.prototype.Draw = function(oCtx) {
         let oViewer = private_getViewer();
 
-        let X = this._rect[0] >> 0;
-        let Y = this._rect[1] >> 0;
-        let nWidth = ((this._rect[2] >> 0) - (this._rect[0] >> 0));
-        let nHeight = ((this._rect[3] >> 0) - (this._rect[1] >> 0));
+        let X = this._rect[0];
+        let Y = this._rect[1];
+        let nWidth = ((this._rect[2]) - (this._rect[0]));
+        let nHeight = ((this._rect[3]) - (this._rect[1]));
 
         // save pos in page.
         this._pagePos = {
@@ -2041,28 +2052,14 @@
             h: nHeight
         };
 
-        // рисуем внешний вид из потока, до тех пор, пока не изменим форму
-        if (this.IsChanged() == false) {
-            let originView = this.GetOriginView();
-            let nScale = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
-
-            if (originView) {
-                let x = (X * nScale) >> 0;
-                let y = (Y * nScale) >> 0;
-                let w = ((nWidth + 1) * nScale) >> 0;
-                let h = ((nHeight + 1) * nScale) >> 0;
-                oCtx.drawImage(originView, 0, 0, originView.width, originView.height, x, y, w, h);
-                return;
-            }
-        }
-
+        let nScale = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
+        
         this.DrawBorders(oCtx);
-        let oMargins = this.GetBordersWidth();
-
-        let contentX = (X + nWidth * 0.01 + oMargins.left) * g_dKoef_pix_to_mm;
-        let contentY = (Y + nWidth * 0.01 + oMargins.top) * g_dKoef_pix_to_mm;
-        let contentXLimit = (X + nWidth * 0.99 - oMargins.right) * g_dKoef_pix_to_mm;
-        let contentYLimit = (Y + nHeight - nWidth * 0.01 - oMargins.bottom) * g_dKoef_pix_to_mm;
+        
+        let contentX        = (X + nWidth * 0.01) * g_dKoef_pix_to_mm;
+        let contentY        = (Y + nWidth * 0.01) * g_dKoef_pix_to_mm;
+        let contentXLimit   = (X + nWidth * 0.99) * g_dKoef_pix_to_mm;
+        let contentYLimit   = (Y + nHeight - nWidth * 0.01) * g_dKoef_pix_to_mm;
 
         let oContentToDraw = this._actions.Format && oViewer.mouseDownFieldObject != this ? this._contentFormat : this._content;
 
@@ -2117,7 +2114,6 @@
         let widthPx = oViewer.canvas.width;
         let heightPx = oViewer.canvas.height;
         
-        let nScale = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
         oGraphics.init(oCtx, widthPx * nScale, heightPx * nScale, widthPx * g_dKoef_pix_to_mm, heightPx * g_dKoef_pix_to_mm);
 		oGraphics.m_oFontManager = AscCommon.g_fontManager;
 		oGraphics.endGlobalAlphaColor = [255, 255, 255];
@@ -2146,6 +2142,11 @@
         this._content.RecalculateCurPos();
         if (this._doNotScroll == false && this._multiline)
             this.UpdateScroll(true);
+
+        if (this.IsNeedDrawFromStream() == true) {
+            this.SetDrawFromStream(false);
+            private_getViewer()._paintForms();
+        }
     };
     CTextField.prototype.SelectionSetStart = function(x, y, e) {
         let {X, Y} = private_getPageCoordsMM(x, y, this._page);
@@ -2221,6 +2222,7 @@
             this._bAutoShiftContentView = true && this._doNotScroll == false;
         }
 
+        this.SetWasChanged(true);
         return true;
     };
     /**
@@ -2381,6 +2383,8 @@
             this.SetNeedRecalc(true);
             this._needApplyToAll = true;
         }
+
+        this.SetWasChanged(true);
     };
     /**
 	 * Synchronizes this field with fields with the same name.
@@ -3033,6 +3037,8 @@
         let oThisBounds = this.getFormRelRect();
 
         aFields.forEach(function(field) {
+            field.SetWasChanged(true);
+
             field._bAutoShiftContentView = false;
 
             field.SetNeedRecalc(true);
@@ -3123,7 +3129,13 @@
         }
 
         this.SetNeedRecalc(true);
+        this.SetWasChanged(true);
         this._needApplyToAll = true;
+
+        if (this.IsNeedDrawFromStream() == true) {
+            this.SetDrawFromStream(false);
+            private_getViewer()._paintForms();
+        }
     };
     CListBoxField.prototype.UnselectOption = function(nIdx) {
         let oApiPara = editor.private_CreateApiParagraph(this._content.GetElement(nIdx));
@@ -3795,6 +3807,9 @@
 
         canvas.width    = nWidth;
         canvas.height   = nHeight;
+
+        canvas.x    = oApearanceInfo["x"];
+        canvas.y    = oApearanceInfo["y"];
         
         let supportImageDataConstructor = (AscCommon.AscBrowser.isIE && !AscCommon.AscBrowser.isIeEdge) ? false : true;
 
@@ -3818,7 +3833,28 @@
 
         return canvas;
     };
+    CBaseField.prototype.DrawOriginView = function(oCtx) {
+        let oViewer = private_getViewer();
+        let originView = this.GetOriginView();
+        let nScale = AscCommon.AscBrowser.retinaPixelRatio * oViewer.zoom;
 
+        let X = this._rect[0];
+        let Y = this._rect[1];
+        let nWidth = ((this._rect[2]) - (this._rect[0]));
+        let nHeight = ((this._rect[3]) - (this._rect[1]));
+
+        if (originView) {
+            oCtx.clearRect(X * nScale, Y * nScale, (nWidth + 1) * nScale, ((nHeight + 1) * nScale));
+
+            let x = Math.round((X * nScale));
+            let y = Math.round((Y * nScale));
+            let w = Math.round(((nWidth + 1) * nScale));
+            let h = Math.round(((nHeight + 1) * nScale));
+
+            oCtx.drawImage(originView, 0, 0, originView.width, originView.height, originView.x, originView.y, originView.width, originView.height);
+            return;
+        }
+    };
     // for format
 
     /**

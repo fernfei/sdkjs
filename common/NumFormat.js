@@ -3878,6 +3878,7 @@ FormatParser.prototype =
         if(!bError){
             var aDate = [];
             var nMonthIndex = null;
+			var sMonthFormat = null;
             var aTime = [];
             var am = false;
             var pm = false;
@@ -4117,6 +4118,8 @@ FormatParser.prototype =
         if(!bError){
             var aDate = [];
             var nMonthIndex = null;
+			var sMonthFormat = null;
+			var monthDone = false;
             var aTime = [];
             var am = false;
             var pm = false;
