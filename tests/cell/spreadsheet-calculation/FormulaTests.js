@@ -15708,6 +15708,39 @@ $(function () {
 	});
 
 	QUnit.test("Test: \"XMATCH\"", function (assert) {
+		let array;
+
+		ws.getRange2("B101").setValue();
+		ws.getRange2("B102").setValue();
+		ws.getRange2("B103").setValue();
+		ws.getRange2("B101:B103").cleanAll();
+
+		// =XMATCH(B1,C1,3)
+		oParser = new parserFormula("XMATCH(B101,B102,-2)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,-2)");
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!", "Result of XMATCH(B101,B102,-2)");
+
+		oParser = new parserFormula("XMATCH(B101,B102,-1)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,-1)");
+		assert.strictEqual(oParser.calculate().getValue(), 1, "Result of XMATCH(B101,B102,-1)");
+
+		oParser = new parserFormula("XMATCH(B101,B102,0)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,0)");
+		assert.strictEqual(oParser.calculate().getValue(), 1, "Result of XMATCH(B101,B102,0)");
+
+		oParser = new parserFormula("XMATCH(B101,B102,1)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,1)");
+		assert.strictEqual(oParser.calculate().getValue(), 1, "Result of XMATCH(B101,B102,1)");
+
+		oParser = new parserFormula("XMATCH(B101,B102,2)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,2)");
+		assert.strictEqual(oParser.calculate().getValue(), 1, "Result of XMATCH(B101,B102,2)");
+
+		oParser = new parserFormula("XMATCH(B101,B102,3)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(B101,B102,3)");
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!", "Result of XMATCH(B101,B102,3)");
+
+
 		// ---------------------- arrays of numbers ---------------------- //
 		ws.getRange2("B50").setValue("9");
 		ws.getRange2("B51").setValue("12");
