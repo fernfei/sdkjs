@@ -15670,11 +15670,11 @@ $(function () {
 
 		oParser = new parserFormula("MATCH(F3,F106:F114,0)", "A2", ws);
 		assert.ok(oParser.parse());
-		assert.strictEqual(oParser.calculate().getValue(), 2);				// #N/A
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
 
 		oParser = new parserFormula("MATCH(F3,F106:F117,0)", "A2", ws);
 		assert.ok(oParser.parse());
-		assert.strictEqual(oParser.calculate().getValue(), 2);				// 10
+		assert.strictEqual(oParser.calculate().getValue(), 10);
 
 		oParser = new parserFormula("MATCH(0,F106:F114,0)", "A2", ws);
 		assert.ok(oParser.parse());
@@ -15746,6 +15746,10 @@ $(function () {
 		assert.ok(oParser.parse());
 		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
 
+		oParser = new parserFormula("MATCH(#DIV/0!,#NUM!)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#DIV/0!");
+
 	});
 
 	QUnit.test("Test: \"XMATCH\"", function (assert) {
@@ -15803,6 +15807,10 @@ $(function () {
 		oParser = new parserFormula("XMATCH(B101,B102,3)", "A2", ws);
 		assert.ok(oParser.parse(), "XMATCH(B101,B102,3)");
 		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!", "Result of XMATCH(B101,B102,3)");
+
+		oParser = new parserFormula("XMATCH(#DIV/0!,#NUM!)", "A2", ws);
+		assert.ok(oParser.parse(), "XMATCH(#DIV/0!,#NUM!)");
+		assert.strictEqual(oParser.calculate().getValue(), "#DIV/0!", "Result of XMATCH(#DIV/0!,#NUM!)");
 
 
 		// ---------------------- arrays of numbers ---------------------- //
