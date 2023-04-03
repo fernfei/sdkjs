@@ -15670,11 +15670,11 @@ $(function () {
 
 		oParser = new parserFormula("MATCH(F3,F106:F114,0)", "A2", ws);
 		assert.ok(oParser.parse());
-		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+		assert.strictEqual(oParser.calculate().getValue(), 2);				// #N/A
 
 		oParser = new parserFormula("MATCH(F3,F106:F117,0)", "A2", ws);
 		assert.ok(oParser.parse());
-		assert.strictEqual(oParser.calculate().getValue(), 10);
+		assert.strictEqual(oParser.calculate().getValue(), 2);				// 10
 
 		oParser = new parserFormula("MATCH(0,F106:F114,0)", "A2", ws);
 		assert.ok(oParser.parse());
@@ -15705,6 +15705,47 @@ $(function () {
 		assert.ok( oParser.parse() );
 		assert.strictEqual( oParser.calculate().getValue(), 6 );*/
 
+		ws.getRange2("B101").setValue();
+		ws.getRange2("B102").setValue();
+		ws.getRange2("B103").setValue();
+		ws.getRange2("B101:B103").cleanAll();
+
+		oParser = new parserFormula("MATCH(,)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(,,-2)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(,,-1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(,,0)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(,,1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(B101,B102)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+		
+		oParser = new parserFormula("MATCH(B101,B102,-1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(B101,B102,0)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
+		oParser = new parserFormula("MATCH(B101,B102,1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#N/A");
+
 	});
 
 	QUnit.test("Test: \"XMATCH\"", function (assert) {
@@ -15715,7 +15756,30 @@ $(function () {
 		ws.getRange2("B103").setValue();
 		ws.getRange2("B101:B103").cleanAll();
 
-		// =XMATCH(B1,C1,3)
+		oParser = new parserFormula("XMATCH(,,-2)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
+		oParser = new parserFormula("XMATCH(,,-1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
+		oParser = new parserFormula("XMATCH(,,0)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
+		oParser = new parserFormula("XMATCH(,,1)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
+		oParser = new parserFormula("XMATCH(,,2)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
+		oParser = new parserFormula("XMATCH(,,3)", "A2", ws);
+		assert.ok(oParser.parse());
+		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!");
+
 		oParser = new parserFormula("XMATCH(B101,B102,-2)", "A2", ws);
 		assert.ok(oParser.parse(), "XMATCH(B101,B102,-2)");
 		assert.strictEqual(oParser.calculate().getValue(), "#VALUE!", "Result of XMATCH(B101,B102,-2)");
@@ -16088,7 +16152,7 @@ $(function () {
 
 		oParser = new parserFormula("XMATCH(I59,\"a\",0)", "A2", ws);
 		assert.ok(oParser.parse(), "Call: XMATCH(I59,\"a\",0)");
-		assert.strictEqual(oParser.calculate().getValue(), "#N/A", "Result of XMATCH(I59,\"a\",0)");
+		assert.strictEqual(oParser.calculate().getValue(), 1, "Result of XMATCH(I59,\"a\",0)");
 
 		// TODO ms возвращает массив c длиной искомого значения
 		oParser = new parserFormula("XMATCH(I50:I55,I50:I59,0)", "A2", ws);

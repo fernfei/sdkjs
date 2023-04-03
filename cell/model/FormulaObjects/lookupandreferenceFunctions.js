@@ -2916,16 +2916,27 @@ function (window, undefined) {
 		let isXMatch = arg[4];
 
 		if(isXMatch) {
+			if (cElementType.empty === arg1.type) {
+				return new cError(cErrorType.wrong_value_type);
+			}
 			// default values for XMatch
 			arg2 = arg[2] ? arg[2] : new cNumber(0);
 			arg3 = arg[3] ? arg[3] : new cNumber(1);
 		} else {
+			if (cElementType.empty === arg1.type) {
+				return new cError(cErrorType.not_available);
+			} else if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type) {
+				if (cElementType.empty === arg1.getValue().type) {
+					return new cError(cErrorType.not_available);
+				}
+			}
 			// default values for Match
 			arg2 = arg[2] ? arg[2] : new cNumber(1);
 			arg3 = new cNumber(1);
 		}
 
 		if (cElementType.cellsRange3D === arg0.type || cElementType.cellsRange === arg0.type) {
+			// пересмотреть поведение функции при получении массива первым аргументом
 			// arg0 = arg0.cross(_arg1);
 			arg0 = arg0.getFullArray().getElementRowCol(0,0);
 
@@ -2958,8 +2969,7 @@ function (window, undefined) {
 		if (!(-1 === a2Value || 0 === a2Value || 1 === a2Value || 2 === a2Value)) {
 			return new cError(cErrorType.wrong_value_type);
 		}
-
-		// let a3value = arg3.getValue();
+		
 		let a3Value;
 		if (cElementType.array === arg3.type || cElementType.cellsRange === arg3.type || cElementType.cellsRange3D === arg3.type) {
 			a3Value = arg3.getFirstElement().tocNumber();
@@ -2971,7 +2981,6 @@ function (window, undefined) {
 			}
 			a3Value = arg3.tocNumber();
 		}
-		// a3Value = a3Value.tocNumber();
 
 		if (cElementType.error === a3Value.type) {
 			return a3Value;
@@ -2983,8 +2992,20 @@ function (window, undefined) {
 		}
 
 		if(cElementType.error === arg1.type) {
-			return new cError(cErrorType.not_available);
-		} else if (cElementType.array === arg1.type) {
+			return arg1;
+			// return new cError(cErrorType.not_available);
+		} else if (cElementType.cellsRange !== arg1.type && cElementType.cellsRange3D !== arg1.type && cElementType.array !== arg1.type) {
+			// if value is not array/range, make him array/range
+			let arg1Array = new cArray();
+			if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type) {
+				arg1 = arg1.getValue();
+			}
+			arg1Array.addElement(arg1);
+			arg1 = arg1Array;
+			// return this._get();
+		}  
+		
+		if (cElementType.array === arg1.type) {
 			arg1 = arg1.getMatrix();
 
 			let i, a1RowCount = arg1.length, a1ColumnCount = arg1[0].length, arr;
@@ -2999,10 +3020,8 @@ function (window, undefined) {
 					arr[i] = arg1[i][0];
 				}
 			}
-			return this._calculate(arr, arg0, a2Value);
-		}
-
-		if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type ||
+			return this._calculate(arr, arg0, a2Value, isXMatch);
+		} else if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type ||
 			cElementType.cellsRange === arg1.type || cElementType.cellsRange3D === arg1.type) {
 			// add range.isonecell
 			let oSearchRange = arg1.getRange();
@@ -3021,7 +3040,8 @@ function (window, undefined) {
 			// return this._get(oSearchRange, arg0, arg2, arg3, bHor, isXMatch);
 			return this._get(oSearchRange, arg0, a2Value, a3Value, bHor, isXMatch);
 		} else {
-			return new cError(cErrorType.not_available);
+			// return new cError(cErrorType.not_available);
+			return new cError(cErrorType.wrong_value_type);
 		}
 	};
 	MatchCache.prototype._get = function (range, arg0, arg2, arg3, bHor, isXMatch) {
@@ -3054,17 +3074,22 @@ function (window, undefined) {
 		}
 		return res;
 	};
-	MatchCache.prototype._calculate = function (arr, a0, a2) {
+	MatchCache.prototype._calculate = function (arr, a0, a2, isXMatch) {
 		let a2Value = a2,	// let a2Value = a2.getValue();
 			a0Type = a0.type,
 			a0Value = a0.getValue();
 
+		// if (a0.type === cElementType.cell || a0.type === cElementType.cell3D) {
+		// 	a0Value = a0.getValue();
+		// 	a0Type = a0Value.type;
+		// }
+
 		if (!(cElementType.number === a0Type || cElementType.string === a0Type || cElementType.bool === a0Type ||
 			cElementType.error === a0Type || cElementType.empty === a0Type)) {
+			a0Type = a0Value.type;
 			if(cElementType.empty === a0Value.type) {
 				a0Value = a0Value.tocNumber();
 			}
-			a0Type = a0Value.type;
 			a0Value = a0Value.getValue();
 		}
 
@@ -3080,19 +3105,25 @@ function (window, undefined) {
 							break;
 						}
 					} else {
-						if (item == a0Value) {
+						if (item.getValue() == a0Value) {
 							index = curIndex;
 							break;
 						}
 					}
 				} else if (1 === a2Value) {
-					if (item <= a0Value) {
+					if (item.getValue() <= a0Value) {
 						index = curIndex;
 					} else {
 						break;
 					}
 				} else if (-1 === a2Value) {
-					if (item >= a0Value) {
+					if (item.getValue() >= a0Value) {
+						index = curIndex;
+					} else {
+						break;
+					}
+				} else if (2 === a2Value && isXMatch) {
+					if (item.getValue() >= a0Value) {
 						index = curIndex;
 					} else {
 						break;
@@ -3147,7 +3178,7 @@ function (window, undefined) {
 							}
 						}
 					} else if (-1 === a2Value || 1 === a2Value) {
-						if (item == a0Value) {
+						if (item.getValue() == a0Value) {
 							index = curIndex;
 							break;
 						} 
