@@ -2391,7 +2391,7 @@ CChartsDrawer.prototype =
         return {w: w , h: h , startX: this.calcProp.chartGutter._left / this.calcProp.pxToMM, startY: this.calcProp.chartGutter._top / this.calcProp.pxToMM};
 	},
 
-	drawPaths: function (paths, series, useNextPoint, bIsYVal, byIdx) {
+	drawPaths: function (paths, series, useNextPoint, bIsYVal, byIdx, joinType) {
 
 		var seria, brush, pen, numCache, point;
 		var seriesPaths = paths.series;
@@ -2452,7 +2452,7 @@ CChartsDrawer.prototype =
 					}
 				}
 				if (seriesPaths[i][j]) {
-					this.drawPath(seriesPaths[i][j], pen, brush);
+					this.drawPath(seriesPaths[i][j], pen, brush, joinType);
 				}
 			}
 		}
@@ -2554,7 +2554,7 @@ CChartsDrawer.prototype =
 		}
 	},
 
-	drawPath: function(path, pen, brush)
+	drawPath: function(path, pen, brush, joinType)
 	{
 		if(!AscFormat.isRealNumber(path)){
 			return;
@@ -2563,8 +2563,14 @@ CChartsDrawer.prototype =
 		if(!oPath)
 			return;
 		
-		if(pen)
-            oPath.stroke = true;
+		if(pen) {
+			oPath.stroke = true;
+
+			if (pen && pen.Join && joinType != null) {
+				pen = pen.createDuplicate();
+				pen.Join.type = joinType;
+			}
+		}
 
 		var cGeometry = new CGeometry2();
 		this.cShapeDrawer.Clear();
@@ -12523,12 +12529,13 @@ drawRadarChart.prototype = {
 	_drawLines: function () {
 		//this.cShapeDrawer.Graphics.SaveGrState();
 		//this.cShapeDrawer.Graphics.AddClipRect(this.chartProp.chartGutter._left / this.chartProp.pxToMM, this.chartProp.chartGutter._top / this.chartProp.pxToMM, this.chartProp.trueWidth / this.chartProp.pxToMM, this.chartProp.trueHeight / this.chartProp.pxToMM);
+		let joinType = Asc['c_oAscLineJoinType'].Round;
 		if (this.radarStyle === AscFormat.RADAR_STYLE_FILLED) {
 			for (var i = 0; i < this.fillPaths.length; i++) {
-				this.cChartDrawer.drawPath(this.fillPaths[i].path, this.fillPaths[i].pen, this.fillPaths[i].brush);
+				this.cChartDrawer.drawPath(this.fillPaths[i].path, this.fillPaths[i].pen, this.fillPaths[i].brush, joinType);
 			}
 		} else {
-			this.cChartDrawer.drawPaths(this.paths, this.chart.series, true);
+			this.cChartDrawer.drawPaths(this.paths, this.chart.series, true, null, null, joinType);
 			this.cChartDrawer.drawPathsPoints(this.paths, this.chart.series);
 		}
 	}
