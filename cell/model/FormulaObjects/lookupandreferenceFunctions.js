@@ -1509,6 +1509,9 @@ function (window, undefined) {
 				if(index === undefined) {
 					index = _func.binarySearchByRange(arg0, arg1);
 
+					let testIndex = _func.binarySearchByRangeNew(arg0, arg1);
+					index = testIndex ? testIndex : index;
+
 					if (index === undefined || index < 0) {
 						return new cError(cErrorType.not_available);
 					}

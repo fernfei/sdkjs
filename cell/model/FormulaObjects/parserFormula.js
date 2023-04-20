@@ -5239,6 +5239,90 @@ _func.binarySearchByRange = function ( sElem, area, regExp ) {
 
 };
 
+_func.binarySearchByRangeNew = function ( sElem, area, regExp ) {
+	let bbox, ws;
+	if (cElementType.cellsRange3D === area.type) {
+		bbox = area.bbox;
+		ws = area.getWS();
+	} else if (cElementType.cellsRange === area.type) {
+		bbox = area.range.bbox;
+		ws = area.ws;
+	}
+	let bVertical = bbox.r2 - bbox.r1 >= bbox.c2 - bbox.c1;//r>=c
+	let first = 0, /* Номер первого элемента в массиве */
+		last = bVertical ? bbox.r2 - bbox.r1 : bbox.c2 - bbox.c1, /* Номер элемента в массиве, СЛЕДУЮЩЕГО ЗА последним */
+		/* Если просматриваемый участок непустой, first<last */
+		mid;
+
+	const getValuesNoEmpty = function () {
+		let _r1 = bbox.r1,
+			_r2 = bVertical ? bbox.r2 : bbox.r1,
+			_c1 = bbox.c1,
+			_c2 = bVertical ? bbox.c1 : bbox.c2,
+			_val = [];
+		ws.getRange3(_r1, _c1, _r2, _c2)._foreachNoEmpty(function(cell) {
+			let checkTypeVal = checkTypeCell(cell);
+			if (checkTypeVal.type !== cElementType.empty) {
+				_val.push(checkTypeVal);
+				mapEmptyFullValues[_val.length - 1] = bVertical ? cell.nRow - bbox.r1 : cell.nCol - bbox.c1;
+			}
+		});
+		return _val;
+	};
+
+	let mapEmptyFullValues = [],
+		noEmptyValues = getValuesNoEmpty();
+
+	last = noEmptyValues.length - 1;
+
+	if (noEmptyValues.length === 0) {
+		return -1;
+		/* массив пуст */
+	} else if (noEmptyValues[0].value > sElem.value) {
+		return -2;
+	} else if (noEmptyValues[last].value < sElem.value) {
+		return last;
+	}
+
+	let tempValue;
+	while (first < last) {
+		mid = Math.floor(first + (last - first) / 2);
+		tempValue = noEmptyValues[mid];
+		if (sElem.value === tempValue.value) {
+			// exact match. Find the last item with the same value and return his index
+			last = _func.getLastMatch(mid, tempValue, noEmptyValues);
+			break;
+		}
+		if (sElem.value <= tempValue.value || ( regExp && regExp.test(tempValue.value) )) {
+			last = mid;
+		} else {
+			first = mid + 1;
+		}
+	}
+
+	/* Если условный оператор if(n==0) и т.д. в начале опущен - значит, тут раскомментировать!    */
+	if (/* last<n &&*/ noEmptyValues[last].value === sElem.value) {
+		return mapEmptyFullValues[last];
+		/* Искомый элемент найден. last - искомый индекс */
+	} else {
+		return mapEmptyFullValues[last - 1];
+		/* Искомый элемент не найден. Но если вам вдруг надо его вставить со сдвигом, то его место - last.    */
+	}
+
+};
+
+_func.getLastMatch = function (index, value, array) {
+	let resIndex = index;
+	for (let i = index; i < array.length; i++) {
+		if (array[i].type === value.type && array[i].value === value.value) {
+			resIndex = i;
+		} else {
+			break;
+		}
+	}
+	return resIndex;
+}
+
 _func[cElementType.number][cElementType.cell] = function ( arg0, arg1, what, bbox ) {
     var ar1 = arg1.tocNumber();
     switch ( what ) {
