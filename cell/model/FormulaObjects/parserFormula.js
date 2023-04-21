@@ -5284,7 +5284,7 @@ _func.binarySearchByRangeNew = function ( sElem, area, regExp ) {
 		return last;
 	}
 
-	let tempValue;
+	let tempValue, cacheIndex = -1;
 	while (first < last) {
 		mid = Math.floor(first + (last - first) / 2);
 		tempValue = noEmptyValues[mid];
@@ -5293,19 +5293,37 @@ _func.binarySearchByRangeNew = function ( sElem, area, regExp ) {
 			last = _func.getLastMatch(mid, tempValue, noEmptyValues);
 			break;
 		}
-		if (sElem.value <= tempValue.value || ( regExp && regExp.test(tempValue.value) )) {
+
+		if (tempValue.type !== cElementType.error) {
+			cacheIndex = mid;
+		}
+
+		if (Math.abs(first - last) === 1) {
+			// first and last items are next to each other.
+			if (sElem.value < tempValue.value) {
+				last = mid;
+			} else if (tempValue.type === cElementType.error) {
+				last = cacheIndex === -1 ? mid : cacheIndex;
+			} else {
+				last = mid;
+			}
+			break;
+		}
+
+		if (sElem.value < tempValue.value || ( regExp && regExp.test(tempValue.value) )) {
 			last = mid;
 		} else {
-			first = mid + 1;
+			// first = mid + 1;
+			first = mid;
 		}
 	}
 
 	/* Если условный оператор if(n==0) и т.д. в начале опущен - значит, тут раскомментировать!    */
 	if (/* last<n &&*/ noEmptyValues[last].value === sElem.value) {
-		return mapEmptyFullValues[last];
+		return mapEmptyFullValues[last];	
 		/* Искомый элемент найден. last - искомый индекс */
 	} else {
-		return mapEmptyFullValues[last - 1];
+		return mapEmptyFullValues[last];
 		/* Искомый элемент не найден. Но если вам вдруг надо его вставить со сдвигом, то его место - last.    */
 	}
 
