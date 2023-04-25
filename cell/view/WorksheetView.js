@@ -4858,6 +4858,7 @@
 
 		let t = this;
 		let doDrawArrow = function (_from, _to, external) {
+			// draw line
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
 
@@ -4877,6 +4878,23 @@
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(x2, y2);
 			ctx.closePath().stroke();
+
+			// draw arrow in the end
+			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 8;
+
+			ctx.beginPath();
+			ctx.moveTo(x2, y2);
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 6), y2 - arrowSize * Math.sin(angle - Math.PI / 6));
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 6), y2 - arrowSize * Math.sin(angle + Math.PI / 6));
+			ctx.setFillStyle(!external ? lineColor : externalLineColor);
+			ctx.closePath().fill();
+
+			// draw dot on start (dot should drawn once)
+			ctx.beginPath();
+			ctx.arc(x1, y1, 2, 0, Math.PI * 2, true);
+			ctx.setFillStyle(externalLineColor);
+			ctx.closePath().fill();
+
 		};
 
 		let otherSheetMap = {};
