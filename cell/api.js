@@ -5791,6 +5791,9 @@ var editor;
   };
 
   spreadsheet_api.prototype.asc_setCellBold = function(isBold) {
+  	this.asc_TraceDependents();
+  	return;
+
   	var ws = this.wb.getWorksheet();
     if (ws.objectRender.selectedGraphicObjectsExists() && ws.objectRender.controller.setCellBold) {
       ws.objectRender.controller.setCellBold(isBold);
@@ -5801,7 +5804,10 @@ var editor;
   };
 
   spreadsheet_api.prototype.asc_setCellItalic = function(isItalic) {
-    var ws = this.wb.getWorksheet();
+    this.asc_RemoveTraceArrows(Asc.c_oAscRemoveArrowsType.all);
+    return;
+
+  	var ws = this.wb.getWorksheet();
     if (ws.objectRender.selectedGraphicObjectsExists() && ws.objectRender.controller.setCellItalic) {
       ws.objectRender.controller.setCellItalic(isItalic);
     } else {
@@ -8525,6 +8531,46 @@ var editor;
 		return res == null ? AscCommonExcel.ESheetViewType.normal : res;
 	};
 
+	spreadsheet_api.prototype.asc_TracePrecedents = function() {
+		if (this.collaborativeEditing.getGlobalLock() || !this.canEdit()) {
+			return;
+		}
+		let wb = this.wb;
+		if (!wb) {
+			return;
+		}
+
+		var ws = wb.getWorksheet();
+		return ws.tracePrecedents();
+	};
+
+	spreadsheet_api.prototype.asc_TraceDependents = function() {
+		if (this.collaborativeEditing.getGlobalLock() || !this.canEdit()) {
+			return;
+		}
+		let wb = this.wb;
+		if (!wb) {
+			return;
+		}
+		var ws = wb.getWorksheet();
+		return ws.traceDependents();
+	};
+
+	spreadsheet_api.prototype.asc_RemoveTraceArrows = function(type) {
+		if (this.collaborativeEditing.getGlobalLock() || !this.canEdit()) {
+			return;
+		}
+		let wb = this.wb;
+		if (!wb) {
+			return;
+		}
+		var ws = wb.getWorksheet();
+		//c_oAscRemoveArrowsType
+		return ws.removeTraceArrows(type);
+	};
+
+
+
   /*
    * Export
    * -----------------------------------------------------------------------------
@@ -9081,6 +9127,9 @@ var editor;
   prot["asc_SetSheetViewType"]   = prot.asc_SetSheetViewType;
   prot["asc_GetSheetViewType"]   = prot.asc_GetSheetViewType;
 
+  prot["asc_TracePrecedents"]     = prot.asc_TracePrecedents;
+  prot["asc_TraceDependents"]     = prot.asc_TraceDependents;
+  prot["asc_RemoveTraceArrows"]   = prot.asc_RemoveTraceArrows;
 
 
 

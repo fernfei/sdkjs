@@ -506,6 +506,8 @@
 		this.pagesModeData = null;
 		this.pageBreakPreviewSelectionRange = null;
 
+		this.traceDependentsManager = new AscCommonExcel.TraceDependentsManager(this);
+
         this._init();
 
         return this;
@@ -4830,6 +4832,73 @@
 		}
 	};
 
+	WorksheetView.prototype.drawTraceDependents = function () {
+		let traceManager = this.traceDependentsManager;
+		if(traceManager && (traceManager.isHaveDependents() || traceManager.isHavePrecedents())) {
+			this._drawElements(this.drawTraceArrows);
+		}
+	};
+
+	WorksheetView.prototype.drawTraceArrows = function (visibleRange, offsetX, offsetY) {
+		let traceManager = this.traceDependentsManager;
+
+		let ctx = this.overlayCtx;
+
+		let isRetina = AscBrowser.retinaPixelRatio === 2;
+		let widthLine = 1;
+
+		if (isRetina) {
+			widthLine = AscCommon.AscBrowser.convertToRetinaValue(widthLine, true);
+		}
+
+		ctx.setLineWidth(widthLine);
+
+		let lineColor = new CColor(0, 0, 208);
+		let externalLineColor = new CColor(0, 0, 0);
+
+		let t = this;
+		let doDrawArrow = function (_from, _to, external) {
+			ctx.beginPath();
+			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
+
+			let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 2;
+			let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
+
+			let x2, y2;
+			if (external) {
+				//TODO max
+				x2 = t._getColLeft(_from.col === 0 ? _from.col + 1 :_from.col - 1) - offsetX;
+				y2 = t._getRowTop(_from.row === 0 ? _from.row + 1 :_from.row - 1) - offsetY;
+			} else {
+				x2 = t._getColLeft(_to.col) - offsetX + t._getColumnWidth(_to.col) / 2;
+				y2 = t._getRowTop(_to.row) - offsetY + t._getRowHeight(_to.row) / 2;
+			}
+
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(x2, y2);
+			ctx.closePath().stroke();
+		};
+
+		let otherSheetMap = {};
+		traceManager.forEachDependents(function (from, to) {
+			if (from && to) {
+				for (let i in to) {
+					let cellFrom = AscCommonExcel.getFromCellIndex(from, true);
+					if (-1 !== i.indexOf(";")) {
+						if (visibleRange.contains2(cellFrom) && !otherSheetMap[from]) {
+							doDrawArrow(cellFrom, null, true);
+						}
+					} else {
+						let cellTo = AscCommonExcel.getFromCellIndex(i, true);
+						if (visibleRange.contains2(cellFrom) || visibleRange.contains2(cellTo)) {
+							doDrawArrow(cellFrom, cellTo);
+						}
+					}
+				}
+			}
+		});
+	};
+
 	WorksheetView.prototype._drawPageBreakPreviewText = function (drawingCtx, range, leftFieldInPx, topFieldInPx) {
 
 		if(!this.isPageBreakPreview(true)) {
@@ -6044,6 +6113,8 @@
             }
         }
 
+		this.drawTraceDependents();
+
         // restore canvas' original clipping range
         ctx.restore();
 
@@ -6338,7 +6409,8 @@
 
 		//TODO пересмотреть! возможно стоит очищать частями в зависимости от print_area
 		//print lines view
-		if(this.viewPrintLines || this.copyCutRange || (this.isPageBreakPreview(true) && this.pagesModeData)) {
+		let isTraceDependents = this.traceDependentsManager.isHaveData();
+		if(this.viewPrintLines || this.copyCutRange || (this.isPageBreakPreview(true) && this.pagesModeData) || isTraceDependents) {
 			this.overlayCtx.clear();
 		}
 
@@ -24841,6 +24913,30 @@
 	WorksheetView.prototype.setColsCount = function (val) {
 		this.nColsCount = val;
 	};
+
+	//cell trace dependents/precedents
+	WorksheetView.prototype.tracePrecedents = function () {
+		if (this.traceDependentsManager) {
+			this.traceDependentsManager.calculatePrecedents();
+			this.updateSelection();
+		}
+	};
+
+	WorksheetView.prototype.traceDependents = function () {
+		if (this.traceDependentsManager) {
+			this.traceDependentsManager.calculateDependents();
+			this.updateSelection();
+		}
+	};
+
+	WorksheetView.prototype.removeTraceArrows = function (type) {
+		if (this.traceDependentsManager && this.traceDependentsManager.isHaveData()) {
+			this.cleanSelection();
+			this.traceDependentsManager.clear(type);
+			this.updateSelection();
+		}
+	};
+
 
 
 	//------------------------------------------------------------export---------------------------------------------------
