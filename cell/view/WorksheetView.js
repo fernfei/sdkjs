@@ -4865,42 +4865,41 @@
 			let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 2;
 			let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
 
-			let x2, y2;
+			let x2, y2, length, dashLength;
 			if (external) {
 				let miniTableCol, miniTableRow, isTableLeft;
 				//TODO max
 				// 4 pointer options:
 				if (_from.col < 2 && _from.row < 3) {
 					// 1) Right down (+1r, +1c)
-					x2 = t._getColLeft(_from.col + 1) + t._getColumnWidth(_from.col + 1);
-					y2 = t._getRowTop(_from.row + 1) + t._getRowHeight(_from.row + 1);
+					x2 = t._getColLeft(_from.col + 1) - offsetX + t._getColumnWidth(_from.col + 1);
+					y2 = t._getRowTop(_from.row + 1) - offsetY + t._getRowHeight(_from.row + 1);
 					miniTableCol = _from.col + 2;
 					miniTableRow = _from.row + 1;
 				} else if (_from.col < 2 && _from.row >= 3) {
 					// 2) Right up(-1r,+1c)
-					x2 = t._getColLeft(_from.col + 1) + t._getColumnWidth(_from.col + 1);
-					y2 = t._getRowTop(_from.row - 1);
+					x2 = t._getColLeft(_from.col + 1) - offsetX + t._getColumnWidth(_from.col + 1);
+					y2 = t._getRowTop(_from.row - 1) - offsetY;
 					miniTableCol = _from.col + 2;
 					miniTableRow = _from.row - 2;
 				} else if (_from.col >= 2 && _from.row < 3) {
 					// 3) Left down(+1r,-1c)
-					x2 = t._getColLeft(_from.col - 1);
-					y2 = t._getRowTop(_from.row + 1) + t._getRowHeight(_from.row + 1);
+					x2 = t._getColLeft(_from.col - 1) - offsetX;
+					y2 = t._getRowTop(_from.row + 1) - offsetY + t._getRowHeight(_from.row + 1);
 					miniTableCol = _from.col - 2;
 					miniTableRow = _from.row + 1;
 					isTableLeft = true;
 				} else {
 					// 4) Left up(-1r,-1c)
-					x2 = t._getColLeft(_from.col - 1);
-					y2 = t._getRowTop(_from.row - 1);
+					x2 = t._getColLeft(_from.col - 1) - offsetX;
+					y2 = t._getRowTop(_from.row - 1) - offsetY;
 					miniTableCol = _from.col - 2;
 					miniTableRow = _from.row - 2;
 					isTableLeft = true;
 				}
 				// ?? line should always contain 10 dotted lines
-				const length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
-				const dashLength = length / 20;
-				ctx.setLineDash([10, 8]);
+				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
+				dashLength = length / 20 * t.getZoom();
 
 				// draw table in the end of arrow
 				drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
@@ -4910,22 +4909,23 @@
 				y2 = t._getRowTop(_to.row) - offsetY + t._getRowHeight(_to.row) / 2;
 			}
 
+			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(x2, y2);
 			ctx.closePath().stroke();
 
 			// draw arrow in the end
-			const angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 6 * t.getZoom();
+			const angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 5 * t.getZoom();
 
 			ctx.beginPath();
 			ctx.moveTo(x2, y2);
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 6), y2 - arrowSize * Math.sin(angle - Math.PI / 6));
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 6), y2 - arrowSize * Math.sin(angle + Math.PI / 6));
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 8), y2 - arrowSize * Math.sin(angle - Math.PI / 8));
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 8), y2 - arrowSize * Math.sin(angle + Math.PI / 8));
 			ctx.setFillStyle(!external ? lineColor : externalLineColor);
 			ctx.closePath().fill();
 
 			// draw dot on start
-			const dotRadius = 2 * t.getZoom();
+			const dotRadius = 3 * t.getZoom();
 			ctx.beginPath();
 			ctx.arc(x1, y1, dotRadius, 0, 2 * Math.PI);
 			ctx.setFillStyle(externalLineColor);
@@ -4934,17 +4934,25 @@
 		};
 
 		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
-			let offsetY = t._getRowHeight(destRow) * 0.1;
+			const offsetY = (2 * t.getZoom()) > 6 ? 6 : 2 * t.getZoom();
 			const tableWidth = 15 * t.getZoom();
-			// ? Adaptive height
 			const tableHeight = 14 * t.getZoom();
 			const cellWidth = tableWidth / 3;
 			const cellHeight = tableHeight / 5;
-			const lineWidth = 1;
+			const lineWidth = 1 * (t.getZoom());
+			const whiteColor = new CColor(255, 255, 255);
+			const cellStrokesColor = new CColor(192, 192, 192);
 
 			const x1 = isTableLeft ? x - tableWidth : x;
 			const y1 = y - tableHeight - offsetY;
-		  		
+
+			ctx.setLineWidth(lineWidth);
+
+			// Draw a white canvas on which the table will be located
+			ctx.setFillStyle(whiteColor);
+			ctx.fillRect(x1 - 1, y1 - 1, tableWidth + 1, tableHeight + 1);
+		  	
+			ctx.setStrokeStyle(cellStrokesColor);
 			// Draw vertical lines between cells
 			for (let i = 1; i < 3; i++) {
 				const x2 = x1 + i * cellWidth;
@@ -4964,15 +4972,19 @@
 				ctx.lineTo(x1 + tableWidth, y2);
 				ctx.stroke();
 			}
-
+			
 			// Draw blue stripe
+			ctx.beginPath();
 			ctx.setFillStyle(lineColor);
+			ctx.setStrokeStyle(externalLineColor);
 			ctx.fillRect(x1, y1, tableWidth, cellHeight);
-		  
+			ctx.moveTo(x1, y1 + cellHeight);
+			ctx.lineTo(x1 + tableWidth, y1 + cellHeight);
+			ctx.closePath().stroke();
+
 			// Draw outer table border
 			ctx.beginPath();
 			ctx.setLineDash([]);
-			ctx.lineWidth = lineWidth * 2;
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(x1 + tableWidth, y1);
 			ctx.lineTo(x1 + tableWidth, y1 + tableHeight);
