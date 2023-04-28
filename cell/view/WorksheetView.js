@@ -4845,10 +4845,19 @@
 		let ctx = this.overlayCtx;
 
 		let isRetina = AscBrowser.retinaPixelRatio === 2;
-		let widthLine = 1;
+		let isCustomScaling = AscBrowser.isCustomScaling();
+		let widthLine = 1, customScale = AscBrowser.retinaPixelRatio;
+		
+		AscBrowser.checkZoom();
 
-		if (isRetina) {
-			widthLine = AscCommon.AscBrowser.convertToRetinaValue(widthLine, true);
+		let zoom = this.getZoom();
+
+		// if (isRetina) {
+		// 	widthLine = AscCommon.AscBrowser.convertToRetinaValue(widthLine, true);
+		// }
+
+		if (isCustomScaling) {
+			widthLine = customScale * widthLine * zoom;
 		}
 
 		ctx.setLineWidth(widthLine);
@@ -4897,9 +4906,9 @@
 					miniTableRow = _from.row - 2;
 					isTableLeft = true;
 				}
-				// ?? line should always contain 10 dotted lines
+				// ?? line should always contain 7-10 dotted lines
 				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
-				dashLength = length / 20 * t.getZoom();
+				dashLength = length / 20 * zoom;
 
 				// draw table in the end of arrow
 				drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
@@ -4914,8 +4923,12 @@
 			ctx.lineTo(x2, y2);
 			ctx.closePath().stroke();
 
-			// draw arrow in the end
-			const angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 5 * t.getZoom();
+			// draw arrowhead in the end
+			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 7 * zoom * customScale;
+
+			if (zoom <= 0.8) {
+				arrowSize = arrowSize / zoom;
+			}
 
 			ctx.beginPath();
 			ctx.moveTo(x2, y2);
@@ -4925,7 +4938,7 @@
 			ctx.closePath().fill();
 
 			// draw dot on start
-			const dotRadius = 3 * t.getZoom();
+			const dotRadius = 3 * zoom * customScale;
 			ctx.beginPath();
 			ctx.arc(x1, y1, dotRadius, 0, 2 * Math.PI);
 			ctx.setFillStyle(externalLineColor);
@@ -4934,12 +4947,12 @@
 		};
 
 		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
-			const offsetY = (2 * t.getZoom()) > 6 ? 6 : 2 * t.getZoom();
-			const tableWidth = 15 * t.getZoom();
-			const tableHeight = 14 * t.getZoom();
+			const offsetY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
+			const tableWidth = 15 * zoom * customScale;
+			const tableHeight = 14 * zoom * customScale;
 			const cellWidth = tableWidth / 3;
 			const cellHeight = tableHeight / 5;
-			const lineWidth = 1 * (t.getZoom());
+			const lineWidth = 1 * zoom * customScale;
 			const whiteColor = new CColor(255, 255, 255);
 			const cellStrokesColor = new CColor(192, 192, 192);
 
