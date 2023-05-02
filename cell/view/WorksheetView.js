@@ -4931,29 +4931,20 @@
 			ctx.lineTo(newX2, newY2);
 			ctx.closePath().stroke();
 
-			// draw arrowhead in the end
 			if (zoom <= 0.8) {
 				arrowSize = arrowSize / zoom;
 			}
 
-			ctx.beginPath();
-			ctx.moveTo(x2, y2);
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 8), y2 - arrowSize * Math.sin(angle - Math.PI / 8));
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 8), y2 - arrowSize * Math.sin(angle + Math.PI / 8));
-			ctx.setFillStyle(!external ? lineColor : externalLineColor);
-			ctx.closePath().fill();
+			// draw arrowhead in the end
+			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
 
-			// draw dot on start
-			const dotRadius = 3 * zoom * customScale;
-			ctx.beginPath();
-			ctx.arc(x1, y1, dotRadius, 0, 2 * Math.PI);
-			ctx.setFillStyle(!external ? lineColor : externalLineColor);
-			ctx.closePath().fill();
+			// draw dot at the beginning of the line
+			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
 
 		};
 
 		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
-			const offsetY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
+			const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
 			const tableWidth = 15 * zoom * customScale;
 			const tableHeight = 14 * zoom * customScale;
 			const cellWidth = tableWidth / 3;
@@ -4963,7 +4954,8 @@
 			const cellStrokesColor = new CColor(192, 192, 192);
 
 			const x1 = isTableLeft ? x - tableWidth : x;
-			const y1 = y - tableHeight - offsetY;
+			// Padding for a table inside a cell
+			const y1 = y - tableHeight - paddingY;
 
 			ctx.setLineWidth(lineWidth);
 
@@ -5010,7 +5002,24 @@
 			ctx.lineTo(x1, y1 + tableHeight);
 			ctx.closePath();
 			ctx.stroke();
-		}
+		};
+
+		const drawArrowHead = function (x2, y2, arrowSize, angle, color) {
+			ctx.beginPath();
+			ctx.moveTo(x2, y2);
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 8), y2 - arrowSize * Math.sin(angle - Math.PI / 8));
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 8), y2 - arrowSize * Math.sin(angle + Math.PI / 8));
+			ctx.setFillStyle(color);
+			ctx.closePath().fill()
+		};
+
+		const drawDot = function (x, y, color) {
+			const dotRadius = 3 * zoom * customScale;
+			ctx.beginPath();
+			ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
+			ctx.setFillStyle(color);
+			ctx.closePath().fill();
+		};
 
 		let otherSheetMap = {};
 		traceManager.forEachDependents(function (from, to) {
