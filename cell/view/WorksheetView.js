@@ -4847,22 +4847,21 @@
 		let isRetina = AscBrowser.retinaPixelRatio === 2;
 		let isCustomScaling = AscBrowser.isCustomScaling();
 		let widthLine = 1, customScale = AscBrowser.retinaPixelRatio;
-		
-		AscBrowser.checkZoom();
-
 		let zoom = this.getZoom();
 
 		// if (isRetina) {
 		// 	widthLine = AscCommon.AscBrowser.convertToRetinaValue(widthLine, true);
 		// }
 
-		if (isCustomScaling) {
-			widthLine = customScale * widthLine * zoom;
-		}
+		// if (isCustomScaling) {
+		// 	widthLine = customScale * widthLine * zoom;
+		// }
+
+		widthLine = customScale * widthLine * zoom;
 
 		ctx.setLineWidth(widthLine);
 
-		let lineColor = new CColor(0, 0, 208);
+		let lineColor = new CColor(0, 0, 255);
 		let externalLineColor = new CColor(0, 0, 0);
 
 		let t = this;
@@ -4871,7 +4870,7 @@
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
 
-			let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 2;
+			let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 4;
 			let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
 
 			let x2, y2, length, dashLength;
@@ -4914,18 +4913,25 @@
 				drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
 
 			} else {
-				x2 = t._getColLeft(_to.col) - offsetX + t._getColumnWidth(_to.col) / 2;
+				x2 = t._getColLeft(_to.col) - offsetX + t._getColumnWidth(_to.col) / 4;
 				y2 = t._getRowTop(_to.row) - offsetY + t._getRowHeight(_to.row) / 2;
 			}
 
+			// Angle and size for arrowhead
+			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 7 * zoom * customScale;
+
+			// Draw the line and subtract the padding to draw the arrowhead correctly
+			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+			let dx = (x2 - x1) / extLength;
+			let dy = (y2 - y1) / extLength;
+			let newX2 = x2 - dx * (arrowSize / 2);
+			let newY2 = y2 - dy * (arrowSize / 2);
 			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
 			ctx.moveTo(x1, y1);
-			ctx.lineTo(x2, y2);
+			ctx.lineTo(newX2, newY2);
 			ctx.closePath().stroke();
 
 			// draw arrowhead in the end
-			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 7 * zoom * customScale;
-
 			if (zoom <= 0.8) {
 				arrowSize = arrowSize / zoom;
 			}
@@ -4941,7 +4947,7 @@
 			const dotRadius = 3 * zoom * customScale;
 			ctx.beginPath();
 			ctx.arc(x1, y1, dotRadius, 0, 2 * Math.PI);
-			ctx.setFillStyle(externalLineColor);
+			ctx.setFillStyle(!external ? lineColor : externalLineColor);
 			ctx.closePath().fill();
 
 		};
