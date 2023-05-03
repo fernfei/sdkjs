@@ -72,7 +72,20 @@
 			}
 			else
 			{
-				this.Elements.push(new AscCommonWord.CSearchTextItemChar(nCharCode));
+				if (9 === nCharCode) { // \t
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(92)); // -> /
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(116)); // -> t
+				}
+				else if (10 === nCharCode) { // \n
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(92)); // -> /
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(110)); // -> n
+				} 
+				else if (13 === nCharCode) { // \r
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(92)); // -> /
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(114)); // -> r
+				}
+				else
+					this.Elements.push(new AscCommonWord.CSearchTextItemChar(nCharCode));
 			}
 		}
 	};
