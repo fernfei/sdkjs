@@ -1295,7 +1295,9 @@
         arrToRemove[arrToRemove.length - 1].Content.push(new AscWord.CRunParagraphMark());
         arrToInserts[arrToInserts.length - 1].Content.push(new AscWord.CRunParagraphMark());
         const comparison = new CDocumentResolveConflictComparison(this.originalDocument, this.revisedDocument, this.options);
-	    comparison.oBookmarkManager = this.oBookmarkManager;
+				const oOldBookmarkMeeting = this.oBookmarkManager.mapBookmarkMeeting;
+	      this.oBookmarkManager.mapBookmarkMeeting = {};
+	      comparison.oBookmarkManager = this.oBookmarkManager;
         comparison.oComparisonMoveMarkManager = this.oComparisonMoveMarkManager;
         const originalDocument = new CMockDocument();
         const revisedDocument = new CMockDocument();
@@ -1312,6 +1314,7 @@
         comparison.oComparisonMoveMarkManager.executeResolveConflictMode(function () {
             comparison.compareRoots(originalDocument, revisedDocument);
         });
+	    this.oBookmarkManager.mapBookmarkMeeting = oOldBookmarkMeeting;
         return originalParagraph.Content;
     }
 

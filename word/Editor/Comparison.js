@@ -41,6 +41,8 @@
     //EXCLUDED_PUNCTUATION[95] = true;
     EXCLUDED_PUNCTUATION[160] = true;
     //EXCLUDED_PUNCTUATION[63] = true;
+	const CHECK_BOOKMARK_END_MEETING = 0;
+	const CHECK_BOOKMARK_START_MEETING = 1;
 
     function CNode(oElement, oParent)
     {
@@ -1304,7 +1306,11 @@
 	{
 		const CNodeConstructor = this.getNodeConstructor();
 		const oNode = new CNodeConstructor(oElement, oParent);
-		this.updateBookmarksStack(oNode);
+		if (oElement instanceof CTextElement)
+		{
+			this.updateBookmarksStack(oNode);
+			this.oBookmarkManager.previousNode = oNode;
+		}
 		return oNode;
 	}
     CDocumentComparison.prototype.compareGroups = function(oBaseGroup, oCompareGroup)
@@ -2535,6 +2541,7 @@
     }
     CDocumentComparison.prototype.createNodeFromRunContentElement = function(oElement, oParentNode, oHashWords, isOriginalDocument)
     {
+	    this.oBookmarkManager.previousNode = null;
         const NodeConstructor = this.getNodeConstructor();
         const TextElementConstructor = this.getTextElementConstructor();
         const oRet = this.createNode(oElement, oParentNode);
@@ -2837,6 +2844,7 @@
 			this.needUpdateBookmarks = false;
 			this.IdName = {};
 			this.bookmarkStack = [];
+			this.mapBookmarkMeeting = {};
 		}
 
 	CComparisonBookmarkManager.prototype.init = function (oMainDocument, oRevisedDocument)
@@ -2889,14 +2897,31 @@
 			this.bookmarkStack.push(oLabel);
 		}
 	};
+
 	CComparisonBookmarkManager.prototype.updateBookmarksStack = function (oNode)
 	{
+		const arrNextStack = [];
+		const oPreviousElement = this.previousNode && this.previousNode.element;
 		for (let i = this.bookmarkStack.length - 1; i >= 0; i-= 1)
 		{
 			const oLabel = this.bookmarkStack[i];
-			oNode.addBookmark(oLabel.bookmark, oLabel.insertIndex);
+			const nBookmarkMeetingValue = this.mapBookmarkMeeting[oLabel.bookmark.GetBookmarkId()];
+			if ((oPreviousElement instanceof CTextElement) && oLabel.insertIndex === 0 && !oLabel.bookmark.IsStart() && (nBookmarkMeetingValue === CHECK_BOOKMARK_START_MEETING))
+			{
+				oPreviousElement.addBookmark(oLabel.bookmark, oPreviousElement.elements.length);
+			}
+			else if ((oLabel.insertIndex === oNode.element.elements.length) && oLabel.bookmark.IsStart() && nBookmarkMeetingValue !== CHECK_BOOKMARK_END_MEETING)
+			{
+				oLabel.insertIndex = 0;
+				arrNextStack.unshift(oLabel);
+			}
+			else
+			{
+				oNode.addBookmark(oLabel.bookmark, oLabel.insertIndex);
+				this.mapBookmarkMeeting[oLabel.bookmark.GetBookmarkId()] = oLabel.bookmark.IsStart() ? CHECK_BOOKMARK_START_MEETING : CHECK_BOOKMARK_END_MEETING;
+			}
 		}
-		this.bookmarkStack = [];
+		this.bookmarkStack = arrNextStack;
 	};
 
 	function CBookmarkLabel(oBookmark, nInsertIndex)

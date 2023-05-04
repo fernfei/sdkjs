@@ -467,6 +467,20 @@ const arrTestObjectsInfo = [
 			]
 		]
 	},
+	///////////////////////// -> 22 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello hello hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hello hello '),
+				createParagraphInfo('hello hello', null, null, {start:[{id:'1', name:'s1'}, {id:'1'}]})
+			]
+		]
+	},
 ];
 const arrAnswers = [
 	/////////////////////////////////// -> 1 <- ////////////////////////////////////////////
@@ -821,7 +835,7 @@ const arrAnswers = [
 		}),
 			createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '5'}]}),
 			createParagraphInfo('ет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
-			end: [{id: '7', name: 's9'}, {id: '12', name: 's10'}, {id: '6'}]
+			end: [{id: '6'}, {id: '7', name: 's9'}, {id: '12', name: 's10'}]
 		}), createParagraphInfo(' ', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '7'}]}),
 			createParagraphInfo('прив', null, null, {
 			end: [{
@@ -850,6 +864,17 @@ const arrAnswers = [
 				createParagraphInfo(' Hello'),
 			]
 		]
+	},
+	/////////////////////////////////// -> 22 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello'),
+				createParagraphInfo(' hello', createFindingReviewInfo(reviewtype_Add)),
+				createParagraphInfo(' '),
+				createParagraphInfo('hello hello', null, null, {start:[{id:'1', name:'s1'}, {id:'1'}]})
+			]
+		]
 	}
 ];
 const comments = [
@@ -873,7 +898,8 @@ const comments = [
 	'Blocking merging duplicate bookmarks',
 	'Merging some bookmarks',
 	'Merging in start of document and add bookmark',
-	'Remove from start of document and add bookmark'
+	'Remove from start of document and add bookmark',
+	'Merging start and end bookmarks to start of word'
 ];
 
 function merge(oMainDocument, oRevisedDocument, fCallback)
