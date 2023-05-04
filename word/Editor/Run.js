@@ -499,9 +499,17 @@ ParaRun.prototype.Get_Text = function(Text)
 				Text.Text += String.fromCharCode(Item.Value);
 				break;
 			}
-			case para_Space:
 			case para_NewLine:
+			{
+				Text.Text += undefined != Text.NewLineSeparator ? Text.NewLineSeparator : " ";
+				break;
+			}
 			case para_Tab:
+			{
+				Text.Text += undefined != Text.TabSymbol ? Text.TabSymbol : " ";
+				break;
+			}
+			case para_Space:
 			{
 				Text.Text += " ";
 				break;
@@ -3265,12 +3273,15 @@ ParaRun.prototype.GetSelectedText = function(bAll, bClearText, oPr)
             {
                 Str += AscCommon.encodeSurrogateChar(Item.value);
                 break;
-            }			case para_NewLine:
+            }
+			case para_NewLine:
 			{
-				if (oPr && true === oPr.NewLine)
-				{
-					Str += '\r';
+				if (oPr && undefined != oPr.NewLineSeparator) {
+					Str += oPr.NewLineSeparator;
 				}
+				else if (oPr && true === oPr.NewLine)
+					Str += '\r';
+				
 				break;
 			}
 			case para_End:
@@ -9719,6 +9730,10 @@ ParaRun.prototype.Set_Color = function(Value)
         this.Recalc_CompiledPr(false);
         this.private_UpdateTrackRevisionOnChangeTextPr(true);
     }
+};
+ParaRun.prototype.SetColor = function(color)
+{
+	return this.Set_Color(color);
 };
 
 ParaRun.prototype.Set_Unifill = function(Value, bForce)

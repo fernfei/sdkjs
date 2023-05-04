@@ -1670,8 +1670,7 @@
 	CAscStyle.prototype['put_UIPriority']     = CAscStyle.prototype.put_UIPriority;
 	CAscStyle.prototype['get_StyleId']        = CAscStyle.prototype.get_StyleId;
 	CAscStyle.prototype['get_TranslatedName'] = CAscStyle.prototype.get_TranslatedName;
-
-
+	
 	/**
 	 * Класс для работы с настройками нумерации
 	 * @constructor
@@ -1700,10 +1699,23 @@
 
 		return this.Lvl[nLvl];
 	};
+	CAscNumbering.prototype.get_JSONNumbering = function(singleLevel)
+	{
+		return AscWord.CNumInfo.FromNum(this, singleLevel ? 0 : null);
+	};
+	CAscNumbering.prototype.put_FromJSON = function(value)
+	{
+		let numInfo = AscWord.CNumInfo.Parse(value);
+		if (!numInfo)
+			return;
+		
+		numInfo.FillNum(this);
+	};
 	window['Asc']['CAscNumbering'] = window['Asc'].CAscNumbering = CAscNumbering;
-	CAscNumbering.prototype['get_InternalId'] = CAscNumbering.prototype.get_InternalId;
-	CAscNumbering.prototype['get_Lvl']        = CAscNumbering.prototype.get_Lvl;
-
+	CAscNumbering.prototype['get_InternalId']    = CAscNumbering.prototype.get_InternalId;
+	CAscNumbering.prototype['get_Lvl']           = CAscNumbering.prototype.get_Lvl;
+	CAscNumbering.prototype['get_JSONNumbering'] = CAscNumbering.prototype.get_JSONNumbering;
+	CAscNumbering.prototype['put_FromJSON']      = CAscNumbering.prototype.put_FromJSON;
 
 	/**
 	 * Класс для работы с текстом конкретного уровня нумерации

@@ -642,31 +642,15 @@
 				}
 				else if (_current["Script"] !== undefined)
 				{
-					// insert/replace script
-					function customXMLHttpRequest() {
-				
-						this.open = function() {
-							console.error("XMLHttpRequest doesn't allow this.");
-						};
-
-						this.setRequestHeader = function() {};
-				
-						this.send = function() {
-							this.onerror && this.onerror("XMLHttpRequest doesn't allow this.");
-						};
-					};
-
-
 					if ( !AscCommon.isValidJs( _current["Script"] ) )
 					{
 						console.error('Invalid JS.');
 						return;	
 					}
 
-					var _script = "(function(Api, window, alert, document, XMLHttpRequest){ \n" + "\"use strict\"" + ";\n" + _current["Script"] + "\n})(window.g_asc_plugins.api, {}, function(){}, {}," + customXMLHttpRequest.toString() + ");";
 					try
 					{
-						eval(_script);
+						AscCommon.safePluginEval(_current["Script"]);
 					}
 					catch (err)
 					{
@@ -968,6 +952,7 @@
 		{
 			window.editor = this;
 			window['editor'] = window.editor;
+			Asc['editor'] = Asc.editor = this;
 
 			if (window["NATIVE_EDITOR_ENJINE"])
 				editor = window.editor;
@@ -1388,11 +1373,11 @@ background-repeat: no-repeat;\
 			[c_oAscDocumentShortcutType.ShowAll, 56, true, true, false],
 			[c_oAscDocumentShortcutType.EditSelectAll, 65, true, false, false],
 			[c_oAscDocumentShortcutType.Bold, 66, true, false, false],
-			[c_oAscDocumentShortcutType.CopyFormat, 67, true, true, false],
-			[c_oAscDocumentShortcutType.CopyrightSign, 67, true, false, true],
+			[c_oAscDocumentShortcutType.CopyFormat, 67, true, false, true],
 			[c_oAscDocumentShortcutType.InsertEndnoteNow, 68, true, false, true],
 			[c_oAscDocumentShortcutType.CenterPara, 69, true, false, false],
 			[c_oAscDocumentShortcutType.EuroSign, 69, true, false, true],
+			[c_oAscDocumentShortcutType.CopyrightSign, 71, true, false, true],
 			[c_oAscDocumentShortcutType.Italic, 73, true, false, false],
 			[c_oAscDocumentShortcutType.JustifyPara, 74, true, false, false],
 			[c_oAscDocumentShortcutType.InsertHyperlink, 75, true, false, false],
@@ -1407,7 +1392,7 @@ background-repeat: no-repeat;\
 			[c_oAscDocumentShortcutType.Save, 83, true, false, false],
 			[c_oAscDocumentShortcutType.TrademarkSign, 84, true, false, true],
 			[c_oAscDocumentShortcutType.Underline, 85, true, false, false],
-			[c_oAscDocumentShortcutType.PasteFormat, 86, true, true, false],
+			[c_oAscDocumentShortcutType.PasteFormat, 86, true, false, true],
 			[c_oAscDocumentShortcutType.EditRedo, 89, true, false, false],
 			[c_oAscDocumentShortcutType.EditUndo, 90, true, false, false],
 			[c_oAscDocumentShortcutType.EnDash, 109, true, false, false],
@@ -2348,22 +2333,6 @@ background-repeat: no-repeat;\
 		else
 			ParaPr.StyleName = this.WordControl.m_oLogicDocument.Styles.Style[ParaPr.PStyle].Name;
 
-		var NumType    = -1;
-		var NumSubType = -1;
-		if (!(null == ParaPr.NumPr || 0 === ParaPr.NumPr.NumId || "0" === ParaPr.NumPr.NumId))
-		{
-			var oNum = this.WordControl.m_oLogicDocument.GetNumbering().GetNum(ParaPr.NumPr.NumId);
-
-			if (oNum && oNum.GetLvl(ParaPr.NumPr.Lvl))
-			{
-				var res    = oNum.GetLvl(ParaPr.NumPr.Lvl).GetPresetType();
-				NumType    = res.Type;
-				NumSubType = res.SubType;
-			}
-		}
-
-		ParaPr.ListType = {Type : NumType, SubType : NumSubType};
-
 		if (undefined !== ParaPr.FramePr && undefined !== ParaPr.FramePr.Wrap)
 		{
 			if (AscCommonWord.wrap_NotBeside === ParaPr.FramePr.Wrap)
@@ -2378,7 +2347,6 @@ background-repeat: no-repeat;\
 		this.Update_ParaInd(ParaPr.Ind);
 		this.sync_PrAlignCallBack(ParaPr.Jc);
 		this.sync_ParaStyleName(ParaPr.StyleName);
-		this.sync_ListType(ParaPr.ListType);
 		this.sync_PrPropCallback(ParaPr);
 	};
 
@@ -4146,95 +4114,81 @@ background-repeat: no-repeat;\
 			this.WordControl.m_oLogicDocument.FinalizeAction();
 		}
 	};
-	asc_docs_api.prototype.put_ListType = function(type, subtype)
+	asc_docs_api.prototype.put_ListTypeCustom = function(value)
 	{
-		let numObject = AscWord.GetNumberingObjectByDeprecatedTypes(type, subtype);
-		if (!numObject)
+		let numInfo = AscWord.CNumInfo.Parse(value);
+		if (!numInfo)
 			return;
-
-		this.put_ListTypeCustom(numObject);
-	};
-	asc_docs_api.prototype.put_ListTypeCustom = function(numInfo)
-	{
-		let _numInfo = numInfo;
-		if (typeof _numInfo === "string" || _numInfo instanceof String)
-		{
-			try
-			{
-				_numInfo = JSON.parse(numInfo);
-			}
-			catch (e)
-			{
-				return;
-			}
-		}
 
 		let logicDocument = this.private_GetLogicDocument();
 		if (!logicDocument)
 			return;
 
-		new Promise(function(resolve)
+		return new Promise(function(resolve)
 		{
-			let symbols = AscWord.GetNumberingSymbols(_numInfo);
+			let symbols = AscWord.GetNumberingSymbols(numInfo);
 			if (symbols && symbols.length)
 				AscFonts.FontPickerByCharacter.checkText(symbols, this, resolve);
 			else
 				resolve();
 		}).then(function()
 		{
+			let oRes = null;
 			if (!logicDocument.IsSelectionLocked(AscCommon.changestype_Paragraph_Properties))
 			{
 				logicDocument.StartAction(AscDFH.historydescription_Document_SetParagraphNumbering);
-				logicDocument.SetParagraphNumbering(_numInfo);
+				let num = logicDocument.SetParagraphNumbering(numInfo);
 				logicDocument.FinalizeAction();
+				
+				if (!num)
+					oRes = null;
+				else if (!numInfo.HaveLvl())
+					oRes = AscWord.CNumInfo.FromNum(num, 0).ToJson();
+				else
+					oRes = AscWord.CNumInfo.FromNum(num, null, logicDocument.GetStyles()).ToJson();
 			}
+			return oRes;
 		});
 	};
-	asc_docs_api.prototype.asc_GetCurrentNumberingJson = function(isSingleLevel)
+	asc_docs_api.prototype.asc_CompareNumberingPresets = function(value1, value2)
+	{
+		let numInfo1 = AscWord.CNumInfo.Parse(value1);
+		let numInfo2 = AscWord.CNumInfo.Parse(value2);
+		if (!numInfo1 || !numInfo2)
+			return false;
+		
+		return numInfo1.IsEqual(numInfo2);
+	};
+	asc_docs_api.prototype.asc_IsCurrentNumberingPreset = function(value, singleLevel)
 	{
 		let logicDocument = this.private_GetLogicDocument();
-		let numPr = logicDocument.GetSelectedNum();
-		if (!numPr)
+		if (!logicDocument)
+			return false;
+		
+		let numInfo = AscWord.CNumInfo.Parse(value);
+		if (!numInfo)
+			return false;
+		
+		let numPr = logicDocument.GetSelectedNum(true);
+		if (!numPr || !numPr.IsValid())
+			return numInfo.IsRemove();
+		
+		let num = logicDocument.GetNumbering().GetNum(numPr.NumId);
+		return numInfo.CompareWithNum(num, singleLevel ? numPr.Lvl : undefined);
+	};
+	asc_docs_api.prototype.asc_GetCurrentNumberingJson = function(singleLevel)
+	{
+		let logicDocument = this.private_GetLogicDocument();
+		if (!logicDocument)
 			return null;
-
-		let numManager = logicDocument.GetNumbering();
-		let num = numManager.GetNum(numPr.NumId);
+		
+		let numPr     = logicDocument.GetSelectedNum();
+		let numbering = logicDocument.GetNumbering();
+		let num       = numPr && numPr.IsValid() ? numbering.GetNum(numPr.NumId) : null;
 		if (!num)
 			return null;
 
-		let result = {
-			Type : "unknown",
-			Lvl  : []
-		};
-
-		if (isSingleLevel)
-		{
-			let numLvl = num.GetLvl(numPr.Lvl);
-			result.Type = numLvl.IsBulleted() ? "bullet" : "number";
-			result.Lvl[0] = numLvl.ToJson();
-		}
-		else
-		{
-			let isBulleted = false;
-			let isNumbered = false;
-
-			for (let ilvl = 0; ilvl < 9; ++ilvl)
-			{
-				let numLvl = num.GetLvl(ilvl);
-				isBulleted = isBulleted || numLvl.IsBulleted();
-				isNumbered = isNumbered || numLvl.IsNumbered();
-				result.Lvl[ilvl] = numLvl.ToJson();
-			}
-
-			if (isBulleted && isNumbered)
-				result.Type = Asc.c_oAscJSONNumberingType.Hybrid;
-			else if (isNumbered)
-				result.Type = Asc.c_oAscJSONNumberingType.Number;
-			else if (isBulleted)
-				result.Type = Asc.c_oAscJSONNumberingType.Bullet;
-		}
-
-		return result;
+		return AscWord.CNumInfo.FromNum(num, singleLevel ? 0 : null, logicDocument.GetStyles()).ToJson();
 	};
 	asc_docs_api.prototype.asc_ContinueNumbering = function()
 	{
@@ -4866,10 +4820,6 @@ background-repeat: no-repeat;\
 	asc_docs_api.prototype.sync_PrAlignCallBack   = function(value)
 	{
 		this.sendEvent("asc_onPrAlign", value);
-	};
-	asc_docs_api.prototype.sync_ListType          = function(NumPr)
-	{
-		this.sendEvent("asc_onListType", new AscCommon.asc_CListType(NumPr));
 	};
 	asc_docs_api.prototype.sync_TextColor         = function(TextPr)
 	{
@@ -8601,6 +8551,9 @@ background-repeat: no-repeat;\
             this.sync_TableEraseModeCallback(false);
         }
 
+		this.stopInkDrawer();
+		this.cancelEyedropper();
+
 		this.isStartAddShape = true;
 		this.addShapePreset  = sPreset;
 		if (is_apply)
@@ -10721,7 +10674,9 @@ background-repeat: no-repeat;\
 		var oContentControl = oLogicDocument.GetContentControl(sId);
 		if (!oContentControl || !oContentControl.IsDatePicker())
 			return;
-
+		
+		oContentControl.SkipSpecialContentControlLock(true);
+		oContentControl.SkipFillingFormModeCheck(true);
 		if (c_oAscSdtLevelType.Block === oContentControl.GetContentControlType())
 		{
 			isLocked = oLogicDocument.Document_Is_SelectionLocked(AscCommon.changestype_None, {
@@ -10743,7 +10698,7 @@ background-repeat: no-repeat;\
 			}
 		}
 
-		if (false === isLocked)
+		if (!isLocked)
 		{
 			oLogicDocument.StartAction(AscDFH.historydescription_Document_SetContentControlListPr);
 			oContentControl.ApplyDatePickerPr(oPr, updateDate);
@@ -10752,6 +10707,9 @@ background-repeat: no-repeat;\
 			oLogicDocument.UpdateTracks();
 			oLogicDocument.FinalizeAction();
 		}
+		
+		oContentControl.SkipSpecialContentControlLock(false);
+		oContentControl.SkipFillingFormModeCheck(false);
 	};
 	asc_docs_api.prototype.asc_SetContentControlDatePickerDate = function(oPr, sId)
 	{
@@ -12995,140 +12953,7 @@ background-repeat: no-repeat;\
 	};
 	asc_docs_api.prototype.CheckDeprecatedBulletPreviewInfo = function (arrDrawingInfo, nTypeOfPreview)
 	{
-		const arrAdaptedDrawingInfo = [];
-
-		for (let i = 0; i < arrDrawingInfo.length; i += 1)
-		{
-			let sDivId;
-			let oNumberingInfo;
-
-			// Это верный тип передачи информации
-			if (arrDrawingInfo[i].numberingInfo)
-			{
-				arrAdaptedDrawingInfo.push(arrDrawingInfo[i]);
-
-			}
-			else if (arrDrawingInfo[i].divId)
-			{
-				sDivId = arrDrawingInfo[i]["divId"];
-				let sResult = null;
-				switch (arrDrawingInfo[i]["type"])
-				{
-					case 0:
-					{
-						oNumberingInfo = {"Type": Asc.c_oAscJSONNumberingType.Remove};
-						break;
-					}
-					case 1:
-					{
-						let result = {};
-						const oLvl = new AscCommonWord.CNumberingLvl();
-						oLvl.AddStringToLvlText(arrDrawingInfo[i]["char"]);
-						oLvl.TextPr.RFonts.SetAll(arrDrawingInfo[i]["specialFont"] || "Arial");
-						result["Type"] = Asc.c_oAscJSONNumberingType.Bullet;
-						result["Lvl"] = [oLvl.ToJson()];
-						oNumberingInfo = result;
-						break;
-					}
-					case 3:
-					{
-						switch (arrDrawingInfo[i]["numberingType"])
-						{
-							case Asc.c_oAscNumberingLevel.UpperLetterDot_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperLetter"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.LowerLetterBracket_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%1)"}]}'; break;
-							case Asc.c_oAscNumberingLevel.LowerLetterDot_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.DecimalDot_Right: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.DecimalBracket_Right: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1)"}]}'; break;
-							case Asc.c_oAscNumberingLevel.UpperRomanDot_Right: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.LowerRomanDot_Right: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.UpperRussian_Dot_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianUpper"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.UpperRussian_Bracket_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianUpper"},"lvlText":"%1)"}]}'; break;
-							case Asc.c_oAscNumberingLevel.LowerRussian_Dot_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianLower"},"lvlText":"%1."}]}'; break;
-							case Asc.c_oAscNumberingLevel.LowerRussian_Bracket_Left: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianLower"},"lvlText":"%1)"}]}'; break;
-							default: break;
-						}
-						break;
-					}
-					case 4:
-					{
-						switch (arrDrawingInfo[i]["numberingType"])
-						{
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_1_a_i          : sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1)","pPr":{"ind":{"left":360,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%2)","pPr":{"ind":{"left":720,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%3)","pPr":{"ind":{"left":1080,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%4)","pPr":{"ind":{"left":1440,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%5)","pPr":{"ind":{"left":1800,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%6)","pPr":{"ind":{"left":2160,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%7)","pPr":{"ind":{"left":2520,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%8)","pPr":{"ind":{"left":2880,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%9)","pPr":{"ind":{"left":3240,"firstLine":-360}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_1_11_111       : sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.","pPr":{"ind":{"left":360,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.","pPr":{"ind":{"left":792,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.","pPr":{"ind":{"left":1224,"firstLine":-504}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.","pPr":{"ind":{"left":1728,"firstLine":-648}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.","pPr":{"ind":{"left":2232,"firstLine":-792}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.","pPr":{"ind":{"left":2736,"firstLine":-936}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.","pPr":{"ind":{"left":3240,"firstLine":-1080}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.","pPr":{"ind":{"left":3744,"firstLine":-1224}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.%9.","pPr":{"ind":{"left":4320,"firstLine":-1440}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_Bullet         : sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"v","pPr":{"ind":{"left":360,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"Ø","pPr":{"ind":{"left":720,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"§","pPr":{"ind":{"left":1080,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"·","pPr":{"ind":{"left":1440,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"¨","pPr":{"ind":{"left":1800,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"Ø","pPr":{"ind":{"left":2160,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"§","pPr":{"ind":{"left":2520,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"·","pPr":{"ind":{"left":2880,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"¨","pPr":{"ind":{"left":3240,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_Article_Section: sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"Article %1.","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimalZero"},"lvlText":"Section %1.%2","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%3)","pPr":{"ind":{"left":720,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%4)","pPr":{"ind":{"left":864,"firstLine":-144}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%5)","pPr":{"ind":{"left":1008,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%6)","pPr":{"ind":{"left":1152,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%7)","pPr":{"ind":{"left":1296,"firstLine":-288}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%8.","pPr":{"ind":{"left":1440,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%9.","pPr":{"ind":{"left":1584,"firstLine":-144}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_Chapter        : sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"space","numFmt":{"val":"decimal"},"lvlText":"Chapter %1","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_I_A_1          : sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"%1.","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperLetter"},"lvlText":"%2.","pPr":{"ind":{"left":720,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%3.","pPr":{"ind":{"left":1440,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%4)","pPr":{"ind":{"left":2160,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"(%5)","pPr":{"ind":{"left":2880,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%6)","pPr":{"ind":{"left":3600,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%7)","pPr":{"ind":{"left":4320,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%8)","pPr":{"ind":{"left":5040,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%9)","pPr":{"ind":{"left":5760,"firstLine":0}}}]}'; break;
-							case Asc.c_oAscMultiLevelNumbering.MultiLevel_1_11_111_NoInd : sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.","pPr":{"ind":{"left":432,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.","pPr":{"ind":{"left":576,"firstLine":-576}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.","pPr":{"ind":{"left":720,"firstLine":-720}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.","pPr":{"ind":{"left":864,"firstLine":-864}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.","pPr":{"ind":{"left":1008,"firstLine":-1008}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.","pPr":{"ind":{"left":1152,"firstLine":-1152}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.","pPr":{"ind":{"left":1296,"firstLine":-1296}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.","pPr":{"ind":{"left":1440,"firstLine":-1440}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.%9.","pPr":{"ind":{"left":1584,"firstLine":-1584}}}]}'; break;
-							default: break;
-						}
-						break;
-					}
-				}
-				if (sResult !== null)
-					oNumberingInfo = JSON.parse(sResult);
-				arrAdaptedDrawingInfo.push({"divId": sDivId, "numberingInfo": oNumberingInfo});
-			}
-			else if (typeof arrDrawingInfo[i] === "string")
-			{
-				sDivId = arrDrawingInfo[i];
-				let sResult;
-				if (nTypeOfPreview === 0)
-				{
-					switch (i)
-					{
-						case 0: sResult = '{"Type":"remove"}'; break;
-						case 1: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"·","rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}}]}'; break;
-						case 2: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"o","rPr":{"rFonts":{"ascii":"Courier New","cs":"Courier New","eastAsia":"Courier New","hAnsi":"Courier New"}}}]}'; break;
-						case 3: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"§","rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}}]}'; break;
-						case 4: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"v","rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}}]}'; break;
-						case 5: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"Ø","rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}}]}'; break;
-						case 6: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"ü","rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}}]}'; break;
-						case 7: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"¨","rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}}]}'; break;
-						case 8: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"–","rPr":{"rFonts":{"ascii":"Arial","cs":"Arial","eastAsia":"Arial","hAnsi":"Arial"}}}]}'; break;
-						default: sResult = null; break;
-					}
-				}
-				else if (nTypeOfPreview === 1)
-				{
-					switch (i)
-					{
-						case 0: sResult = '{"Type":"remove"}'; break;
-						case 1: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperLetter"},"lvlText":"%1."}]}'; break;
-						case 2: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%1)"}]}'; break;
-						case 3: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%1."}]}'; break;
-						case 4: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1."}]}'; break;
-						case 5: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1)"}]}'; break;
-						case 6: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"%1."}]}'; break;
-						case 7: sResult = '{"Type":"number","Lvl":[{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%1."}]}'; break;
-						case 8: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianUpper"},"lvlText":"%1."}]}'; break;
-						case 9: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianUpper"},"lvlText":"%1)"}]}'; break;
-						case 10: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianLower"},"lvlText":"%1."}]}'; break;
-						case 11: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","numFmt":{"val":"russianLower"},"lvlText":"%1)"}]}'; break;
-						default: sResult = null; break;
-					}
-				}
-				else if (nTypeOfPreview === 2)
-				{
-					switch (i)
-					{
-						case 0: sResult = '{"Type":"remove"}'; break;
-						case 1: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1)","pPr":{"ind":{"left":360,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%2)","pPr":{"ind":{"left":720,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%3)","pPr":{"ind":{"left":1080,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%4)","pPr":{"ind":{"left":1440,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%5)","pPr":{"ind":{"left":1800,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%6)","pPr":{"ind":{"left":2160,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%7)","pPr":{"ind":{"left":2520,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%8)","pPr":{"ind":{"left":2880,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%9)","pPr":{"ind":{"left":3240,"firstLine":-360}}}]}'; break;
-						case 2: sResult = '{"Type":"number","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.","pPr":{"ind":{"left":360,"firstLine":-360}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.","pPr":{"ind":{"left":792,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.","pPr":{"ind":{"left":1224,"firstLine":-504}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.","pPr":{"ind":{"left":1728,"firstLine":-648}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.","pPr":{"ind":{"left":2232,"firstLine":-792}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.","pPr":{"ind":{"left":2736,"firstLine":-936}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.","pPr":{"ind":{"left":3240,"firstLine":-1080}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.","pPr":{"ind":{"left":3744,"firstLine":-1224}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.%9.","pPr":{"ind":{"left":4320,"firstLine":-1440}}}]}'; break;
-						case 3: sResult = '{"Type":"bullet","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"v","pPr":{"ind":{"left":360,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"Ø","pPr":{"ind":{"left":720,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"§","pPr":{"ind":{"left":1080,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"·","pPr":{"ind":{"left":1440,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"¨","pPr":{"ind":{"left":1800,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"Ø","pPr":{"ind":{"left":2160,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"§","pPr":{"ind":{"left":2520,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Wingdings","cs":"Wingdings","eastAsia":"Wingdings","hAnsi":"Wingdings"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"·","pPr":{"ind":{"left":2880,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"bullet"},"lvlText":"¨","pPr":{"ind":{"left":3240,"firstLine":-360}},"rPr":{"rFonts":{"ascii":"Symbol","cs":"Symbol","eastAsia":"Symbol","hAnsi":"Symbol"}}}]}'; break;
-						case 4: sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"Article %1.","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimalZero"},"lvlText":"Section %1.%2","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%3)","pPr":{"ind":{"left":720,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%4)","pPr":{"ind":{"left":864,"firstLine":-144}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%5)","pPr":{"ind":{"left":1008,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%6)","pPr":{"ind":{"left":1152,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%7)","pPr":{"ind":{"left":1296,"firstLine":-288}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%8.","pPr":{"ind":{"left":1440,"firstLine":-432}}},{"lvlJc":"right","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"%9.","pPr":{"ind":{"left":1584,"firstLine":-144}}}]}'; break;
-						case 5: sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"space","numFmt":{"val":"decimal"},"lvlText":"Chapter %1","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"nothing","numFmt":{"val":"none"},"lvlText":"","pPr":{"ind":{"left":0,"firstLine":0}}}]}'; break;
-						case 6: sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperRoman"},"lvlText":"%1.","pPr":{"ind":{"left":0,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"upperLetter"},"lvlText":"%2.","pPr":{"ind":{"left":720,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%3.","pPr":{"ind":{"left":1440,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"%4)","pPr":{"ind":{"left":2160,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"(%5)","pPr":{"ind":{"left":2880,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%6)","pPr":{"ind":{"left":3600,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%7)","pPr":{"ind":{"left":4320,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerLetter"},"lvlText":"(%8)","pPr":{"ind":{"left":5040,"firstLine":0}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"lowerRoman"},"lvlText":"(%9)","pPr":{"ind":{"left":5760,"firstLine":0}}}]}'; break;
-						case 7: sResult = '{"Type":"number","Headings":"true","Lvl":[{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.","pPr":{"ind":{"left":432,"firstLine":-432}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.","pPr":{"ind":{"left":576,"firstLine":-576}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.","pPr":{"ind":{"left":720,"firstLine":-720}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.","pPr":{"ind":{"left":864,"firstLine":-864}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.","pPr":{"ind":{"left":1008,"firstLine":-1008}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.","pPr":{"ind":{"left":1152,"firstLine":-1152}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.","pPr":{"ind":{"left":1296,"firstLine":-1296}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.","pPr":{"ind":{"left":1440,"firstLine":-1440}}},{"lvlJc":"left","suff":"tab","numFmt":{"val":"decimal"},"lvlText":"%1.%2.%3.%4.%5.%6.%7.%8.%9.","pPr":{"ind":{"left":1584,"firstLine":-1584}}}]}'; break;
-						default: sResult = null; break;
-					}
-				}
-				if (sResult !== null)
-					oNumberingInfo = JSON.parse(sResult);
-				arrAdaptedDrawingInfo.push({"divId": sDivId, "numberingInfo": oNumberingInfo});
-			}
-		}
-		return arrAdaptedDrawingInfo;
+		return arrDrawingInfo;
 	};
 	asc_docs_api.prototype.ParseBulletPreviewInformation = function (arrDrawingInfo)
 	{
@@ -13317,7 +13142,7 @@ background-repeat: no-repeat;\
 		}
 		else if(this.isInkDrawerOn())
 		{
-			this.asc_StopInkDrawer();
+			this.stopInkDrawer();
 		}
 		
 		if (!oLogicDocument.IsFillingFormMode() && oLogicDocument.FocusCC && oLogicDocument.FocusCC.IsForm())
@@ -13915,10 +13740,11 @@ background-repeat: no-repeat;\
 	asc_docs_api.prototype['paraApply']                                 = asc_docs_api.prototype.paraApply;
 	asc_docs_api.prototype['put_PrAlign']                               = asc_docs_api.prototype.put_PrAlign;
 	asc_docs_api.prototype['put_TextPrBaseline']                        = asc_docs_api.prototype.put_TextPrBaseline;
-	asc_docs_api.prototype['put_ListType']                              = asc_docs_api.prototype.put_ListType;
 	asc_docs_api.prototype['asc_IsShowListIndentsSettings']             = asc_docs_api.prototype.asc_IsShowListIndentsSettings;
 	asc_docs_api.prototype['put_ListTypeCustom']                        = asc_docs_api.prototype.put_ListTypeCustom;
 	asc_docs_api.prototype['asc_GetCurrentNumberingJson']               = asc_docs_api.prototype.asc_GetCurrentNumberingJson;
+	asc_docs_api.prototype['asc_IsCurrentNumberingPreset']              = asc_docs_api.prototype.asc_IsCurrentNumberingPreset;
+	asc_docs_api.prototype['asc_CompareNumberingPresets']               = asc_docs_api.prototype.asc_CompareNumberingPresets;
 	asc_docs_api.prototype['asc_ContinueNumbering']                     = asc_docs_api.prototype.asc_ContinueNumbering;
 	asc_docs_api.prototype['asc_RestartNumbering']                      = asc_docs_api.prototype.asc_RestartNumbering;
 	asc_docs_api.prototype['asc_GetCurrentNumberingId']                 = asc_docs_api.prototype.asc_GetCurrentNumberingId;
@@ -13957,7 +13783,6 @@ background-repeat: no-repeat;\
 	asc_docs_api.prototype['getFocusObject']                            = asc_docs_api.prototype.getFocusObject;
 	asc_docs_api.prototype['sync_VerticalAlign']                        = asc_docs_api.prototype.sync_VerticalAlign;
 	asc_docs_api.prototype['sync_PrAlignCallBack']                      = asc_docs_api.prototype.sync_PrAlignCallBack;
-	asc_docs_api.prototype['sync_ListType']                             = asc_docs_api.prototype.sync_ListType;
 	asc_docs_api.prototype['sync_TextColor']                            = asc_docs_api.prototype.sync_TextColor;
 	asc_docs_api.prototype['sync_TextHighLight']                        = asc_docs_api.prototype.sync_TextHighLight;
 	asc_docs_api.prototype['sync_TextSpacing']                          = asc_docs_api.prototype.sync_TextSpacing;

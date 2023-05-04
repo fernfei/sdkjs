@@ -476,7 +476,7 @@ CInlineLevelSdt.prototype.Draw_HighLights = function(PDSH)
 
 	// Для экспорта в PDF записываем поля. Поля, находящиеся в автофигурах, пока не пишем
 	var oTransform = this.Get_ParentTextTransform();
-	if (!oGraphics.isPrintMode && this.private_IsAddFormFieldToGraphics(oGraphics, oTransform))
+	if (this.private_IsAddFormFieldToGraphics(oGraphics, oTransform))
 	{
 		this.SkipDraw(PDSH);
 
@@ -567,8 +567,7 @@ CInlineLevelSdt.prototype.Draw_HighLights = function(PDSH)
 };
 CInlineLevelSdt.prototype.Draw_Elements = function(PDSE)
 {
-	if ((!PDSE.Graphics.isPrintMode && this.private_IsAddFormFieldToGraphics(PDSE.Graphics))
-		|| (this.IsSkipDraw(PDSE.Graphics)))
+	if (this.private_IsAddFormFieldToGraphics(PDSE.Graphics) || this.IsSkipDraw(PDSE.Graphics))
 		this.SkipDraw(PDSE);
 	else
 		CParagraphContentWithParagraphLikeContent.prototype.Draw_Elements.apply(this, arguments);
@@ -578,7 +577,7 @@ CInlineLevelSdt.prototype.Draw_Lines = function(PDSL)
 	// Не отключаем отрисовку линий для PlaceHolder, т.к. рамка рисуется через данную функцию
 	// отключение остальных отрисовок идет внутри ParaRun.Draw_Lines
 
-	if ((!PDSL.Graphics.isPrintMode && this.private_IsAddFormFieldToGraphics(PDSL.Graphics)))
+	if (this.private_IsAddFormFieldToGraphics(PDSL.Graphics))
 		this.SkipDraw(PDSL);
 	else
 		CParagraphContentWithParagraphLikeContent.prototype.Draw_Lines.apply(this, arguments);
@@ -608,6 +607,9 @@ CInlineLevelSdt.prototype.GetRangeBounds = function(_CurLine, _CurRange)
 };
 CInlineLevelSdt.prototype.private_IsAddFormFieldToGraphics = function(oGraphics, oTransform)
 {
+	if (oGraphics.isPrintMode || !oGraphics.IsPdfRenderer || !oGraphics.IsPdfRenderer())
+		return false;
+	
 	var _oTransform = oTransform;
 	if (undefined === oTransform)
 		_oTransform = this.Get_ParentTextTransform();

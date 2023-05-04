@@ -4640,7 +4640,7 @@
 	Workbook.prototype.checkUserProtectedRangeName = function (name) {
 		var res = c_oAscDefinedNameReason.OK;
 		//TODO пересмотреть проверку на rx_defName
-		if (!AscCommon.rx_defName.test(name.toLowerCase()) || name.length > g_nDefNameMaxLength) {
+		if (!AscCommon.rx_protectedRangeName.test(name.toLowerCase()) || name.length > g_nDefNameMaxLength) {
 			return c_oAscDefinedNameReason.WrongName;
 		}
 
@@ -10072,15 +10072,15 @@
 				}
 
 				if (type === Asc.c_oAscFormulaArgumentType.number) {
+					//in most cases in ms array/range -> {1,2,..} if NUMBER type
 					if (res.type === AscCommonExcel.cElementType.array) {
-						res = res.getElementRowCol(0, 0);
-						res = res.tocNumber();
-						if (res) {
-							resultStr = '"' + res.toLocaleString() + '"';
-						}
-					} else if (res.type === AscCommonExcel.cElementType.cellsRange) {
 						resultStr = res.toLocaleString();
-					} else if (res.type !== AscCommonExcel.cElementType.cellsRange3D) {
+					} else if (res.type === AscCommonExcel.cElementType.cellsRange || res.type === AscCommonExcel.cElementType.cellsRange3D) {
+						res = res.getFullArray(new AscCommonExcel.cNumber(0), maxArrayRowCount, maxArrayColCount);
+						if (res) {
+							resultStr = res.toLocaleString();
+						}
+					} else {
 						res = res.tocNumber();
 						if (res) {
 							resultStr = res.toLocaleString();
@@ -15001,15 +15001,23 @@
 		});
 		History.EndTransaction();
 	};
-	Range.prototype.setValue2=function(array){
+	Range.prototype.setValue2=function(array, pushOnlyFirstMergedCell){
 		History.Create_NewPoint();
 		History.StartTransaction();
 		//[{"text":"qwe","format":{"b":true, "i":false, "u":Asc.EUnderline.underlineNone, "s":false, "fn":"Arial", "fs": 12, "c": 0xff00ff, "va": "subscript"  }},{}...]
 		/*
 		 Устанавливаем значение в Range ячеек. В отличае от setValue, сюда мы попадаем только в случае ввода значения отличного от формулы. Таким образом, если в ячейке была формула, то для нее в графе очищается список ячеек от которых зависела. После чего выставляем флаг о необходимости пересчета.
 		 */
+		let t = this;
 		this._foreach(function(cell){
-			cell.setValue2(array);
+			if (pushOnlyFirstMergedCell) {
+				let merged = t.worksheet.getMergedByCell(cell.nRow, cell.nCol);
+				if (!merged || (merged && merged.r1 === cell.nRow && merged.c1 === cell.nCol)) {
+					cell.setValue2(array);
+				}
+			} else {
+				cell.setValue2(array);
+			}
 			// if(cell.isEmpty())
 			// cell.Remove();
 		});

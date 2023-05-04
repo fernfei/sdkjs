@@ -318,7 +318,12 @@ function asc_menu_WriteColor(_type, _color, _stream)
 {
     if (!_color)
         return;
-    _color.write(_type, _stream);
+
+    // TODO:
+    if (_color.write)
+        _color.write(_type, _stream);
+    else
+        Asc.asc_CColor.prototype.write.call(_color, _type, _stream);
 }
 
 // PARAINDENT

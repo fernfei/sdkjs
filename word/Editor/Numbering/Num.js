@@ -414,7 +414,9 @@ CNum.prototype.RecalculateRelatedParagraphs = function(nLvl)
 				logicDocument.Add_ChangedStyle(style.GetId());
 		}
 	}
-
+	
+	logicDocument.GetNumberingCollection().CheckNum(this.Id, nLvl);
+	
 	var arrParagraphs = logicDocument.GetAllParagraphsByNumbering({NumId : this.Id, Lvl : nLvl});
 	for (var nIndex = 0, nCount = arrParagraphs.length; nIndex < nCount; ++nIndex)
 	{
@@ -1094,3 +1096,7 @@ CLvlOverride.prototype.ReadFromBinary = function(oReader)
 //--------------------------------------------------------export--------------------------------------------------------
 window['AscCommonWord'] = window['AscCommonWord'] || {};
 window['AscCommonWord'].CNum = CNum;
+
+window['AscWord'] = window['AscWord'] || {};
+window['AscWord'].CNum = CNum;
+

@@ -48,7 +48,7 @@
 
 		this.NumPr      = null;
 		this.Paragraphs = [];
-		this.NumInfo    = new CNumInfo();
+		this.NumInfo    = new AscWord.CNumInfo();
 
 		this.LastBulleted = null;
 		this.LastNumbered = null;
@@ -63,7 +63,7 @@
 		if (!this.Document || !numInfo)
 			return false;
 
-		this.NumInfo    = new CNumInfo(numInfo);
+		this.NumInfo    = numInfo;
 		this.NumPr      = this.GetCurrentNumPr();
 		this.Paragraphs = this.GetParagraphs();
 
@@ -86,6 +86,11 @@
 			this.UpdateDocumentOutline();
 
 		return result;
+	};
+	CNumberingApplicator.prototype.ResetLast = function()
+	{
+		this.SetLastNumbered(null);
+		this.SetLastBulleted(null);
 	};
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Private area
@@ -162,7 +167,6 @@
 		{
 			this.Paragraphs[index].RemoveNumPr();
 		}
-
 		return true;
 	};
 	CNumberingApplicator.prototype.ApplyBulleted = function()
@@ -238,7 +242,6 @@
 
 		this.SetLastBulleted(numId, ilvl);
 		this.ApplyNumPr(numId, ilvl);
-
 		return true;
 	};
 	CNumberingApplicator.prototype.ApplyBulletedToCurrent = function()
@@ -358,7 +361,6 @@
 
 		this.SetLastNumbered(numId, ilvl);
 		this.ApplyNumPr(numId, ilvl);
-
 		return true;
 	};
 	CNumberingApplicator.prototype.ApplyNumberedToCurrent = function()
@@ -418,7 +420,9 @@
 			if (num)
 			{
 				let oldNumLvl = num.GetLvl(commonNumPr.Lvl);
-				numLvl.SetParaPr(oldNumLvl.GetParaPr());
+				const oNewParaPr = oldNumLvl.GetParaPr().Copy();
+				oNewParaPr.Merge(numLvl.GetParaPr());
+				numLvl.SetParaPr(oNewParaPr);
 				numLvl.ResetNumberedText(commonNumPr.Lvl);
 				num.SetLvl(numLvl, commonNumPr.Lvl);
 				this.SetLastSingleLevel(commonNumPr.NumId, commonNumPr.Lvl);
@@ -431,7 +435,9 @@
 			let ilvl  = !commonNumPr || !commonNumPr.Lvl ? 0 : commonNumPr.Lvl;
 
 			let oldNumLvl = num.GetLvl(commonNumPr.Lvl);
-			numLvl.SetParaPr(oldNumLvl.GetParaPr());
+			const oNewParaPr = oldNumLvl.GetParaPr().Copy();
+			oNewParaPr.Merge(numLvl.GetParaPr());
+			numLvl.SetParaPr(oNewParaPr);
 			numLvl.ResetNumberedText(ilvl);
 			num.SetLvl(numLvl, ilvl);
 
@@ -682,18 +688,6 @@
 			this.Paragraphs[index].UpdateDocumentOutline();
 		}
 	};
-
-	/**
-	 * Класс для информации о нумерации
-	 * @param numInfo
-	 * @constructor
-	 */
-	function CNumInfo(numInfo)
-	{
-		this.Type     = numInfo && numInfo["Type"] ? numInfo["Type"] : "";
-		this.Lvl      = numInfo && numInfo["Lvl"] && numInfo["Lvl"].length ? numInfo["Lvl"] : [];
-		this.Headings = numInfo ? !!numInfo["Headings"] : false;
-	}
 	//---------------------------------------------------------export---------------------------------------------------
 	window["AscWord"].CNumberingApplicator = CNumberingApplicator;
 

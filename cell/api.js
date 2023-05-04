@@ -2307,7 +2307,7 @@ var editor;
 					wb.init(initOpenManager.oReadResult.tableCustomFunc, initOpenManager.oReadResult.tableIds, initOpenManager.oReadResult.sheetIds, false, true);
 				} else {
 					readSheetDataExternal(true);
-					if (window["Asc"] && window["Asc"]["editor"] !== undefined) {
+					if (Asc["editor"] && Asc["editor"].wb) {
 						wb.init(initOpenManager.oReadResult.tableCustomFunc, initOpenManager.oReadResult.tableIds, initOpenManager.oReadResult.sheetIds, true);
 					}
 				}
@@ -4913,6 +4913,8 @@ var editor;
       this.asc_endAddShape();
       return false;
     }
+	this.stopInkDrawer();
+	this.cancelEyedropper();
     this.isStartAddShape = this.controller.isShapeAction = true;
     ws.objectRender.controller.startTrackNewShape(sPreset);
   };
@@ -6097,11 +6099,16 @@ var editor;
 
   // Формат по образцу
   spreadsheet_api.prototype.asc_formatPainter = function(formatPainterState) {
-	this.formatPainter.putState(formatPainterState);
-    if (this.wb) {
-      this.wb.formatPainter(formatPainterState);
-    }
+	this.changeFormatPainterState(formatPainterState, undefined);
   };
+
+
+	spreadsheet_api.prototype.changeFormatPainterState = function(formatPainterState, bLockDraw) {
+		this.formatPainter.putState(formatPainterState);
+		if (this.wb) {
+			this.wb.formatPainter(formatPainterState, bLockDraw);
+		}
+	};
 	spreadsheet_api.prototype.retrieveFormatPainterData = function()
 	{
 		let oWSView = this.wb.getWorksheet();
@@ -8291,7 +8298,9 @@ var editor;
 		ws._updateVisibleRowsCount();
 
 		ws.handlers.trigger("selectionChanged");
-		ws.handlers.trigger("selectionMathInfoChanged", ws.getSelectionMathInfo());
+		ws.getSelectionMathInfo(function (info) {
+			ws.handlers.trigger("selectionMathInfoChanged", info);
+		});
 	};
 
 
@@ -8499,6 +8508,10 @@ var editor;
 				}
 			});
 		}
+
+		res.sort(function (a, b) {
+			return a.name > b.name ? 1 : -1;
+		});
 
 		return res;
 	};

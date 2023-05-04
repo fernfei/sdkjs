@@ -3833,6 +3833,9 @@
     	if (!this.asc_canPaste())
     		return;
 
+		if (window["AscDesktopEditor"] && window["AscDesktopEditor"]["isSupportMacroses"] && !window["AscDesktopEditor"]["isSupportMacroses"]())
+			return;
+
     	this._beforeEvalCommand();
 		this.macros.runAuto();
 		this._afterEvalCommand(undefined);
@@ -3847,6 +3850,9 @@
 
     	if (!this.asc_canPaste())
     		return;
+
+		if (window["AscDesktopEditor"] && window["AscDesktopEditor"]["isSupportMacroses"] && !window["AscDesktopEditor"]["isSupportMacroses"]())
+			return;
 
     	this._beforeEvalCommand();
 		this.macros.run(sGuid);
@@ -4529,6 +4535,9 @@
 		this.inkDrawer.startErase();
 	};
 	baseEditorsApi.prototype.asc_StopInkDrawer = function() {
+		this.stopInkDrawer();
+	};
+	baseEditorsApi.prototype.stopInkDrawer = function() {
 		this.inkDrawer.turnOff();
 	};
 	baseEditorsApi.prototype.onInkDrawerChangeState = function() {

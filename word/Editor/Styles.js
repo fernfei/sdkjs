@@ -17146,7 +17146,7 @@ CParaPr.prototype.Compare = function(ParaPr)
 	// NumPr
 	if (undefined != this.NumPr && undefined != ParaPr.NumPr && this.NumPr.NumId === ParaPr.NumPr.NumId)
 	{
-		Result_ParaPr.NumPr       = new CParaPr();
+		Result_ParaPr.NumPr       = new CNumPr();
 		Result_ParaPr.NumPr.NumId = ParaPr.NumPr.NumId;
 		Result_ParaPr.NumPr.Lvl   = Math.max(this.NumPr.Lvl, ParaPr.NumPr.Lvl);
 	}
@@ -17527,6 +17527,10 @@ CParaPr.prototype.Is_Equal = function(ParaPr)
 		|| this.OutlineLvl !== ParaPr.OutlineLvl
 		|| this.SuppressLineNumbers !== ParaPr.SuppressLineNumbers);
 };
+CParaPr.prototype.IsEqual = function(paraPr)
+{
+	return this.Is_Equal(paraPr);
+};
 /**
  * Сравниваем данные настройки с заданными, если настройка совпала ставим undefined, если нет, то берем из текущей
  * @param oParaPr {CParaPr}
@@ -17706,10 +17710,11 @@ CParaPr.prototype.Get_PresentationBullet = function(theme, colorMap)
 	}
 	return Bullet;
 };
-CParaPr.prototype.Is_Empty = function()
+CParaPr.prototype.Is_Empty = function(oPr)
 {
+	const bIsSingleLvlPresetJSON = !!(oPr && oPr.isSingleLvlPresetJSON);
 	return !(undefined !== this.ContextualSpacing
-		|| true !== this.Ind.Is_Empty()
+		|| true !== (bIsSingleLvlPresetJSON || this.Ind.Is_Empty())
 		|| undefined !== this.Jc
 		|| undefined !== this.KeepLines
 		|| undefined !== this.KeepNext
@@ -17724,7 +17729,7 @@ CParaPr.prototype.Is_Empty = function()
 		|| undefined !== this.Brd.Right
 		|| undefined !== this.Brd.Top
 		|| undefined !== this.WidowControl
-		|| undefined !== this.Tabs
+		|| (undefined !== this.Tabs && !bIsSingleLvlPresetJSON)
 		|| undefined !== this.NumPr
 		|| undefined !== this.PStyle
 		|| undefined !== this.OutlineLvl

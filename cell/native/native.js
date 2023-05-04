@@ -41,7 +41,11 @@ function asc_menu_WriteColor(_type, _color, _stream) {
     if (!_color)
         return;
     
-    _color.write(_type, _stream);
+    // TODO:
+    if (_color.write)
+        _color.write(_type, _stream);
+    else
+        Asc.asc_CColor.prototype.write.call(_color, _type, _stream);
 }
 
 
@@ -2146,7 +2150,10 @@ function OfflineEditor () {
                     this.handlers.trigger("selectionNameChanged", this.getSelectionName(/*bRangeText*/true));
                     if (!isSelectMode) {
                         this.handlers.trigger("selectionChanged");
-                        this.handlers.trigger("selectionMathInfoChanged", this.getSelectionMathInfo());
+                        let t = this;
+                        this.getSelectionMathInfo(function (info) {
+                            t.handlers.trigger("selectionMathInfoChanged", info);
+                        });
                     }
                 }
             } else {

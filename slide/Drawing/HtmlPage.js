@@ -2430,7 +2430,7 @@ function CEditorPage(api)
 			oThis.m_oApi.checkEyedropperColor(nX, nY);
 			oThis.m_oApi.sync_MouseMoveStartCallback();
 			let MMData = new AscCommon.CMouseMoveData();
-			let Coords = oWordControl.m_oDrawingDocument.ConvertCoordsToCursorWR(pos.X, pos.Y, pos.Page, null);
+			let Coords = oWordControl.m_oDrawingDocument.ConvertCoordsToCursorWR(pos.X, pos.Y, pos.Page, null, true);
 			MMData.X_abs = Coords.X;
 			MMData.Y_abs = Coords.Y;
 			MMData.EyedropperColor = oThis.m_oApi.getEyedropperColor();

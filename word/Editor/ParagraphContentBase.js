@@ -2171,6 +2171,9 @@ CParagraphContentWithParagraphLikeContent.prototype.GetNextRunElements = functio
 
 	var nCurPos     = true === isUseContentPos ? oRunElements.ContentPos.Get(nDepth) : 0;
 	var nContentLen = this.Content.length;
+	
+	if (nCurPos >= nContentLen)
+		return;
 
 	oRunElements.UpdatePos(nCurPos, nDepth);
 	this.Content[nCurPos].GetNextRunElements(oRunElements, isUseContentPos, nDepth + 1);
@@ -2194,6 +2197,9 @@ CParagraphContentWithParagraphLikeContent.prototype.GetPrevRunElements = functio
 		return;
 
 	var nCurPos = true === isUseContentPos ? oRunElements.ContentPos.Get(nDepth) : this.Content.length - 1;
+	
+	if (nCurPos < 0)
+		return;
 
 	oRunElements.UpdatePos(nCurPos, nDepth);
 	this.Content[nCurPos].GetPrevRunElements(oRunElements, isUseContentPos, nDepth + 1);

@@ -2479,7 +2479,7 @@ CChartsDrawer.prototype =
 
 			dataSeries = paths.series[i];
 
-			if (!dataSeries) {
+			if (!dataSeries || !paths.points[i]) {
 				continue;
 			}
 
@@ -4683,7 +4683,10 @@ CChartsDrawer.prototype =
 				yCenter = (this.calcProp.chartGutter._top + trueHeight / 2) / this.calcProp.pxToMM;
 			}
 
-			var ptCount = this.getNumCache(this.calcProp.series[0].val).ptCount;
+			var ptCount = this.getPtCount(this.calcProp.series);
+			if (!ptCount) {
+				return null;
+			}
 			var tempAngle = 2 * Math.PI / ptCount;
 
 			var radius, x, y, firstX, firstY;
@@ -12188,11 +12191,6 @@ drawRadarChart.prototype = {
 	},
 
 	_calculateLines: function (fillPath) {
-		let numCache = this.cChartDrawer.getNumCache(this.chart.series[0].val).pts;
-		if (!numCache) {
-			return;
-		}
-
 		let dispBlanksAs = this.cChartSpace.chart.dispBlanksAs;
 		let yPoints = this.valAx.yPoints;
 
@@ -12340,7 +12338,7 @@ drawRadarChart.prototype = {
 					this.paths.series[ser] = [];
 				}
 				if (this._tempLines[ser]) {
-					for (let point = 0; point < this._tempLines[ser].length; point++) {
+					for (let point = 0, length = this._tempLines[ser].length; point < length; point++) {
 						let curTempSer = this._tempLines[ser];
 						let containerForDrawSer = this.paths.series[ser];
 						if (curTempSer && curTempSer[point]) {
@@ -12352,7 +12350,12 @@ drawRadarChart.prototype = {
 							} else {
 								if (this._comparePointsSettings(ser, point - 1, point, point)) {
 									//use previous path
-									this.cChartDrawer.calculateLine(curTempSer[point].x1, curTempSer[point].y1, curTempSer[point].x2, curTempSer[point].y2, path, true);
+									if (point === length - 1 && path && curTempSer[0] &&
+										curTempSer[point].x2 === curTempSer[0].x1 && curTempSer[point].y2 === curTempSer[0].y1) {
+										path.close();
+									} else {
+										this.cChartDrawer.calculateLine(curTempSer[point].x1, curTempSer[point].y1, curTempSer[point].x2, curTempSer[point].y2, path, true);
+									}
 								} else {
 									generateNewPath();
 									this.cChartDrawer.calculateLine(curTempSer[point].x1, curTempSer[point].y1, curTempSer[point].x2, curTempSer[point].y2, path);
@@ -14186,7 +14189,10 @@ axisChart.prototype = {
 				yCenter = (this.chartProp.chartGutter._top + trueHeight / 2) / this.chartProp.pxToMM;
 			}
 
-			var ptCount = this.cChartDrawer.getNumCache(this.chartProp.series[0].val).ptCount;
+			var ptCount = this.cChartDrawer.getPtCount(this.chartProp.series);
+			if (!ptCount) {
+				return;
+			}
 			var tempAngle = 2 * Math.PI / ptCount;
 
 			var radius, x, y;

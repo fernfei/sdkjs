@@ -940,7 +940,7 @@ Paragraph.prototype.private_UpdateSelectionPosOnRemove = function(nPosition, nCo
  * Добавляем элемент в содержимое параграфа. (Здесь передвигаются все позиции
  * CurPos.ContentPos, Selection.StartPos, Selection.EndPos)
  */
-Paragraph.prototype.Internal_Content_Add = function(Pos, Item, bCorrectPos)
+Paragraph.prototype.Internal_Content_Add = function(Pos, Item)
 {
 	History.Add(new CChangesParagraphAddItem(this, Pos, [Item]));
 	this.Content.splice(Pos, 0, Item);
@@ -12024,6 +12024,9 @@ Paragraph.prototype.Get_ParentTextInvertTransform = function()
 };
 Paragraph.prototype.UpdateCursorType = function(X, Y, CurPage)
 {
+	if (!this.IsRecalculated())
+		return;
+	
 	CurPage            = Math.max(0, Math.min(CurPage, this.Pages.length - 1));
 	var text_transform = this.Get_ParentTextTransform();
 	var MMData         = new AscCommon.CMouseMoveData();
@@ -12424,6 +12427,7 @@ Paragraph.prototype.PreDelete = function()
 	this.RemoveSelection();
 
 	this.UpdateDocumentOutline();
+	this.private_RefreshNumbering();
 
 	if (undefined !== this.Get_SectionPr() && this.LogicDocument)
 	{
@@ -15830,6 +15834,11 @@ Paragraph.prototype.Get_CurrentColumn = function(CurPage)
 };
 Paragraph.prototype.private_RefreshNumbering = function(NumPr)
 {
+	let logicDocument = this.GetLogicDocument();
+	let numberingCollection = logicDocument && logicDocument.IsDocumentEditor() ? logicDocument.GetNumberingCollection() : null;
+	if (numberingCollection)
+		numberingCollection.CheckParagraph(this);
+	
     if (undefined === NumPr || null === NumPr)
         return;
 
@@ -15984,6 +15993,25 @@ Paragraph.prototype.GetText = function(oPr)
 
 	oText.SetBreakOnNonText(false);
 	oText.SetParaEndToSpace(oPr && undefined !== oPr.ParaEndToSpace ? oPr.ParaEndToSpace: true);
+	oText.SetParaNumbering(oPr && undefined !== oPr.Numbering ? oPr.Numbering: true);
+	oText.SetParaMath(oPr && undefined !== oPr.Math ? oPr.Math: true);
+	oText.SetParaTabSymbol(oPr && undefined !== oPr.TabSymbol ? oPr.TabSymbol: " ");
+	oText.SetParaNewLineSeparator(oPr && undefined !== oPr.NewLineSeparator ? oPr.NewLineSeparator: "\r");
+
+	if (true === oText.Numbering)
+	{
+		var oNumPr = this.GetNumPr();
+		if (oNumPr && oNumPr.IsValid())
+		{
+			oText.Text += this.GetNumberingText(false);
+
+			var nSuff = this.Parent.GetNumbering().GetNum(oNumPr.NumId).GetLvl(oNumPr.Lvl).GetSuff();
+			if (Asc.c_oAscNumberingSuff.Tab === nSuff)
+				oText.Text += "	";
+			else if (Asc.c_oAscNumberingSuff.Space === nSuff)
+				oText.Text += " ";
+		}
+	}
 
 	for (var nIndex = 0, nCount = this.Content.length; nIndex < nCount; ++nIndex)
 	{
@@ -19781,8 +19809,12 @@ function CParagraphGetText()
 {
     this.Text = "";
 
-    this.BreakOnNonText = true;
-    this.ParaEndToSpace = false;
+    this.BreakOnNonText 	= true;
+    this.ParaEndToSpace 	= false;
+	this.Numbering			= false;
+	this.Math				= false;
+	this.TabSymbol			= undefined;
+	this.NewLineSeparator	= undefined;
 }
 CParagraphGetText.prototype.AddText = function(sText)
 {
@@ -19796,6 +19828,22 @@ CParagraphGetText.prototype.SetBreakOnNonText = function(bValue)
 CParagraphGetText.prototype.SetParaEndToSpace = function(bValue)
 {
 	this.ParaEndToSpace = bValue;
+};
+CParagraphGetText.prototype.SetParaNewLineSeparator = function(sValue)
+{
+	this.NewLineSeparator = sValue;
+};
+CParagraphGetText.prototype.SetParaNumbering = function(bValue)
+{
+	this.Numbering = bValue;
+};
+CParagraphGetText.prototype.SetParaMath = function(bValue)
+{
+	this.Math = bValue;
+};
+CParagraphGetText.prototype.SetParaTabSymbol = function(sValue)
+{
+	this.TabSymbol = sValue;
 };
 
 function CParagraphNearPos()

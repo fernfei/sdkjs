@@ -179,6 +179,10 @@
 	var pivotCollapseButtonClose = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOSIgaGVpZ2h0PSI5IiB2aWV3Qm94PSIwIDAgOSA5IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB4PSIwLjUiIHk9IjAuNSIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0id2hpdGUiIHN0cm9rZT0iI0NBQ0FDQSIvPgo8cGF0aCBkPSJNNSA0VjJINFY0SDJWNUg0VjdINVY1SDdWNEg1WiIgZmlsbD0iIzc4Nzg3OCIvPgo8L3N2Zz4K";
 	var pivotCollapseButtonOpen = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOSIgaGVpZ2h0PSI5IiB2aWV3Qm94PSIwIDAgOSA5IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB4PSIwLjUiIHk9IjAuNSIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0id2hpdGUiIHN0cm9rZT0iI0NBQ0FDQSIvPgo8cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iNSIgaGVpZ2h0PSIxIiBmaWxsPSIjNzg3ODc4Ii8+Cjwvc3ZnPgo=";
 
+	var asyncOperationsTypes = {
+		mathInfo: 0
+	};
+
 	function getPivotButtonsForLoad() {
 		return [pivotCollapseButtonClose, pivotCollapseButtonOpen];
 	}
@@ -505,6 +509,8 @@
 
 		this.pagesModeData = null;
 		this.pageBreakPreviewSelectionRange = null;
+
+		this.asyncOperations = null;
 
         this._init();
 
@@ -1616,7 +1622,9 @@
 
                 History.EndTransaction();
 
-				t.handlers.trigger("selectionMathInfoChanged", t.getSelectionMathInfo());
+				t.getSelectionMathInfo(function (info) {
+					t.handlers.trigger("selectionMathInfoChanged", info);
+				});
 				t.draw();
             };
 
@@ -6858,7 +6866,9 @@
                 str = c.getValue2();
                 if (0 < str.length) {
                     strCopy = str[0];
-                    if (!(tm = AscCommonExcel.g_oCacheMeasureEmpty.get(strCopy.format))) {
+                    //this.isZooming - in default case(with text) every time recalculate text size -> update row height
+                    //this.isZooming -> fix for start editor with system zoom
+                    if (!(tm = AscCommonExcel.g_oCacheMeasureEmpty.get(strCopy.format)) || this.isZooming) {
                         // Без текста не будет толка
                         strCopy = strCopy.clone();
                         strCopy.setFragmentText('A');
@@ -9812,64 +9822,153 @@
 		return bResult;
 	};
 
-    WorksheetView.prototype.getSelectionMathInfo = function () {
-       //TODO при выделении большого количетсва данных функция работает долго
-        var oSelectionMathInfo = new asc_CSelectionMathInfo();
-        var sum = 0;
-        var oExistCells = {};
-
+	WorksheetView.prototype.getSelectionMathInfo = function (callback) {
+		//TODO при выделении большого количетсва данных функция работает долго
+		var oSelectionMathInfo = new asc_CSelectionMathInfo();
 		if (window["NATIVE_EDITOR_ENJINE"] || this.getSelectionDialogMode()) {
-		    return oSelectionMathInfo;
+			return oSelectionMathInfo;
 		}
 
-        var t = this;
-        this.model.selectionRange.ranges.forEach(function (item) {
-            var cellValue;
-            var range = t.model.getRange3(item.r1, item.c1, item.r2, item.c2);
-            range._setPropertyNoEmpty(null, null, function (cell, r) {
-                var idCell = cell.nCol + '-' + cell.nRow;
-                if (!oExistCells[idCell] && !cell.isNullTextString() && 0 < t._getRowHeight(r)) {
-                    oExistCells[idCell] = true;
-                    ++oSelectionMathInfo.count;
-                    if (CellValueType.Number === cell.getType()) {
-						cellValue = cell.getNumberValue();
-                        if (0 === oSelectionMathInfo.countNumbers) {
-                            oSelectionMathInfo.min = oSelectionMathInfo.max = cellValue;
-                        } else {
-                            oSelectionMathInfo.min = Math.min(oSelectionMathInfo.min, cellValue);
-                            oSelectionMathInfo.max = Math.max(oSelectionMathInfo.max, cellValue);
-                        }
-                        ++oSelectionMathInfo.countNumbers;
-                        sum += cellValue;
-                    }
-                }
-            });
-        });
+		let t = this;
+		let oAsyncSelectionMathInfo = t.asyncOperations && t.asyncOperations[asyncOperationsTypes["mathInfo"]];
+		if (oAsyncSelectionMathInfo) {
+			oAsyncSelectionMathInfo.stop();
+			oAsyncSelectionMathInfo.clear();
+			oAsyncSelectionMathInfo = null;
+		}
 
-        // Показываем только данные для 2-х или более ячеек (http://bugzilla.onlyoffice.com/show_bug.cgi?id=24115)
-        if (1 < oSelectionMathInfo.count && 0 < oSelectionMathInfo.countNumbers) {
-            // Мы должны отдавать в формате активной ячейки
-			var activeCell = this.model.selectionRange.activeCell;
-            var numFormat = this.model.getRange3(activeCell.row, activeCell.col,
-				activeCell.row, activeCell.col).getNumFormat();
-            if (Asc.c_oAscNumFormatType.Time === numFormat.getType()) {
-                // Для времени нужно отдавать в формате [h]:mm:ss (http://bugzilla.onlyoffice.com/show_bug.cgi?id=26271)
-                numFormat = AscCommon.oNumFormatCache.get('[h]:mm:ss');
-            }
+		let action = function (stopFunc, props) {
+			let _ranges = props && props.ranges ? props.ranges : t.model.selectionRange.ranges;
+			let _oExistCells = props && props.oExistCells ? props.oExistCells : {};
+			let _oSelectionMathInfo = props.oSelectionMathInfo;
 
-            oSelectionMathInfo.sum =
-              numFormat.formatToMathInfo(sum, CellValueType.Number, this.settings.mathMaxDigCount);
-            oSelectionMathInfo.average =
-              numFormat.formatToMathInfo(sum / oSelectionMathInfo.countNumbers, CellValueType.Number,
-                this.settings.mathMaxDigCount);
+			if (!_oSelectionMathInfo || !_ranges) {
+				return;
+			}
 
-            oSelectionMathInfo.min =
-              numFormat.formatToMathInfo(oSelectionMathInfo.min, CellValueType.Number, this.settings.mathMaxDigCount);
-            oSelectionMathInfo.max =
-              numFormat.formatToMathInfo(oSelectionMathInfo.max, CellValueType.Number, this.settings.mathMaxDigCount);
-        }
-        return oSelectionMathInfo;
-    };
+			for (let i = 0; i < _ranges.length; i++) {
+				var cellValue;
+				let item = _ranges[i];
+				var range = t.model.getRange3(item.r1, item.c1, item.r2, item.c2);
+				let needBreak = false;
+				let _col, _row;
+				range._setPropertyNoEmpty(null, null, function (cell, r) {
+					var idCell = cell.nCol + '-' + cell.nRow;
+					if (!_oExistCells[idCell] && !cell.isNullTextString() && 0 < t._getRowHeight(r)) {
+						_oExistCells[idCell] = true;
+						++_oSelectionMathInfo.count;
+						if (CellValueType.Number === cell.getType()) {
+							cellValue = cell.getNumberValue();
+							if (0 === _oSelectionMathInfo.countNumbers) {
+								_oSelectionMathInfo.min = _oSelectionMathInfo.max = cellValue;
+							} else {
+								_oSelectionMathInfo.min = Math.min(_oSelectionMathInfo.min, cellValue);
+								_oSelectionMathInfo.max = Math.max(_oSelectionMathInfo.max, cellValue);
+							}
+							++_oSelectionMathInfo.countNumbers;
+							props.sum += cellValue;
+						}
+					}
+
+					_col = cell.nCol;
+					_row = cell.nRow;
+
+					if (stopFunc && stopFunc()) {
+						needBreak = true;
+						return true;
+					}
+				});
+
+				if (props.ranges) {
+					if (needBreak) {
+						if (_ranges[i].c2 === _col && _ranges[i].r2 === _row) {
+							props.ranges = props.ranges.splice(i + 1);
+						} else {
+							let breakRange = _ranges[i];
+							props.ranges = props.ranges.splice(i + 1);
+							//break before _col/_row and after and push into this.ranges
+							let afterRanges = breakRange.sliceAfter(_col, _row);
+							if (afterRanges) {
+								props.ranges = props.ranges.concat(afterRanges)
+							}
+						}
+						break;
+					} else if (i === props.ranges.length - 1) {
+						props.ranges = [];
+						break;
+					}
+				}
+			}
+		};
+
+		let afterAction = function (_props) {
+			let _oSelectionMathInfo = _props.oSelectionMathInfo;
+			if (!_oSelectionMathInfo) {
+				callback && callback(oSelectionMathInfo);
+				return;
+			}
+			let sum = _props.sum;
+			if (1 < _oSelectionMathInfo.count && 0 < _oSelectionMathInfo.countNumbers) {
+				// Мы должны отдавать в формате активной ячейки
+				var activeCell = t.model.selectionRange.activeCell;
+				var numFormat = t.model.getRange3(activeCell.row, activeCell.col,
+					activeCell.row, activeCell.col).getNumFormat();
+				if (Asc.c_oAscNumFormatType.Time === numFormat.getType()) {
+					// Для времени нужно отдавать в формате [h]:mm:ss (http://bugzilla.onlyoffice.com/show_bug.cgi?id=26271)
+					numFormat = AscCommon.oNumFormatCache.get('[h]:mm:ss');
+				}
+
+				_oSelectionMathInfo.sum =
+					numFormat.formatToMathInfo(sum, CellValueType.Number, t.settings.mathMaxDigCount);
+				_oSelectionMathInfo.average =
+					numFormat.formatToMathInfo(sum / _oSelectionMathInfo.countNumbers, CellValueType.Number,
+						t.settings.mathMaxDigCount);
+
+				_oSelectionMathInfo.min =
+					numFormat.formatToMathInfo(_oSelectionMathInfo.min, CellValueType.Number, t.settings.mathMaxDigCount);
+				_oSelectionMathInfo.max =
+					numFormat.formatToMathInfo(_oSelectionMathInfo.max, CellValueType.Number, t.settings.mathMaxDigCount);
+			}
+			callback && callback(_oSelectionMathInfo);
+		};
+
+		let nLargeArea = 3000000;
+		let selectionSize = this.model.selectionRange.getSize();
+		if (selectionSize > nLargeArea) {
+			if (!t.asyncOperations) {
+				t.asyncOperations = {};
+			}
+
+			//clean previous info
+			t.handlers.trigger("selectionMathInfoChanged", oSelectionMathInfo);
+
+			oAsyncSelectionMathInfo = new cAsyncAction();
+			t.asyncOperations[asyncOperationsTypes["mathInfo"]] = oAsyncSelectionMathInfo;
+
+			oAsyncSelectionMathInfo.action = action;
+			oAsyncSelectionMathInfo.callback = afterAction;
+
+			oAsyncSelectionMathInfo.checkContinue = function () {
+				return oAsyncSelectionMathInfo.props.ranges.length > 0;
+			};
+
+			oAsyncSelectionMathInfo.props = {};
+			oAsyncSelectionMathInfo.props.oExistCells = {};
+			oAsyncSelectionMathInfo.props.oSelectionMathInfo = oSelectionMathInfo;
+			oAsyncSelectionMathInfo.props.sum = 0;
+			let cloneRanges = [];
+			this.model.selectionRange.ranges.forEach(function (item) {
+				cloneRanges.push(item.clone());
+			});
+			oAsyncSelectionMathInfo.props.ranges = cloneRanges;
+			oAsyncSelectionMathInfo.start();
+
+		} else {
+			let simpleProps = {oSelectionMathInfo: oSelectionMathInfo, sum: 0};
+			action(null, simpleProps);
+			afterAction(simpleProps);
+		}
+	};
 
     WorksheetView.prototype.getSelectionName = function (bRangeText) {
         if (this.isSelectOnShape) {
@@ -10295,7 +10394,10 @@
     WorksheetView.prototype._updateSelectionNameAndInfo = function () {
         this.handlers.trigger("selectionNameChanged", this.getSelectionName(/*bRangeText*/false));
         this.handlers.trigger("selectionChanged");
-        this.handlers.trigger("selectionMathInfoChanged", this.getSelectionMathInfo());
+        let t = this;
+        this.getSelectionMathInfo(function (info) {
+            t.handlers.trigger("selectionMathInfoChanged", info);
+        });
     };
 
     WorksheetView.prototype.getSelectionShape = function () {
@@ -10399,7 +10501,10 @@
 			this.handlers.trigger("selectionNameChanged", this.getSelectionName(/*bRangeText*/false));
 			if (!isCoord) {
 				this.handlers.trigger("selectionChanged");
-				this.handlers.trigger("selectionMathInfoChanged", this.getSelectionMathInfo());
+				let t = this;
+				this.getSelectionMathInfo(function (info) {
+					t.handlers.trigger("selectionMathInfoChanged", info);
+				});
 			}
 		}
 
@@ -10546,7 +10651,10 @@
                 this.handlers.trigger("selectionNameChanged", this.getSelectionName(/*bRangeText*/true));
                 if (!isCoord) {
                     this.handlers.trigger("selectionChanged");
-                    this.handlers.trigger("selectionMathInfoChanged", this.getSelectionMathInfo());
+					let t = this;
+					this.getSelectionMathInfo(function (info) {
+						t.handlers.trigger("selectionMathInfoChanged", info);
+					});
                 }
             }
         }
@@ -13567,12 +13675,13 @@
 				if (specialPasteChangeColWidth) {
 					t.changeWorksheet("update");
 				} else {
-					if (arn.length) {
-						for (var i = 0; i < arn.length; i++) {
-							t._updateRange(arn[i]);
+					let updateRanges = pasteToRange ? pasteToRange : selectData[0];
+					if (updateRanges.length) {
+						for (var i = 0; i < updateRanges.length; i++) {
+							t._updateRange(updateRanges[i]);
 						}
 					} else {
-						t._updateRange(arn);
+						t._updateRange(updateRanges);
 					}
 				}
 			}
@@ -13664,7 +13773,6 @@
 			pastedInfo.push(selectData);
 		};
 
-		var fonts = pasteContent.props && pasteContent.props.fontsNew ? pasteContent.props.fontsNew : val.fontsNew;
 		callback();
 	};
 
@@ -15663,7 +15771,9 @@
 			}
 
 			t.handlers.trigger("selectionChanged");
-			t.handlers.trigger("selectionMathInfoChanged", t.getSelectionMathInfo());
+			t.getSelectionMathInfo(function (info) {
+				t.handlers.trigger("selectionMathInfoChanged", info);
+			});
 			t._cleanPagesModeData();
 		};
 
@@ -16925,6 +17035,11 @@
 			}, 1);
 		};
 
+		if (aReplaceCells[options.indexInArray] && this.model.isUserProtectedRangesIntersection(aReplaceCells[options.indexInArray])) {
+			this.model.workbook.handlers.trigger("asc_onError", c_oAscError.ID.ProtectedRangeByOtherUser, c_oAscError.Level.NoCritical);
+			return callback ? callback(options) : null;
+		}
+
 		return !needLockCell ? onReplaceCallback(true) :
 			this._isLockedCells(aReplaceCells[options.indexInArray], /*subType*/null, onReplaceCallback);
 	};
@@ -17251,7 +17366,7 @@
 		} else {
 			//***array-formula***
 			changeRangesIfArrayFormula();
-			c.setValue2(val);
+			c.setValue2(val, true);
 
 			// Вызываем функцию пересчета для заголовков форматированной таблицы
 			this.model.checkChangeTablesContent(bbox);
@@ -22785,7 +22900,9 @@
 
 		t.handlers.trigger("reinitializeScroll", AscCommonExcel.c_oAscScrollType.ScrollVertical | AscCommonExcel.c_oAscScrollType.ScrollHorizontal);
 		t.handlers.trigger("selectionChanged");
-		t.handlers.trigger("selectionMathInfoChanged", t.getSelectionMathInfo());
+		t.getSelectionMathInfo(function (info) {
+			t.handlers.trigger("selectionMathInfoChanged", info);
+		});
 	};
 
 	WorksheetView.prototype.clearOutline = function() {
@@ -24870,6 +24987,56 @@
 	WorksheetView.prototype.setColsCount = function (val) {
 		this.nColsCount = val;
 	};
+
+
+	function cAsyncAction() {
+		this.timer = null;
+
+		this.props = null;//options for current action
+		this.callback = null;//after action call function
+		this.action = null;//action function
+		this.checkContinue = null;//passed to the action function and return end of action true/false
+
+		this.interval = 20;
+	}
+	cAsyncAction.prototype.clear = function () {
+		this.props = null;
+	};
+	cAsyncAction.prototype.start = function () {
+		this.stop();
+
+		let oThis = this;
+		this.timer = setTimeout(function () {
+			oThis.continueAction();
+		}, this.interval);
+	};
+	cAsyncAction.prototype.continueAction = function () {
+		let oThis = this;
+
+		let nStartTime = performance.now();
+		this.action && this.action(function () {
+			if (performance.now() - nStartTime > oThis.interval) {
+				return true;
+			}
+			return false;
+		}, this.props);
+
+		if (this.checkContinue && this.checkContinue()) {
+			this.timer = setTimeout(function () {
+				oThis.continueAction();
+			}, this.interval);
+		} else {
+			this.timer = null;
+			this.callback && this.callback(this.props);
+		}
+	};
+	cAsyncAction.prototype.stop = function () {
+		if (this.timer) {
+			clearTimeout(this.timer);
+		}
+		this.timer = null;
+	};
+
 
 
 	//------------------------------------------------------------export---------------------------------------------------

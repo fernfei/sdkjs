@@ -88,7 +88,6 @@
 	editor.private_GetLogicDocument = function(){return this.WordControl.m_oLogicDocument;};
 	editor.asc_getKeyboardLanguage = function(){return -1;};
 	
-	
 
 	//--------------------------------------------------------export----------------------------------------------------
 	AscTest.DrawingDocument = drawingDocument;

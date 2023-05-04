@@ -1271,25 +1271,38 @@ parserHelp.setDigitSeparator(AscCommon.g_oDefaultCultureInfo.NumberDecimalSepara
 		return this.getValueByRowCol(0, 0);
 	};
 	cArea.prototype._getCol = function (colIndex) {
-		if (colIndex < 0 || colIndex > this.getDimensions().col) {
+		let dimensions = this.getDimensions();
+		if (colIndex < 0 || colIndex > dimensions.col) {
 			return null;
 		}
 
 		let col = [];
-		for (let i = 0; i < this.getDimensions().row; i++) {
+		for (let i = 0; i < dimensions.row; i++) {
+			let valInRow = this.getValueByRowCol(i, colIndex);
 			col[i] = [];
-			col[i].push(this.getValueByRowCol(i, colIndex));
+			if (!valInRow) {
+				col[i].push(new cEmpty());
+			} else {
+				col[i].push(valInRow);
+			}
 		}
 		return col;
 	};
 	cArea.prototype._getRow = function (rowIndex) {
-		if (rowIndex < 0 || rowIndex > this.getDimensions().row) {
+		let dimensions = this.getDimensions();
+		if (rowIndex < 0 || rowIndex > dimensions.row) {
 			return null;
 		}
 
 		let row = [[]];
-		for (let j = 0; j < this.getDimensions().col; j++) {
-			row[0].push(this.getValueByRowCol(rowIndex, j));
+		for (let j = 0; j < dimensions.col; j++) {
+			let valInCol = this.getValueByRowCol(rowIndex, j);
+			if (!valInCol) {
+				row[0].push(new cEmpty());
+			} else {
+				row[0].push(valInCol);
+			}
+			
 		}
 		return row;
 	};
@@ -1666,25 +1679,38 @@ parserHelp.setDigitSeparator(AscCommon.g_oDefaultCultureInfo.NumberDecimalSepara
 		return this.getValueByRowCol(0, 0);
 	};
 	cArea3D.prototype._getCol = function (colIndex) {
-		if (colIndex < 0 || colIndex > this.getDimensions().col) {
+		let dimensions = this.getDimensions();
+		if (colIndex < 0 || colIndex > dimensions.col) {
 			return null;
 		}
 
 		let col = [];
-		for (let i = 0; i < this.getDimensions().row; i++) {
+		for (let i = 0; i < dimensions.row; i++) {
+			let valInRow = this.getValueByRowCol(i, colIndex);
 			col[i] = [];
-			col[i].push(this.getValueByRowCol(i, colIndex));
+			if (!valInRow) {
+				col[i].push(new cEmpty());
+			} else {
+				col[i].push(valInRow);
+			}
 		}
 		return col;
 	};
 	cArea3D.prototype._getRow = function (rowIndex) {
-		if (rowIndex < 0 || rowIndex > this.getDimensions().row) {
+		let dimensions = this.getDimensions();
+		if (rowIndex < 0 || rowIndex > dimensions.row) {
 			return null;
 		}
 
 		let row = [[]];
-		for (let j = 0; j < this.getDimensions().col; j++) {
-			row[0].push(this.getValueByRowCol(rowIndex, j));
+		for (let j = 0; j < dimensions.col; j++) {
+			let valInCol = this.getValueByRowCol(rowIndex, j);
+			if (!valInCol) {
+				row[0].push(new cEmpty());
+			} else {
+				row[0].push(valInCol);
+			}
+			
 		}
 		return row;
 	};
@@ -8419,7 +8445,7 @@ function parserFormula( formula, parent, _ws ) {
 					values.push(value);
 				}
 
-				resultArr.addElement(func(true, values));
+				resultArr.addElement(func(values, true));
 			}
 		}
 

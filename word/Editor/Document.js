@@ -1944,10 +1944,11 @@ function CDocument(DrawingDocument, isMainLogicDocument)
     this.TurnOffRecalcCurPos    = false;
 
     this.CheckEmptyElementsOnSelection = true; // При выделении проверять или нет пустой параграф в конце/начале выделения.
-
-    this.Numbering           = new AscWord.CNumbering();
-	this.NumberingApplicator = new AscWord.CNumberingApplicator(this);
-
+	
+	this.Numbering           = new AscWord.CNumbering();               // Форматный класс для хранения всех нумераций согласно формату
+	this.NumberingApplicator = new AscWord.CNumberingApplicator(this); // Класс для применения нумерации к текущему выделение
+	this.NumberingCollection = new AscWord.CNumberingCollection(this); // Класс, хранящий нумерации, используемые в документе
+	
     this.Styles    = new CStyles();
     this.Styles.Set_LogicDocument(this);
 
@@ -2174,9 +2175,6 @@ function CDocument(DrawingDocument, isMainLogicDocument)
 	this.HighlightRequiredFields = false;  // Выделяем ли обязательные поля
 	this.RequiredFieldsBorder    = new CDocumentBorder();
 	this.RequiredFieldsBorder.SetSimpleColor(255, 0, 0);
-
-	this.LastBulletList   = undefined; // Последний примененный маркированный список
-	this.LastNumberedList = undefined; // Последний примененный нумерованный список
 
 	this.SectionEndMark = {}; // Храним пересчитанные метки конца секции
 
@@ -3008,6 +3006,10 @@ CDocument.prototype.private_FinalizeFormChange = function()
 	for (var sKey in this.Action.Additional.FormChange)
 	{
 		let oForm = this.Action.Additional.FormChange[sKey];
+		
+		if (oForm.IsFixedForm() && oForm.IsMainForm() && oForm.IsAutoFitContent())
+			this.CheckFormAutoFit(oForm);
+		
 		this.FormsManager.OnChange(oForm);
 		this.Action.Recalculate = true;
 	}
@@ -6715,6 +6717,14 @@ CDocument.prototype.SetParagraphNumbering = function(numInfo)
 		this.UpdateSelection();
 		this.UpdateInterface();
 		this.UpdateStylePanel();
+		
+		let paraPr = this.GetCalculatedParaPr();
+		let numPr  = paraPr.NumPr;
+		return (numPr && numPr.IsValid() ? this.Numbering.GetNum(numPr.NumId) : null);
+	}
+	else
+	{
+		return null;
 	}
 };
 CDocument.prototype.SetParagraphOutlineLvl = function(nLvl)
@@ -8963,6 +8973,7 @@ CDocument.prototype.OnKeyDown = function(e)
 				this.StartAction(AscDFH.historydescription_Document_BackSpaceButton);
 				this.Remove(-1, true, false, false, e.CtrlKey, true);
 				this.FinalizeAction();
+				this.private_UpdateCursorXY(true, true);
 			}
 			bRetValue = keydownresult_PreventAll;
 		}
@@ -9181,7 +9192,7 @@ CDocument.prototype.OnKeyDown = function(e)
 			}
 			else if (this.Api.isInkDrawerOn())
 			{
-				this.Api.asc_StopInkDrawer();
+				this.Api.stopInkDrawer();
 			}
 			else if (this.IsFormFieldEditing())
 			{
@@ -9479,6 +9490,7 @@ CDocument.prototype.OnKeyDown = function(e)
 					this.StartAction(AscDFH.historydescription_Document_DeleteButton);
 					this.Remove(1, false, false, false, e.CtrlKey, true);
 					this.FinalizeAction();
+					this.private_UpdateCursorXY(true, true);
 				}
 				bRetValue = keydownresult_PreventAll;
 			}
@@ -10544,6 +10556,9 @@ CDocument.prototype.Get_Numbering = function()
 {
 	return this.Numbering;
 };
+/**
+ * @returns {AscWord.CNumbering}
+ */
 CDocument.prototype.GetNumbering = function()
 {
 	return this.Numbering;
@@ -10551,6 +10566,13 @@ CDocument.prototype.GetNumbering = function()
 CDocument.prototype.GetNumberingManager = function()
 {
 	return this.GetNumbering();
+};
+/**
+ * @returns {AscWord.NumberingCollection}
+ */
+CDocument.prototype.GetNumberingCollection = function()
+{
+	return this.NumberingCollection;
 };
 /**
  * Получаем стиль по выделенному фрагменту
@@ -10732,15 +10754,34 @@ CDocument.prototype.Select_DrawingObject = function(Id)
 	if (!drawingObject || !drawingObject.IsUseInDocument())
 		return;
 
+	const oDocContent = drawingObject.GetDocumentContent();
+	if(!oDocContent)
+		return;
+
 	this.RemoveSelection();
 
 	// Прячем курсор
 	this.DrawingDocument.TargetEnd();
 	this.DrawingDocument.SetCurrentPage(this.CurPage);
 
-	this.Selection.Start = false;
-	this.Selection.Use   = true;
-	this.SetDocPosType(docpostype_DrawingObjects);
+	const oHdrFtr = oDocContent.IsHdrFtr(true);
+	if (!oHdrFtr)
+	{
+		this.Selection.Start = false;
+		this.Selection.Use   = true;
+		this.SetDocPosType(docpostype_DrawingObjects);
+	}
+	else
+	{
+		this.SetDocPosType(docpostype_HdrFtr);
+		this.Selection.Start = false;
+		this.Selection.Use   = true;
+		const oDocContent = oHdrFtr.Content;
+		oDocContent.SetDocPosType(docpostype_DrawingObjects);
+		oDocContent.Selection.Use   = true;
+		oDocContent.Selection.Start = true;
+	}
+
 	this.DrawingObjects.selectById(Id, this.CurPage);
 
 	this.Document_UpdateInterfaceState();
@@ -11728,6 +11769,7 @@ CDocument.prototype.private_UpdateInterface = function(isSaveCurrentReviewChange
 	this.Document_UpdateCanAddHyperlinkState();
 	this.Document_UpdateSectionPr();
 	this.UpdateStylePanel();
+	this.UpdateNumberingPanel();
 };
 CDocument.prototype.private_UpdateRulers = function()
 {
@@ -12371,8 +12413,7 @@ CDocument.prototype.Document_Undo = function(Options)
 		return;
 
 	// Нужно сбрасывать, т.к. после Undo/Redo данные списки у нас будут в глобальной таблице, но не такие, какие нужны
-	this.SetLastNumberedList(null);
-	this.SetLastBulletList(null);
+	this.NumberingApplicator.ResetLast();
 
 	if (true !== this.History.Can_Undo() && this.Api && this.CollaborativeEditing && true === this.CollaborativeEditing.Is_Fast() && true !== this.CollaborativeEditing.Is_SingleUser())
 	{
@@ -12402,8 +12443,7 @@ CDocument.prototype.Document_Redo = function()
 		return;
 
 	// Нужно сбрасывать, т.к. после Undo/Redo данные списки у нас будут в глобальной таблице, но не такие, какие нужны
-	this.SetLastNumberedList(null);
-	this.SetLastBulletList(null);
+	this.NumberingApplicator.ResetLast();
 
 	if (this.History.Can_Redo())
 	{
@@ -14560,6 +14600,10 @@ CDocument.prototype.UnlockPanelStyles = function(isUpdate)
 	if (true === isUpdate)
 		this.UpdateStylePanel();
 };
+CDocument.prototype.UpdateNumberingPanel = function()
+{
+	this.NumberingCollection.UpdatePanel();
+};
 CDocument.prototype.GetAllParagraphs = function(Props, ParaArray)
 {
 	if (Props && true === Props.OnlyMainDocument && true === Props.All && null !== this.AllParagraphsList)
@@ -15831,29 +15875,6 @@ CDocument.prototype.Set_ColumnsProps = function(ColumnsProps)
 CDocument.prototype.GetTopDocumentContent = function(isOneLevel)
 {
 	return this;
-};
-CDocument.prototype.private_RecalculateNumbering = function(Elements)
-{
-	if (true === AscCommon.g_oIdCounter.m_bLoad)
-		return;
-
-	for (var Index = 0, Count = Elements.length; Index < Count; ++Index)
-	{
-		var Element = Elements[Index];
-		if (type_Paragraph === Element.Get_Type())
-			this.History.Add_RecalcNumPr(Element.GetNumPr());
-		else if (type_Paragraph === Element.Get_Type())
-		{
-			var ParaArray = [];
-			Element.GetAllParagraphs({All : true}, ParaArray);
-
-			for (var ParaIndex = 0, ParasCount = ParaArray.length; ParaIndex < ParasCount; ++ParaIndex)
-			{
-				var Para = ParaArray[ParaIndex];
-				this.History.Add_RecalcNumPr(Element.GetNumPr());
-			}
-		}
-	}
 };
 CDocument.prototype.Set_SectionProps = function(Props)
 {
@@ -21845,6 +21866,7 @@ CDocument.prototype.MoveToFillingForm = function(isNext)
 	else if ((oForm = oInfo.GetField()) instanceof ParaField)
 		oForm.SelectThisElement();
 
+	this.DrawingObjects.resetDrawStateBeforeAction();
 	var oRes = null;
 	if (docpostype_DrawingObjects === this.GetDocPosType())
 	{
@@ -22032,6 +22054,7 @@ CDocument.prototype.AddContentControl = function(nContentControlType)
 {
 	if (this.IsDrawingSelected() && !this.DrawingObjects.getTargetDocContent())
 	{
+		this.DrawingObjects.resetDrawStateBeforeAction();
 		var oDrawing = this.DrawingObjects.getMajorParaDrawing();
 		if (oDrawing)
 			oDrawing.SelectAsText();
@@ -23672,46 +23695,6 @@ CDocument.prototype.GetHyperlinkAnchors = function()
 	}
 
 	return arrAnchors;
-};
-/**
- * Получаем последний примененный маркированный список
- * @returns {?CNumPr}
- */
-CDocument.prototype.GetLastBulletList = function()
-{
-	return this.LastBulletList;
-};
-/**
- * Запоминаем последний примененный маркированный список
- * @param sNumId {string}
- * @param nLvl {number} 0..8
- */
-CDocument.prototype.SetLastBulletList = function(sNumId, nLvl)
-{
-	if (!sNumId)
-		this.LastBulletList = undefined;
-	else
-		this.LastBulletList = new CNumPr(sNumId, nLvl);
-};
-/**
- * Получаем последний примененный нумерованный список
- * @returns {?CNumPr}
- */
-CDocument.prototype.GetLastNumberedList = function()
-{
-	return this.LastNumberedList;
-};
-/**
- * Запоминаем последний примененный нумерованный список
- * @param sNumId {string}
- * @param nLvl {number} 0..8
- */
-CDocument.prototype.SetLastNumberedList = function(sNumId, nLvl)
-{
-	if (!sNumId)
-		this.LastNumberedList = undefined;
-	else
-		this.LastNumberedList = new CNumPr(sNumId, nLvl);
 };
 /**
  * Получаем текущую выделенную нумерацию
@@ -25483,7 +25466,7 @@ CDocument.prototype.ConvertFormFixedType = function(sId, isToFixed)
 	var oParagraph = oForm.GetParagraph();
 	if (oParagraph)
 	{
-		if (oParagraph.GetParentShape())
+		if (isToFixed && oParagraph.GetParentShape())
 			return false;
 		
 		isLocked = this.IsSelectionLocked(AscCommon.changestype_None, {
@@ -26566,6 +26549,7 @@ CDocument.prototype.GetSearchElementId = function(bNext)
 
 	this.SearchEngine.SetDirection(bNext);
 
+	this.DrawingObjects.resetDrawStateBeforeAction();
 	if (docpostype_DrawingObjects === this.CurPos.Type)
 	{
 		var ParaDrawing = this.DrawingObjects.getMajorParaDrawing();

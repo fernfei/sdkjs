@@ -754,5 +754,9 @@ CNativeGraphics.prototype =
     Destroy : function()
     {
         this.Native["Destroy"]();
-    }
+    },
+	IsPdfRenderer : function()
+	{
+		return this.RENDERER_PDF_FLAG;
+	}
 };
