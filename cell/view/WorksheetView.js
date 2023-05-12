@@ -14176,6 +14176,7 @@
 		//необходимо проверить, пересекаемся ли мы с фоматированной таблицей
 		//если да, то подхватывать dxf при вставке не нужно
 		var intersectionAllRangeWithTables = t.model.autoFilters._intersectionRangeWithTableParts(trueActiveRange);
+		let isPastedPartContainsTables = val.autoFilters._intersectionRangeWithTableParts(activeCellsPasteFragment);
 
 
 		var addComments = function (pasteRow, pasteCol, comments) {
@@ -14197,22 +14198,24 @@
 
 		var mergeArr = [];
 		var checkMerge = function (range, curMerge, nRow, nCol, rowDiff, colDiff, pastedRangeProps) {
-			var isMerged = false;
+			let isMerged = false;
 
-			for (var mergeCheck = 0; mergeCheck < mergeArr.length; ++mergeCheck) {
-				if (mergeArr[mergeCheck].contains(nCol, nRow)) {
-					isMerged = true;
+			if (mergeArr.length) {
+				for (let mergeCheck = 0; mergeCheck < mergeArr.length; ++mergeCheck) {
+					if (mergeArr[mergeCheck].contains(nCol, nRow)) {
+						isMerged = true;
+					}
 				}
 			}
 
 			if (!isOneMerge) {
 				if (curMerge != null && !isMerged) {
-					var offsetCol = curMerge.c2 - curMerge.c1;
+					let offsetCol = curMerge.c2 - curMerge.c1;
 					if (offsetCol + nCol >= gc_nMaxCol0) {
 						offsetCol = gc_nMaxCol0 - nCol;
 					}
 
-					var offsetRow = curMerge.r2 - curMerge.r1;
+					let offsetRow = curMerge.r2 - curMerge.r1;
 					if (offsetRow + nRow >= gc_nMaxRow0) {
 						offsetRow = gc_nMaxRow0 - nRow;
 					}
@@ -14234,19 +14237,21 @@
 			}
 		};
 
-		var getTableDxf = function (pasteRow, pasteCol, newVal) {
-			var dxf = null;
-
+		let getTableDxf = function (pasteRow, pasteCol, newVal) {
 			if (false !== intersectionAllRangeWithTables) {
 				return {dxf: null};
 			}
+			if (!isPastedPartContainsTables) {
+				return null;
+			}
 
-			var tables = val.autoFilters._intersectionRangeWithTableParts(newVal.bbox);
-			var blocalArea = true;
+			let dxf = null;
+			let tables = val.autoFilters._intersectionRangeWithTableParts(newVal.bbox);
+			let blocalArea = true;
 			if (tables && tables[0]) {
-				var table = tables[0];
-				var styleInfo = table.TableStyleInfo;
-				var styleForCurTable = styleInfo ? t.model.workbook.TableStyles.AllStyles[styleInfo.Name] : null;
+				let table = tables[0];
+				let styleInfo = table.TableStyleInfo;
+				let styleForCurTable = styleInfo ? t.model.workbook.TableStyles.AllStyles[styleInfo.Name] : null;
 
 				if (activeCellsPasteFragment.containsRange(table.Ref)) {
 					blocalArea = false;
@@ -14256,8 +14261,8 @@
 					return null;
 				}
 
-				var headerRowCount = 1;
-				var totalsRowCount = 0;
+				let headerRowCount = 1;
+				let totalsRowCount = 0;
 				if (null != table.HeaderRowCount) {
 					headerRowCount = table.HeaderRowCount;
 				}
@@ -14265,7 +14270,7 @@
 					totalsRowCount = table.TotalsRowCount;
 				}
 
-				var bbox = new Asc.Range(table.Ref.c1, table.Ref.r1, table.Ref.c2, table.Ref.r2);
+				let bbox = new Asc.Range(table.Ref.c1, table.Ref.r1, table.Ref.c2, table.Ref.r2);
 				styleForCurTable.initStyle(val.sheetMergedStyles, bbox, styleInfo, headerRowCount, totalsRowCount);
 				val._getCell(pasteRow, pasteCol, function (cell) {
 					if (cell) {
@@ -14279,7 +14284,7 @@
 				});
 			}
 
-			return {dxf: dxf, blocalArea: blocalArea};
+			return dxf ? {dxf: dxf, blocalArea: blocalArea} : null;
 		};
 
 		var findFormulaArrayFirstCell = function (_arr, _cell) {
@@ -14353,8 +14358,8 @@
 		var pasteSheetLinkName = null;
 		var colsWidth = {};
 		var pastedFormulaArray = [];
-		var putInsertedCellIntoRange = function (toRow, toCol, fromRow, fromCol, rowDiff, colDiff, range, newVal, curMerge, transposeRange) {
-			var pastedRangeProps = {};
+		let putInsertedCellIntoRange = function (toRow, toCol, fromRow, fromCol, rowDiff, colDiff, range, newVal, curMerge, transposeRange) {
+			let pastedRangeProps = {};
 
 			if (isPastingLink) {
 				if (-1 === pasteLinkIndex) {
@@ -14366,9 +14371,8 @@
 				t._pasteCellLink(range, fromRow, fromCol, arrFormula, pasteSheetLinkName, pasteLinkIndex);
 				return;
 			}
-
 			//range может далее изменится в связи с наличием мерженных ячеек, firstRange - не меняется(ему делаем setValue, как первой ячейке в диапазоне мерженных)
-			var firstRange = range.clone();
+			let firstRange = range.clone();
 
 			//****paste comments****
 			if (specialPasteProps.comment && val.aComments && val.aComments.length) {
@@ -14382,43 +14386,38 @@
 				pastedRangeProps._cellStyle = newVal.getStyle();
 			}*/
 
-			//set style
-			if (!isOneMerge) {
-				pastedRangeProps.cellStyle = newVal.getStyleName();
-			}
-
-			if (!isOneMerge)//settings for cell(format)
+			if (!isOneMerge)//settings for cell
 			{
+				//set style
+				pastedRangeProps.cellStyle = newVal.getStyleName();
+
 				//format
-				var numFormat = newVal.getNumFormat();
-				var nameFormat;
+				let numFormat = newVal.getNumFormat();
+				let nameFormat;
 				if (numFormat && numFormat.sFormat) {
 					nameFormat = numFormat.sFormat;
 				}
 
 				pastedRangeProps.numFormat = nameFormat;
-			}
 
-			if (!isOneMerge)//settings for cell
-			{
-				var align = newVal.getAlign();
+				let align = newVal.getAlign();
 				//vertical align
 				pastedRangeProps.alignVertical = align.getAlignVertical();
 				//horizontal align
 				pastedRangeProps.alignHorizontal = align.getAlignHorizontal();
 
 				//borders
-				var fullBorders;
+				let fullBorders;
 				if (specialPasteProps.transpose) {
 					//TODO сделано для правильного отображения бордеров при транспонирования. возможно стоит использовать эту функцию во всех ситуациях. проверить!
 					fullBorders = newVal.getBorder(newVal.bbox.r1, newVal.bbox.c1).clone();
 				} else {
-					fullBorders = newVal.getBorderFull();
+					fullBorders = newVal.getBorder(newVal.bbox.r1, newVal.bbox.c1).clone();
 				}
 				if (pastedRangeProps.offsetLast && pastedRangeProps.offsetLast.col > 0 && curMerge && fullBorders) {
 					//для мерженных ячеек, правая границу
-					var endMergeCell = val.getCell3(fromRow, curMerge.c2);
-					var fullBordersEndMergeCell = endMergeCell.getBorderFull();
+					let endMergeCell = val.getCell3(fromRow, curMerge.c2);
+					let fullBordersEndMergeCell = endMergeCell.getBorderFull();
 					if (fullBordersEndMergeCell && fullBordersEndMergeCell.r) {
 						fullBorders.r = fullBordersEndMergeCell.r;
 					}
@@ -14446,7 +14445,7 @@
 				pastedRangeProps.locked = newVal.getLocked();
 			}
 
-			var tableDxf = getTableDxf(fromRow, fromCol, newVal);
+			let tableDxf = getTableDxf(fromRow, fromCol, newVal);
 			if (tableDxf && tableDxf.blocalArea) {
 				pastedRangeProps.tableDxfLocal = tableDxf.dxf;
 			} else if (tableDxf) {
@@ -14460,10 +14459,10 @@
 			pastedRangeProps.colsWidth = colsWidth;
 
 			//***array-formula***
-			var fromCell;
+			let fromCell;
 			val._getCell(fromRow, fromCol, function (cell) {
 				fromCell = cell;
-				var _formulaArrayRef = cell.formulaParsed && cell.formulaParsed.getArrayFormulaRef();
+				let _formulaArrayRef = cell.formulaParsed && cell.formulaParsed.getArrayFormulaRef();
 				if (_formulaArrayRef) {
 					//для ситуаций, когда нужно при вставке преобразовать формулу массива в набор формул
 					//это случается, когда при специальной вставке выбираешь арифметическую операцию, а во
@@ -14472,9 +14471,8 @@
 				}
 			});
 
-
 			//apply props by cell
-			var formulaProps = {
+			let formulaProps = {
 				firstRange: firstRange,
 				arrFormula: arrFormula,
 				tablesMap: tablesMap,
@@ -14488,6 +14486,7 @@
 				fromBinary: true,
 				formulaArrayFirstCell: findFormulaArrayFirstCell(pastedFormulaArray, fromCell)
 			};
+
 			t._setPastedDataByCurrentRange(range, pastedRangeProps, formulaProps, specialPasteProps);
 		};
 
