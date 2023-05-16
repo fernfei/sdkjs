@@ -35,386 +35,915 @@
 // When merging, first we add the missing text from the second document, then from the first
 
 const arrTestObjectsInfo = [
-    ///////////////////////// -> 1 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo(''),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет')
-            ]
-        ]
-    },
-    ///////////////////////// -> 2 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo(''),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('')
-            ]
-        ]
-    },
-    ///////////////////////// -> 3 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Приветище')
-            ]
-        ]
-    },
-    ///////////////////////// -> 4 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ]
-    },
-    ///////////////////////// -> 5 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Приветище', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ]
-    },
-    ///////////////////////// -> 6 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('При', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('вет, как дела?')
-            ]
-        ]
-    },
-    ///////////////////////// -> 7 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет Привет Привет'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет'), createParagraphInfo(' Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' Привет')
-            ]
-        ]
-    },
-    ///////////////////////// -> 8 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет'), createParagraphInfo(' ой', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' Привет'), createParagraphInfo(' Привет'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет'), createParagraphInfo(' Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' Привет')
-            ]
-        ]
-    },
-    ///////////////////////// -> 9 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('как дела?')
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет, ', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('как дела?')
-            ]
-        ]
-    },
-    ///////////////////////// -> 10 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?')
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Приветик, ', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('как дела?')
-            ]
-        ]
-    },
-    ///////////////////////// -> 11 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Нормально, а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Хорошо, а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 2000000})
-            ]
-        ]
-    },
-    ///////////////////////// -> 12 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как дела? Нормально, а у тебя как?')
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Хорошо, а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ]
-    },
-    ///////////////////////// -> 13 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?   Хорошо, а у тебя как?')
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет, как дела?    '), createParagraphInfo(' Нормально, а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ]
-    },
-    ///////////////////////// -> 14 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('При', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('вет, как д'),createParagraphInfo('ел', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo('а?'),
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Пр'),createParagraphInfo('и', {reviewType: reviewtype_Add, userName: 'John Smoth', dateTime: 2000000}),createParagraphInfo('в'),createParagraphInfo('е', {reviewType: reviewtype_Add, userName: 'John Smoth', dateTime: 2000000}),createParagraphInfo('т'),createParagraphInfo(',', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo(' к'),createParagraphInfo('а', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo('к', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo(' '),createParagraphInfo('д', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo('ела?'),
-            ]
-        ]
-    },
-    ///////////////////////// -> 15 <- /////////////////////////////
-    {
-        originalDocument: [
-            [
-                createParagraphInfo('Привет, как уюю у '), createParagraphInfo('тебя', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' дела    ', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' дела?')
-            ]
-        ],
-        revisedDocument: [
-            [
-                createParagraphInfo('Привет,'), createParagraphInfo(' ну ты даешь,', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' как у '), createParagraphInfo(' опо', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' дела?')
-            ]
-        ]
-    },
+	///////////////////////// -> 1 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет')
+			]
+		]
+	},
+	///////////////////////// -> 2 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('')
+			]
+		]
+	},
+	///////////////////////// -> 3 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Приветище')
+			]
+		]
+	},
+	///////////////////////// -> 4 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
+			]
+		]
+	},
+	///////////////////////// -> 5 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Приветище', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
+			]
+		]
+	},
+	///////////////////////// -> 6 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('При', {
+					reviewType: reviewtype_Add,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('вет, как дела?')
+			]
+		]
+	},
+	///////////////////////// -> 7 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет Привет Привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет'), createParagraphInfo(' Привет', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' Привет')
+			]
+		]
+	},
+	///////////////////////// -> 8 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет'), createParagraphInfo(' ой', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' Привет'), createParagraphInfo(' Привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет'), createParagraphInfo(' Привет', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' Привет')
+			]
+		]
+	},
+	///////////////////////// -> 9 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('как дела?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет, ', {
+					reviewType: reviewtype_Add,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('как дела?')
+			]
+		]
+	},
+	///////////////////////// -> 10 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Приветик, ', {
+					reviewType: reviewtype_Add,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('как дела?')
+			]
+		]
+	},
+	///////////////////////// -> 11 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Нормально, а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Хорошо, а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 2000000
+			})
+			]
+		]
+	},
+	///////////////////////// -> 12 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как дела? Нормально, а у тебя как?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет, как дела?'), createParagraphInfo(' Хорошо, а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		]
+	},
+	///////////////////////// -> 13 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?   Хорошо, а у тебя как?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет, как дела?    '), createParagraphInfo(' Нормально, а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		]
+	},
+	///////////////////////// -> 14 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('При', {
+					reviewType: reviewtype_Remove,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('вет, как д'), createParagraphInfo('ел', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('а?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Пр'), createParagraphInfo('и', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smoth',
+				dateTime  : 2000000
+			}), createParagraphInfo('в'), createParagraphInfo('е', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smoth',
+				dateTime  : 2000000
+			}), createParagraphInfo('т'), createParagraphInfo(',', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' к'), createParagraphInfo('а', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('к', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' '), createParagraphInfo('д', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('ела?')
+			]
+		]
+	},
+	///////////////////////// -> 15 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет, как уюю у '), createParagraphInfo('тебя', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' дела    ', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' дела?')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Привет,'), createParagraphInfo(' ну ты даешь,', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' как у '), createParagraphInfo(' опо', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' дела?')
+			]
+		]
+	},
 	///////////////////////// -> 16 <- /////////////////////////////
 	{
 		originalDocument: [
 			[
-				createParagraphInfo('Хрусть, '), createParagraphInfo('Хрусть', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(', пок ')
+				createParagraphInfo('Хрусть, '), createParagraphInfo('Хрусть', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(', пок ')
 			]
 		],
-		revisedDocument: [
+		revisedDocument : [
 			[
-				createParagraphInfo('Хрусть, ', {reviewType: reviewtype_Remove, userName: 'Mark Pottato', dateTime: 1000000}), createParagraphInfo('Хрусть', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(', ок п')
+				createParagraphInfo('Хрусть, ', {
+					reviewType: reviewtype_Remove,
+					userName  : 'Mark Pottato',
+					dateTime  : 1000000
+				}), createParagraphInfo('Хрусть', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(', ок п')
 			]
 		]
 	},
+	///////////////////////// -> 17 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello Hello Hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hello', null, null, {
+					start: [{id: '1', name: 's1'}, {id: '2', name: 's2'}],
+					end  : [{id: '1'}, {id: '2'}]
+				}), createParagraphInfo(' Hello Hello')
+			]
+		]
+	},
+	///////////////////////// -> 18 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello', null, null, {
+					start: [{id: '1', name: 's1'}],
+					end  : [{id: '1'}]
+				}), createParagraphInfo(' Hello Hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hel', null, null, {
+					start: [{id: '1', name: 's1'}],
+					end  : [{id: '1'}]
+				}), createParagraphInfo('lo Hello Hello')
+			]
+		]
+	},
+	///////////////////////// -> 19 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Привет привет привет')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('П', null, null, {
+					start: [{id: '1', name: 's1'}, {id: '2', name: 's8'}, {
+						id   : '3',
+						name : 's3',
+						start: true
+					}]
+				}),
+				createParagraphInfo('ри', null, null, {start: [{id: '4', name: 's11'}]}),
+				createParagraphInfo('ве', null, null, {start: [{id: '5', name: 's2'}], end: [{id: '4'}]}),
+				createParagraphInfo('т '),
+				createParagraphInfo('пр', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '1'}]}),
+				createParagraphInfo('и', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+					end: [{
+						id  : '7',
+						name: 's7'
+					}, {id: '5'}]
+				}),
+				createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null),
+				createParagraphInfo('ет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+					start: [{
+						id  : '8',
+						name: 's4'
+					}]
+				}),
+				createParagraphInfo(' '),
+				createParagraphInfo('п', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+					start: [{
+						id  : '9',
+						name: 's6'
+					}]
+				}),
+				createParagraphInfo('ри', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+					start: [{
+						id  : '11',
+						name: 's5'
+					}],
+					end  : [{id: '11'}]
+				}),
+				createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '7'}]}),
+				createParagraphInfo('ет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+					end: [{
+						id  : '12',
+						name: 's9'
+					}, {id: '13', name: 's10'}, {id: '2'}]
+				}),
+				createParagraphInfo(' ', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '12'}]}),
+				createParagraphInfo('прив', null, null, {end: [{id: '14', name: 's12'}, {id: '9'}, {id: '14'}]}),
+				createParagraphInfo('ет', null, null, {end: [{id: '3'}, {id: '8'}, {id: '13'}]})
+			]
+		]
+	},
+	///////////////////////// -> 20 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello Hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hello He'),
+				createParagraphInfo('llo Hel', null, null, {start: [{id: '1', name: 's1'}], end: [{id: '1'}]}),
+				createParagraphInfo('lo')
+			]
+		]
+	},
+	///////////////////////// -> 21 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello Hello Hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hello', null, null, {start: [{id: '1', name: 's1'}], end: [{id: '1'}]}),
+				createParagraphInfo(' Hello')
+			]
+		]
+	},
+	///////////////////////// -> 22 <- /////////////////////////////
+	{
+		originalDocument: [
+			[
+				createParagraphInfo('Hello hello hello')
+			]
+		],
+		revisedDocument : [
+			[
+				createParagraphInfo('Hello hello '),
+				createParagraphInfo('hello hello', null, null, {start: [{id: '1', name: 's1'}, {id: '1'}]})
+			]
+		]
+	}
 ];
+
 const arrAnswers = [
-    /////////////////////////////////// -> 1 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
-            [
-                createParagraphInfo('Привет', {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 2 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo()],
-        ]
-    },
-    /////////////////////////////////// -> 3 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo('Привет', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
-            [createParagraphInfo('Приветище', {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})]
-        ]
-    },
-    /////////////////////////////////// -> 4 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo('Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(undefined)]
-        ]
-    },
-    /////////////////////////////////// -> 5 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo('Привет', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
-            [createParagraphInfo('Приветище', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})]
-        ]
-    },
-    /////////////////////////////////// -> 6 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo('При', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('вет, как дела?')],
-        ]
-    },
-    /////////////////////////////////// -> 7 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [createParagraphInfo('Привет'), createParagraphInfo(' Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' Привет')]
-        ]
-    },
-    /////////////////////////////////// -> 8 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет'), createParagraphInfo(' ой', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo(' ', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}),createParagraphInfo('Привет', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' Привет')
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 9 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет, ', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('как дела?')
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 10 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Приветик',{reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('Привет',{reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}),createParagraphInfo(', ',{reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('как дела?')
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 11 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'), createParagraphInfo(' ',{reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('Хорошо', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 2000000}), createParagraphInfo('Нормально',{reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo(', а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 12 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?'), createParagraphInfo(' ',{reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('Хорошо', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('Нормально', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(', а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000})
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 13 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет, как дела?   '), createParagraphInfo(' ', {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(' Нормально', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),createParagraphInfo('Хорошо', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo(', а у тебя как?', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}),
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 14 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Пр', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('и', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}, {reviewType: reviewtype_Add, userName: 'John Smoth', dateTime: 2000000}), createParagraphInfo('в'), createParagraphInfo('е', {reviewType: reviewtype_Add, userName: 'John Smoth', dateTime: 2000000}), createParagraphInfo('т'), createParagraphInfo(',', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' к'), createParagraphInfo('а', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('к', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' '), createParagraphInfo('д', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('ел', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('а?')
-            ]
-        ]
-    },
-    /////////////////////////////////// -> 15 <- ////////////////////////////////////////////
-    {
-        finalDocument: [
-            [
-                createParagraphInfo('Привет,'),createParagraphInfo(' ну ты даешь,', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' как'), createParagraphInfo(' уюю', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000}),createParagraphInfo(' у '),createParagraphInfo(' опо', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo('тебя', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' дела    ', {reviewType: reviewtype_Add, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(' дела?')
-            ]
-        ]
-    },
+	/////////////////////////////////// -> 1 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
+			[
+				createParagraphInfo('Привет', {
+					reviewType: reviewtype_Add,
+					userName  : 'Valdemar',
+					dateTime  : 3000000
+				}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})
+			]
+		]
+	},
+	/////////////////////////////////// -> 2 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo()]
+		]
+	},
+	/////////////////////////////////// -> 3 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('Привет', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
+			[createParagraphInfo('Приветище', {
+				reviewType: reviewtype_Add,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})]
+		]
+	},
+	/////////////////////////////////// -> 4 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('Привет', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(undefined)]
+		]
+	},
+	/////////////////////////////////// -> 5 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('Привет', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(undefined, {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})],
+			[createParagraphInfo('Приветище', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(undefined, {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000})]
+		]
+	},
+	/////////////////////////////////// -> 6 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('При', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('вет, как дела?')]
+		]
+	},
+	/////////////////////////////////// -> 7 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('Привет'), createParagraphInfo(' Привет', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' Привет')]
+		]
+	},
+	/////////////////////////////////// -> 8 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет'), createParagraphInfo(' ой', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' ', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo('Привет', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' Привет')
+			]
+		]
+	},
+	/////////////////////////////////// -> 9 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет, ', {
+					reviewType: reviewtype_Add,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('как дела?')
+			]
+		]
+	},
+	/////////////////////////////////// -> 10 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Приветик', {
+					reviewType: reviewtype_Add,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('Привет', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(', ', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('как дела?')
+			]
+		]
+	},
+	/////////////////////////////////// -> 11 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?'), createParagraphInfo(' ', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('Хорошо', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 2000000
+			}), createParagraphInfo('Нормально', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(', а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		]
+	},
+	/////////////////////////////////// -> 12 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?'), createParagraphInfo(' ', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('Хорошо', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('Нормально', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(', а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		]
+	},
+	/////////////////////////////////// -> 13 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет, как дела?   '), createParagraphInfo(' ', {
+				reviewType: reviewtype_Add,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(' Нормально', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('Хорошо', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(', а у тебя как?', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			})
+			]
+		]
+	},
+	/////////////////////////////////// -> 14 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Пр', {
+					reviewType: reviewtype_Remove,
+					userName  : 'John Smith',
+					dateTime  : 1000000
+				}), createParagraphInfo('и', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}, {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smoth',
+				dateTime  : 2000000
+			}), createParagraphInfo('в'), createParagraphInfo('е', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smoth',
+				dateTime  : 2000000
+			}), createParagraphInfo('т'), createParagraphInfo(',', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' к'), createParagraphInfo('а', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('к', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' '), createParagraphInfo('д', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('ел', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('а?')
+			]
+		]
+	},
+	/////////////////////////////////// -> 15 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Привет,'), createParagraphInfo(' ну ты даешь,', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' как'), createParagraphInfo(' уюю', {
+				reviewType: reviewtype_Remove,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo(' у '), createParagraphInfo(' опо', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo('тебя', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' дела    ', {
+				reviewType: reviewtype_Add,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(' дела?')
+			]
+		]
+	},
 	/////////////////////////////////// -> 16 <- ////////////////////////////////////////////
 	{
 		finalDocument: [
 			[
-				createParagraphInfo('Хрусть, ', {reviewType: reviewtype_Remove, userName: 'Mark Pottato', dateTime: 1000000}), createParagraphInfo('Хрусть', {reviewType: reviewtype_Remove, userName: 'John Smith', dateTime: 1000000}), createParagraphInfo(', '), createParagraphInfo('ок п', {reviewType: reviewtype_Add, userName: 'Valdemar', dateTime: 3000000}), createParagraphInfo('пок ', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})
+				createParagraphInfo('Хрусть, ', {
+					reviewType: reviewtype_Remove,
+					userName  : 'Mark Pottato',
+					dateTime  : 1000000
+				}), createParagraphInfo('Хрусть', {
+				reviewType: reviewtype_Remove,
+				userName  : 'John Smith',
+				dateTime  : 1000000
+			}), createParagraphInfo(', '), createParagraphInfo('ок п', {
+				reviewType: reviewtype_Add,
+				userName  : 'Valdemar',
+				dateTime  : 3000000
+			}), createParagraphInfo('пок ', {reviewType: reviewtype_Remove, userName: 'Valdemar', dateTime: 3000000})
 			]
 		]
 	},
+	/////////////////////////////////// -> 17 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello', null, null, {
+					start: [{id: '1', name: 's1'}, {id: '2', name: 's2'}],
+					end  : [{id: '1'}, {id: '2'}]
+				}), createParagraphInfo(' Hello Hello')
+			]
+		]
+	},
+	/////////////////////////////////// -> 18 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello', null, null, {
+					start: [{id: '1', name: 's1'}],
+					end  : [{id: '1'}]
+				}), createParagraphInfo(' Hello Hello')
+			]
+		]
+	},
+	/////////////////////////////////// -> 19 <- ////////////////////////////////////////////
+	{
+		finalDocument: [[
+			createParagraphInfo('П', null, null, {
+				start: [{id: '2', name: 's1'}, {id: '6', name: 's8'}, {
+					id: '10', name: 's3'
+				}]
+			}),
+			createParagraphInfo('ри', null, null, {
+				start: [{
+					id: '1', name: 's11'
+				}]
+			}),
+			createParagraphInfo('ве', null, null, {
+				start: [{id: '3', name: 's2'}], end: [{id: '1'}]
+			}),
+			createParagraphInfo('т '),
+			createParagraphInfo('пр', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '2'}]}), createParagraphInfo('и', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+				end: [{
+					id: '5', name: 's7'
+				}, {id: '3'}]
+			}),
+			createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null),
+			createParagraphInfo('ет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+				start: [{
+					id: '11', name: 's4'
+				}]
+			}),
+			createParagraphInfo(' ', new CCreatingReviewInfo('Valdemar', reviewtype_Add, 3000000)),
+			createParagraphInfo('п', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+				start: [{
+					id: '8', name: 's6'
+				}]
+			}),
+			createParagraphInfo('ри', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+				start: [{id: '4', name: 's5'}], end: [{id: '4'}]
+			}),
+			createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '5'}]}),
+			createParagraphInfo('ет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {
+				end: [{id: '6'}, {id: '7', name: 's9'}, {id: '12', name: 's10'}]
+			}), createParagraphInfo(' ', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), null, {end: [{id: '7'}]}),
+			createParagraphInfo('прив', null, null, {
+				end: [{
+					id: '9', name: 's12'
+				}, {id: '8'}, {id: '9'}]
+			}),
+			createParagraphInfo('ет', null, null, {end: [{id: '10'}, {id: '11'}, {id: '12'}]})]]
+	},
+	/////////////////////////////////// -> 20 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello ', createFindingReviewInfo(reviewtype_Add)),
+				createParagraphInfo('He', null, null, {end: [{id: '1', name: 's1'}]}),
+				createParagraphInfo('llo Hel', null, null, {end: [{id: '1'}]}),
+				createParagraphInfo('lo')
+			]
+		]
+	},
+	/////////////////////////////////// -> 21 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello ', createFindingReviewInfo(reviewtype_Remove)),
+				createParagraphInfo('Hello', null, null, {start: [{id: '1', name: 's1'}], end: [{id: '1'}]}),
+				createParagraphInfo(' Hello')
+			]
+		]
+	},
+	/////////////////////////////////// -> 22 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[
+				createParagraphInfo('Hello'),
+				createParagraphInfo(' hello', createFindingReviewInfo(reviewtype_Add)),
+				createParagraphInfo(' '),
+				createParagraphInfo('hello hello', null, null, {start: [{id: '1', name: 's1'}, {id: '1'}]})
+			]
+		]
+	}
 ];
-
 const comments = [
-    'Merging an empty document and a document with a non-reviewed paragraph',
-    'Merging empty documents',
-    'Merging documents with different paragraphs without review',
-    'Merging two documents with the same content in paragraphs, but different in review',
-    'Merging two documents with different paragraphs, the first without review, the second with review',
-    'Merging two documents with the same content, where part of the word has a review',
-    'Merging identical documents, in the middle of the document the word has another review',
-    'Merging documents with insertion and review',
-    'Merging to start',
-    'Merging documents with different origins',
-    'Merging documents with differences in text with the same review',
-    'Merging documents with differences in text with different reviews',
-    'Merging documents with differences in text with different reviews and requiring additional reviews',
-    'Merging identical documents with different types of reviews in letters',
-    'Merging two documents with changes in common text',
-		'Merging two documents with complicated check of review types and spaces'
+	'Merging an empty document and a document with a non-reviewed paragraph',
+	'Merging empty documents',
+	'Merging documents with different paragraphs without review',
+	'Merging two documents with the same content in paragraphs, but different in review',
+	'Merging two documents with different paragraphs, the first without review, the second with review',
+	'Merging two documents with the same content, where part of the word has a review',
+	'Merging identical documents, in the middle of the document the word has another review',
+	'Merging documents with insertion and review',
+	'Merging to start',
+	'Merging documents with different origins',
+	'Merging documents with differences in text with the same review',
+	'Merging documents with differences in text with different reviews',
+	'Merging documents with differences in text with different reviews and requiring additional reviews',
+	'Merging identical documents with different types of reviews in letters',
+	'Merging two documents with changes in common text',
+	'Merging two documents with complicated check of review types and spaces',
+	'Merging two documents with bookmarks',
+	'Blocking merging duplicate bookmarks',
+	'Merging some bookmarks',
+	'Merging in start of document and add bookmark',
+	'Remove from start of document and add bookmark',
+	'Merging start and end bookmarks to start of word'
 ];
 
-function merge(oMainDocument, oRevisedDocument, fCallback) {
-    const oMerge = new AscCommonWord.CDocumentMerge(oMainDocument, oRevisedDocument, new AscCommonWord.ComparisonOptions());
-    const fOldMergeCallback = oMerge.applyLastMergeCallback;
-    oMerge.applyLastMergeCallback = function () {
-        fOldMergeCallback.call(this);
-        fCallback();
-    }
-    oMerge.merge();
+function merge(oMainDocument, oRevisedDocument, fCallback)
+{
+	const oMerge = new AscCommonWord.CDocumentMerge(oMainDocument, oRevisedDocument, new AscCommonWord.ComparisonOptions());
+	const fOldMergeCallback = oMerge.applyLastMergeCallback;
+	oMerge.applyLastMergeCallback = function ()
+	{
+		fOldMergeCallback.call(this);
+		fCallback();
+	}
+	oMerge.merge();
 }
 
-function getTestObject(oDocument) {
-    return oDocument.getTestObject();
+function getTestObject(oDocument)
+{
+	return oDocument.getTestObject();
 }
 
 
-$(function () {
+$(function ()
+{
 
-    QUnit.module("Unit-tests for merge documents feature");
+	QUnit.module("Unit-tests for merge documents feature");
 
-    QUnit.test("Test", function(assert)
-    {
-        AscFormat.ExecuteNoHistory(function () {
-            for (let i = 0; i < arrTestObjectsInfo.length; i += 1) {
-                const oTestInformation = arrTestObjectsInfo[i];
-                merge(readMainDocument(oTestInformation.originalDocument), readRevisedDocument(oTestInformation.revisedDocument), function () {
-                    const oResultDocument = mockEditor.WordControl.m_oLogicDocument;
-                    const oResultObject = getTestObject(oResultDocument);
-                    assert.deepEqual(oResultObject, getTestObject(readMainDocument(arrAnswers[i].finalDocument)), comments[i]);
-                });
-            }
-        }, this, []);
-    });
+	QUnit.test("Test", function (assert)
+	{
+		AscFormat.ExecuteNoHistory(function ()
+		{
+			for (let i = 0; i < arrTestObjectsInfo.length; i += 1)
+			{
+				const oTestInformation = arrTestObjectsInfo[i];
+				merge(readMainDocument(oTestInformation.originalDocument), readRevisedDocument(oTestInformation.revisedDocument), function ()
+				{
+					const oResultDocument = mockEditor.WordControl.m_oLogicDocument;
+					const oResultObject = getTestObject(oResultDocument);
+					assert.deepEqual(oResultObject, getTestObject(readMainDocument(arrAnswers[i].finalDocument)), comments[i]);
+				});
+			}
+		}, this, []);
+	});
 });
