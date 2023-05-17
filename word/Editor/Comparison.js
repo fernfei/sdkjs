@@ -41,8 +41,494 @@
     //EXCLUDED_PUNCTUATION[95] = true;
     EXCLUDED_PUNCTUATION[160] = true;
     //EXCLUDED_PUNCTUATION[63] = true;
-	const CHECK_BOOKMARK_END_MEETING = 0;
-	const CHECK_BOOKMARK_START_MEETING = 1;
+	const CHECK_END_MEETING = 0;
+	const CHECK_START_MEETING = 1;
+
+	function insertBookmarkAndContinue(oLabelChange, oTextIterator, oBookmarkIterator)
+	{
+		const bRet = oTextIterator.skipTo(oLabelChange.elementIndex, oLabelChange.innerElementIndex - oLabelChange.addingValue);
+		if (bRet)
+		{
+			const oRun = oTextIterator.splitCurrentRun(oTextIterator.runElementIndex + oLabelChange.addingValue);
+			oTextIterator.addToCollectBack(oRun);
+			if (oLabelChange.elementIndex === 0 && oLabelChange.innerElementIndex === 0)
+			{
+				changeFirstTextElement(oTextIterator, oRun);
+			}
+			for (let i = 0; i < oLabelChange.labels.length; i += 1)
+			{
+				oTextIterator.parent.AddToContent(oTextIterator.runIndex + 1, oLabelChange.labels[i]);
+			}
+			if (oBookmarkIterator.check())
+			{
+				oBookmarkIterator.next();
+				return oBookmarkIterator.value();
+			}
+		}
+	}
+	function applyEndChangeReview(oReviewChange, oTextIterator)
+	{
+		const bRet = oTextIterator.skipTo(oReviewChange.endElementIndex, oReviewChange.endInnerElementIndex - 1);
+		if (bRet)
+		{
+			oTextIterator.startCollectRuns();
+			oTextIterator.addToCollectCurrentRun();
+			oTextIterator.splitCurrentRun(oTextIterator.runElementIndex + 1);
+		}
+	}
+	function changeFirstTextElement(oTextIterator, oRun)
+	{
+		const oElement = oTextIterator.getCurrentElement();
+		oElement.elements[0] = oRun.Content[0];
+		oElement.firstRun = oRun;
+	}
+	function applyStartChangeReview(oReviewChange, oTextIterator, oChangesIterator, comparison, oNeedReviewWithUser)
+	{
+		const bRet = oTextIterator.skipTo(oReviewChange.startElementIndex, oReviewChange.startInnerElementIndex);
+		if (bRet)
+		{
+			const oRun = oTextIterator.splitCurrentRun();
+			oTextIterator.dropLastCollect();
+			oTextIterator.addToCollectBack(oRun);
+			if (oReviewChange.startElementIndex === 0 && oReviewChange.startInnerElementIndex === 0)
+			{
+				changeFirstTextElement(oTextIterator, oRun);
+			}
+
+
+			const arrRuns = oTextIterator.endCollectRuns();
+
+			const nPriorityReviewType = oReviewChange.reviewType;
+			const nPriorityMoveReviewType = oReviewChange.moveReviewType;
+			const sMoveReviewMarkName = oReviewChange.moveReviewMarkName;
+			const oReviewInfo = oReviewChange.reviewInfo;
+			const sReviewUserName = oReviewInfo.GetUserName();
+			const sReviewDate = oReviewInfo.GetDateTime();
+
+
+			if (!oNeedReviewWithUser[sReviewDate]) {
+				oNeedReviewWithUser[sReviewDate] = {};
+			}
+
+			if (!oNeedReviewWithUser[sReviewDate][sReviewUserName]) {
+				const oNeedReview = {reviewTypes: {}, moveReviewTypes: {}};
+				oNeedReview.reviewTypes[reviewtype_Add] = [];
+				oNeedReview.reviewTypes[reviewtype_Remove] = [];
+				oNeedReview.moveReviewTypes[Asc.c_oAscRevisionsMove.MoveTo] = [];
+				oNeedReview.moveReviewTypes[Asc.c_oAscRevisionsMove.MoveFrom] = [];
+				oNeedReviewWithUser[sReviewDate][sReviewUserName] = oNeedReview;
+			}
+
+			if (AscFormat.isRealNumber(nPriorityReviewType)) {
+				for (let i = 0; i < arrRuns.length; i += 1)
+				{
+					oNeedReviewWithUser[sReviewDate][sReviewUserName].reviewTypes[nPriorityReviewType].push({element: arrRuns[i], reviewInfo: oReviewInfo});
+				}
+			}
+			else if (AscFormat.isRealNumber(nPriorityMoveReviewType))
+			{
+				for (let i = 0; i < arrRuns.length; i += 1)
+				{
+					comparison.oComparisonMoveMarkManager.addMoveMarkNameRunRelation(sMoveReviewMarkName, arrRuns[i]);
+					comparison.oComparisonMoveMarkManager.addRunMoveMarkNameRelation(sMoveReviewMarkName, arrRuns[i]);
+					oNeedReviewWithUser[sReviewDate][sReviewUserName].moveReviewTypes[nPriorityMoveReviewType].push({element: arrRuns[i], reviewInfo: oReviewInfo});												}
+			}
+			if (oChangesIterator.check())
+			{
+				oChangesIterator.next();
+				return oChangesIterator.value();
+			}
+		}
+	}
+	function CLabelsIterator(arrElements)
+	{
+		this.bookmarkIterator = new CBookmarkChangesIterator(arrElements);
+		this.commentsIterator = new CCommentChangesIterator(arrElements);
+		this._value = null;
+		this.init();
+	}
+	CLabelsIterator.prototype.nextComment = function ()
+	{
+		this.commentsIterator.next();
+		this._value = this.commentsIterator.value();
+	};
+	CLabelsIterator.prototype.nextBookmark = function ()
+	{
+		this.bookmarkIterator.next();
+		this._value = this.bookmarkIterator.value();
+	}
+	CLabelsIterator.prototype.init = function ()
+	{
+		const oCurrentBookmark = this.bookmarkIterator.currentLabel;
+		const oCurrentComment = this.commentsIterator.currentLabel;
+		if (oCurrentBookmark && oCurrentComment)
+		{
+			if (oCurrentBookmark.elementIndex > oCurrentComment.elementIndex || oCurrentBookmark.elementIndex === oCurrentComment.elementIndex && oCurrentBookmark.innerElementIndex >= oCurrentComment.innerElementIndex)
+			{
+				this._value = this.bookmarkIterator.value();
+			}
+			else
+			{
+				this._value = this.commentsIterator.value();
+			}
+		}
+		else if (oCurrentComment)
+		{
+			this._value = this.commentsIterator.value();
+		}
+		else if (oCurrentBookmark)
+		{
+			this._value = this.bookmarkIterator.value();
+		}
+	}
+	CLabelsIterator.prototype.next = function ()
+	{
+		const oNextBookmark = this.bookmarkIterator.nextLabel;
+		const oNextComment = this.commentsIterator.nextLabel;
+		if (oNextBookmark && oNextComment)
+		{
+			if (oNextBookmark.elementIndex > oNextComment.elementIndex || oNextBookmark.elementIndex === oNextComment.elementIndex && oNextBookmark.innerElementIndex >= oNextComment.innerElementIndex)
+			{
+				this.nextBookmark();
+			}
+			else
+			{
+				this.nextComment();
+			}
+		}
+		else if (oNextComment)
+		{
+			this.nextComment();
+		}
+		else if (oNextBookmark)
+		{
+			this.nextBookmark();
+		}
+	}
+	CLabelsIterator.prototype.value = function ()
+	{
+		return this._value;
+	}
+	CLabelsIterator.prototype.check = function ()
+	{
+		return this.bookmarkIterator.check() || this.commentsIterator.check();
+	}
+	function CReviewChange()
+	{
+		this.startElementIndex = -1;
+		this.startInnerElementIndex = -1;
+
+		this.endElementIndex = -1;
+		this.endInnerElementIndex = -1;
+
+		this.reviewInfo = null;
+
+		this.reviewType = null;
+
+		this.moveReviewType = null
+		this.moveReviewMarkName = null;
+	}
+	CReviewChange.prototype.setStart = function (nElementIndex, nInnerElementIndex)
+	{
+		this.startElementIndex = nElementIndex;
+		this.startInnerElementIndex = nInnerElementIndex;
+	}
+	CReviewChange.prototype.setEnd = function (nElementIndex, nInnerElementIndex)
+	{
+		this.endElementIndex = nElementIndex;
+		this.endInnerElementIndex = nInnerElementIndex;
+	}
+	CReviewChange.prototype.setMoveReviewType = function (nMoveReviewType, sMoveReviewMarkName)
+	{
+		this.moveReviewType = nMoveReviewType;
+		this.moveReviewMarkName = sMoveReviewMarkName;
+	}
+	CReviewChange.prototype.setReviewInfo = function (oReviewInfo)
+	{
+		this.reviewInfo = oReviewInfo;
+	}
+	CReviewChange.prototype.setReviewType = function (nReviewType)
+	{
+		this.reviewType = nReviewType;
+	}
+
+	function CLabelChange(arrLabels, nElementIndex, nInnerElementIndex, nAddingValue)
+	{
+		this.labels = arrLabels;
+		this.elementIndex = nElementIndex;
+		this.innerElementIndex = nInnerElementIndex;
+		this.addingValue = nAddingValue;
+	}
+
+	function CLabelBaseIterator(arrElements)
+	{
+		this.elements = arrElements;
+		this.currentLabel = null;
+		this.nextLabel = null;
+		this.elementIndex = arrElements.length - 1;
+		this.elementLabelIndexes = this.getInsertIndexes();
+		this.innerLabelElementIndex = -1;
+		this.next();
+		this.next();
+	}
+	CLabelBaseIterator.prototype.check = function ()
+	{
+		return !!this.nextLabel;
+	}
+	CLabelBaseIterator.prototype.value = function ()
+	{
+		return this.currentLabel;
+	}
+	CLabelBaseIterator.prototype.getInsertIndex = function ()
+	{
+		return this.elementLabelIndexes[this.innerLabelElementIndex];
+	}
+	CLabelBaseIterator.prototype.getAddingValue = function ()
+	{
+		const nInsertIndex = this.getInsertIndex();
+		return nInsertIndex === 0 ? 0 : 1;
+	}
+	CLabelBaseIterator.prototype.next = function ()
+	{
+		this.currentLabel = this.nextLabel;
+		this.nextLabel = null;
+		this.innerLabelElementIndex += 1;
+		while (this.innerLabelElementIndex === this.elementLabelIndexes.length && this.elementIndex > 0)
+		{
+			this.elementIndex -= 1;
+			this.elementLabelIndexes = this.getInsertIndexes();
+			this.innerLabelElementIndex = 0;
+		}
+		const oElement = this.getElement();
+		if (oElement && this.innerLabelElementIndex < this.elementLabelIndexes.length)
+		{
+			const nInsertIndex = this.getInsertIndex();
+			this.nextLabel = new CLabelChange(this.getInsertElements(oElement, nInsertIndex), this.elementIndex, nInsertIndex, this.getAddingValue());
+		}
+	}
+	CLabelBaseIterator.prototype.getElement = function ()
+	{
+		return this.elements[this.elementIndex];
+	}
+	CLabelBaseIterator.prototype.getInsertElements = function (oElement, nInsertIndex)
+	{
+
+	};
+	CLabelBaseIterator.prototype.getInsertIndexes = function ()
+	{
+
+	}
+	function CBookmarkChangesIterator(arrElements)
+	{
+		CLabelBaseIterator.call(this, arrElements);
+	}
+	AscFormat.InitClassWithoutType(CBookmarkChangesIterator, CLabelBaseIterator);
+	CBookmarkChangesIterator.prototype.getInsertElements = function (oElement, nInsertIndex)
+	{
+		return oElement.bookmarks[nInsertIndex];
+	};
+	CBookmarkChangesIterator.prototype.getInsertIndexes = function ()
+	{
+		return this.getElement().getBookmarkInsertIndexes();
+	}
+
+	function CCommentChangesIterator(arrElements)
+	{
+		CLabelBaseIterator.call(this, arrElements);
+	}
+	AscFormat.InitClassWithoutType(CCommentChangesIterator, CLabelBaseIterator);
+	CCommentChangesIterator.prototype.getInsertElements = function (oElement, nInsertIndex)
+	{
+		return oElement.comments[nInsertIndex];
+	};
+	CCommentChangesIterator.prototype.getInsertIndexes = function ()
+	{
+		return this.getElement().getCommentInsertIndexes();
+	}
+
+	function CReviewChangesIterator(arrMainElements, arrRevisedElements)
+	{
+		this.mainElements = arrMainElements;
+		this.revisedElements = arrRevisedElements;
+
+		this.currentChange = null;
+		this.nextChange = null;
+		this.elementIndex = null;
+		this.innerElementIndex = null;
+
+		this.canNextElement = true;
+		this.init();
+	}
+
+	CReviewChangesIterator.prototype.init = function ()
+	{
+		this.elementIndex = this.mainElements.length - 1;
+		this.innerElementIndex = this.getMainElement().elements.length;
+		this.findFirstChange();
+	};
+	CReviewChangesIterator.prototype.check = function ()
+	{
+		return !!this.currentChange;
+	};
+
+	CReviewChangesIterator.prototype.nextElement = function ()
+	{
+		this.innerElementIndex -= 1;
+		if (this.innerElementIndex < 0)
+		{
+			this.elementIndex -= 1;
+			this.innerElementIndex = 0;
+		}
+		if (this.elementIndex === 0 && this.innerElementIndex === 0)
+		{
+			this.canNextElement = false;
+		}
+	}
+
+	CReviewChangesIterator.prototype.value = function ()
+	{
+		return this.currentChange;
+	};
+	CReviewChangesIterator.prototype.next = function ()
+	{
+		this.currentChange = this.nextChange;
+		this.nextChange = null;
+		while (this.canNextElement)
+		{
+			this.nextElement();
+			if (this.endCurrentAndFindNextChange())
+			{
+				break;
+			}
+		}
+	};
+	CReviewChangesIterator.prototype.getMainElement = function ()
+	{
+		return this.mainElements[this.elementIndex];
+	}
+	CReviewChangesIterator.prototype.getRevisedElement = function ()
+	{
+		return this.revisedElements[this.elementIndex];
+	}
+	CReviewChangesIterator.prototype.findFirstChange = function ()
+	{
+		this.isFindFirstChange = true;
+		this.next();
+		this.isFindFirstChange = false;
+		this.next();
+	}
+	CReviewChangesIterator.prototype.getPriorityChange = function ()
+	{
+		const oRevisedElement = this.getRevisedElement();
+		const oMainElement = this.getMainElement();
+		const oMainReviewElement = oMainElement.reviewElementTypes[this.innerElementIndex];
+		const oRevisedReviewElement = oRevisedElement.reviewElementTypes[this.innerElementIndex];
+
+		const nRevisedReviewType = oRevisedReviewElement.reviewType;
+		const nRevisedMoveReviewType = oRevisedReviewElement.moveReviewType;
+		const sRevisedNameMoveMark = oRevisedReviewElement.moveName;
+		const oRevisedReviewInfo = oRevisedReviewElement.reviewInfo;
+		const oRevisedPrevAdded = oRevisedReviewElement.prevAdded;
+
+		const nMainReviewType = oMainReviewElement.reviewType;
+		const oMainPrevAdded = oMainReviewElement.prevAdded;
+		const nMainMoveReviewType = oMainReviewElement.moveReviewType;
+
+		let nPriorityReviewType;
+		let oPriorityReviewInfo;
+		let nPriorityMoveReviewType;
+		let bIsMove = false;
+		if (nRevisedReviewType !== reviewtype_Common && !(oMainPrevAdded && nMainReviewType === reviewtype_Remove)) {
+			if (nMainReviewType !== nRevisedReviewType) {
+				nPriorityReviewType = nRevisedReviewType;
+				oPriorityReviewInfo = oRevisedReviewInfo;
+			} else if (nMainReviewType === reviewtype_Remove && oRevisedPrevAdded) {
+				nPriorityReviewType = reviewtype_Add;
+				oPriorityReviewInfo = oRevisedPrevAdded;
+			}
+		}
+		if (nMainMoveReviewType === Asc.c_oAscRevisionsMove.NoMove && nRevisedMoveReviewType !== Asc.c_oAscRevisionsMove.NoMove) {
+			nPriorityMoveReviewType = nRevisedMoveReviewType;
+			oPriorityReviewInfo = oRevisedReviewInfo;
+			bIsMove = true;
+		}
+
+		if ((AscFormat.isRealNumber(nPriorityReviewType) || AscFormat.isRealNumber(nPriorityMoveReviewType)) && oPriorityReviewInfo)
+		{
+			const oChange = new CReviewChange();
+			oChange.setReviewInfo(oPriorityReviewInfo);
+			if (bIsMove)
+			{
+				oChange.setMoveReviewType(nPriorityMoveReviewType, sRevisedNameMoveMark);
+			}
+			else
+			{
+				oChange.setReviewType(nPriorityReviewType);
+			}
+			return oChange;
+		}
+	}
+	CReviewChangesIterator.prototype.endCurrentAndFindNextChange = function ()
+	{
+		const oPriorityChange = this.getPriorityChange();
+		if (oPriorityChange)
+		{
+			if (this.updateCurrentChange(oPriorityChange))
+			{
+				return false;
+			}
+			else
+			{
+				this.nextChange = oPriorityChange;
+				oPriorityChange.setStart(this.elementIndex, this.innerElementIndex);
+				oPriorityChange.setEnd(this.elementIndex, this.innerElementIndex + 1);
+				return true;
+			}
+		}
+		return false;
+	}
+	CReviewChangesIterator.prototype.updateCurrentChange = function (oPriorityChange)
+	{
+		if (this.isFindFirstChange || !this.currentChange)
+		{
+			return false;
+		}
+
+		const bIsMove = oPriorityChange.moveReviewType !== null;
+
+		const bCheckReviewType = bIsMove ? oPriorityChange.moveReviewType === this.currentChange.moveReviewType : oPriorityChange.reviewType === this.currentChange.reviewType;
+
+		let bIsNextCheckElement = false;
+		if (this.innerElementIndex === this.getMainElement().elements.length - 1)
+		{
+			if ((this.currentChange.startElementIndex === this.elementIndex + 1) &&
+				(this.currentChange.startInnerElementIndex === 0))
+			{
+				bIsNextCheckElement = true;
+			}
+		}
+		else
+		{
+			if ((this.currentChange.startElementIndex === this.elementIndex) &&
+				(this.currentChange.startInnerElementIndex === this.innerElementIndex + 1))
+			{
+				bIsNextCheckElement = true;
+			}
+		}
+		const oPriorityReviewInfo = oPriorityChange.reviewInfo;
+		const sReviewUserName = oPriorityReviewInfo.GetUserName();
+		const nReviewDate = oPriorityReviewInfo.GetDateTime();
+		if (bIsNextCheckElement
+			&& bCheckReviewType
+			&& this.currentChange.reviewInfo
+			&& (this.currentChange.reviewInfo.GetUserName() === sReviewUserName )
+			&& this.currentChange.reviewInfo.GetDateTime() === nReviewDate)
+		{
+			this.currentChange.setStart(this.elementIndex, this.innerElementIndex);
+			return true;
+		}
+		return false;
+	}
 
     function CNode(oElement, oParent)
     {
@@ -60,6 +546,65 @@
             oParent.addChildNode(this);
         }
     }
+	CNode.prototype.resolveTypesWithPartner = function (comparison)
+	{
+		this.forEachRight(function (oNode)
+		{
+			const oPartnerNode = oNode.partner;
+			const oOriginalTextElement = oNode.element;
+			if (oOriginalTextElement instanceof CTextElement && oPartnerNode)
+			{
+				const oRevisedTextElement = oPartnerNode.element;
+				const oNeedReviewWithUser = {};
+
+				let oChangesIterator;
+				let oReviewChange;
+				if (comparison.needCheckReview)
+				{
+					oChangesIterator = new CReviewChangesIterator([oOriginalTextElement], [oRevisedTextElement]);
+					oReviewChange = oChangesIterator.value();
+				}
+
+				const oLabelsIterator = new CLabelsIterator([oRevisedTextElement]);
+				let oLabelChange = oLabelsIterator.value();
+
+				const oTextIterator = new AscCommonWord.CTextElementRunIterator([oOriginalTextElement]);
+
+				while (oLabelChange && oReviewChange)
+				{
+					if ((oReviewChange.endElementIndex >= oLabelChange.elementIndex) ||
+						(oReviewChange.endElementIndex === oLabelChange.elementIndex && oReviewChange.endInnerElementIndex >= oLabelChange.innerElementIndex))
+					{
+						applyEndChangeReview(oReviewChange, oTextIterator);
+
+						while (oLabelChange && ((oReviewChange.startElementIndex <= oLabelChange.elementIndex) ||
+							(oReviewChange.startElementIndex === oLabelChange.elementIndex && oReviewChange.startInnerElementIndex <= oLabelChange.innerElementIndex))){
+							oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+						}
+						oReviewChange = applyStartChangeReview(oReviewChange, oTextIterator, oChangesIterator, comparison, oNeedReviewWithUser);
+					}
+					else
+					{
+						while (oLabelChange && (oLabelChange.elementIndex > oReviewChange.endElementIndex || oLabelChange.elementIndex === oReviewChange.endElementIndex && oLabelChange.innerElementIndex > oReviewChange.endInnerElementIndex))
+						{
+							oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+						}
+					}
+				}
+
+				while (oLabelChange)
+				{
+					oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+				}
+				while (oReviewChange)
+				{
+					applyEndChangeReview(oReviewChange, oTextIterator);
+					oReviewChange = applyStartChangeReview(oReviewChange, oTextIterator, oChangesIterator, comparison, oNeedReviewWithUser);
+				}
+				comparison.applyResolveTypes(oNeedReviewWithUser);
+			}
+		});
+	}
     CNode.prototype.getElement = function()
     {
         return this.element;
@@ -85,6 +630,27 @@
 			return this.element.getFirstBookmarks();
 		}
 	}
+	CNode.prototype.addComment = function (oBookmark, nInsertIndex)
+	{
+		if (this.element instanceof CTextElement)
+		{
+			this.element.addComment(oBookmark, nInsertIndex);
+		}
+	}
+	CNode.prototype.getLastComments = function ()
+	{
+		if (this.element instanceof CTextElement)
+		{
+			return this.element.getLastComments();
+		}
+	}
+	CNode.prototype.getFirstComments = function ()
+	{
+		if (this.element instanceof CTextElement)
+		{
+			return this.element.getFirstComments();
+		}
+	}
 		// debug method
 	CNode.prototype.getText = function()
 	{
@@ -105,6 +671,14 @@
 				{
 					this.pushToArrInsertContentWithCopy(aContentToInsert, arrEndBookmarks[i], comparison);
 				}
+	    }
+	    const arrLastComments = oNode.getLastComments();
+	    if (arrLastComments)
+	    {
+		    for (let i = arrLastComments.length - 1; i >= 0; i -= 1)
+		    {
+			    this.pushToArrInsertContentWithCopy(aContentToInsert, arrLastComments[i], comparison);
+		    }
 	    }
         let k = oParentParagraph.Content.length - 1;
         let lastCheckRun;
@@ -270,6 +844,12 @@
 	        {
 						for (let i = arrStartBookmarks.length - 1; i >= 0; i -= 1)
 							this.pushToArrInsertContentWithCopy(aContentToInsert, arrStartBookmarks[i], comparison);
+	        }
+	        const arrStartComments = oFirstNode.getFirstComments();
+	        if (arrStartComments)
+	        {
+		        for (let i = arrStartComments.length - 1; i >= 0; i -= 1)
+			        this.pushToArrInsertContentWithCopy(aContentToInsert, arrStartComments[i], comparison);
 	        }
         }
         return aContentToInsert;
@@ -697,21 +1277,31 @@
         return false;
     };
 
+
     function CTextElement()
     {
         this.elements = [];
         this.firstRun = null;
         this.lastRun = null;
 				this.bookmarks = {};
+				this.comments = {};
     }
+	CTextElement.prototype.getSortedInsertIndexesFromMap = function (arrLabels)
+	{
+		return (Object.keys(arrLabels).map(function (e) {return parseInt(e, 10);})
+			.sort(function (a, b) {return b - a;}));
+	}
 	CTextElement.prototype.compareReviewElements = function (oAnotherElement)
 	{
 		return true;
 	}
 	CTextElement.prototype.getBookmarkInsertIndexes = function ()
 	{
-		return (Object.keys(this.bookmarks).map(function (e) {return parseInt(e, 10);})
-			.sort(function (a, b) {return b - a;}));
+		return this.getSortedInsertIndexesFromMap(this.bookmarks);
+	}
+	CTextElement.prototype.getCommentInsertIndexes = function ()
+	{
+		return this.getSortedInsertIndexesFromMap(this.comments);
 	}
 	CTextElement.prototype.getLastBookmarks = function ()
 	{
@@ -721,6 +1311,14 @@
 	{
 		return this.bookmarks[0];
 	}
+	CTextElement.prototype.getLastComments = function ()
+	{
+		return this.comments[this.elements.length];
+	}
+	CTextElement.prototype.getFirstComments = function ()
+	{
+		return this.comments[0];
+	}
 	CTextElement.prototype.addBookmark = function (oBookmark, nInsertIndex)
 	{
 		if (!this.bookmarks[nInsertIndex])
@@ -728,6 +1326,14 @@
 			this.bookmarks[nInsertIndex] = [];
 		}
 		this.bookmarks[nInsertIndex].push(oBookmark);
+	}
+	CTextElement.prototype.addComment = function (oComment, nInsertIndex)
+	{
+		if (!this.comments[nInsertIndex])
+		{
+			this.comments[nInsertIndex] = [];
+		}
+		this.comments[nInsertIndex].push(oComment);
 	}
     CTextElement.prototype.getPosOfStart = function () {
         const startElement = this.elements[0];
@@ -1005,10 +1611,12 @@
             CopyReviewPr: false,
             Comparison: this
         };
+				this.needCheckReview = false;
         this.nInsertChangesType = reviewtype_Add;
         this.nRemoveChangesType = reviewtype_Remove;
         this.oComparisonMoveMarkManager = new CMoveMarkComparisonManager();
 				this.oBookmarkManager = new CComparisonBookmarkManager(oOriginalDocument, oRevisedDocument);
+				this.oCommentManager = new CComparisonCommentManager(oOriginalDocument, oRevisedDocument);
     }
     CDocumentComparison.prototype.checkOriginalAndSplitRun = function (oOriginalRun, oSplitRun) {
 
@@ -1302,6 +1910,10 @@
 	{
 		this.oBookmarkManager.updateBookmarksStack(oNode);
 	};
+	CDocumentComparison.prototype.updateCommentsStack = function (oNode)
+	{
+		this.oCommentManager.updateCommentsStack(oNode);
+	};
 	CDocumentComparison.prototype.createNode = function (oElement, oParent)
 	{
 		const CNodeConstructor = this.getNodeConstructor();
@@ -1309,7 +1921,9 @@
 		if (oElement instanceof CTextElement)
 		{
 			this.updateBookmarksStack(oNode);
+			this.updateCommentsStack(oNode);
 			this.oBookmarkManager.previousNode = oNode;
+			this.oCommentManager.previousNode = oNode;
 		}
 		return oNode;
 	}
@@ -1697,6 +2311,8 @@
 		}
 
 	}
+	CDocumentComparison.prototype.applyResolveTypes = function () {};
+
     CDocumentComparison.prototype.applyChangesToParagraph = function(oNode)
     {
         oNode.changes.sort(function(c1, c2){return c2.anchor.index - c1.anchor.index});
@@ -1705,7 +2321,7 @@
         {
 					for (let j = nLastIndex; j >= oNode.changes[i].anchor.index; j -= 1)
 					{
-						this.mergeBookmarks(oNode.children[j]);
+						oNode.children[j].resolveTypesWithPartner(this);
 					}
             this.executeWithCheckInsertAndRemove(function () {
                 const aContentToInsert = oNode.getArrOfInsertsFromChanges(i, this);
@@ -1717,7 +2333,7 @@
         }
 	    for (let j = nLastIndex; j >= 0; j -= 1)
 	    {
-		    this.mergeBookmarks(oNode.children[j]);
+		    oNode.children[j].resolveTypesWithPartner(this);
 	    }
         this.applyChangesToChildrenOfParagraphNode(oNode);
         this.applyChangesToSectPr(oNode);
@@ -2056,11 +2672,7 @@
     CDocumentComparison.prototype.copyComment = function(sId)
     {
         let oCopyComment;
-        if(this.CommentsMap[sId])
-        {
-            oCopyComment = this.CommentsMap[sId];
-        }
-        else
+        if(!this.CommentsMap[sId])
         {
             const oComment = this.revisedDocument.Comments.Get_ById(sId);
             if(oComment)
@@ -2542,6 +3154,7 @@
     CDocumentComparison.prototype.createNodeFromRunContentElement = function(oElement, oParentNode, oHashWords, isOriginalDocument)
     {
 	    this.oBookmarkManager.previousNode = null;
+	    this.oCommentManager.previousNode = null;
         const NodeConstructor = this.getNodeConstructor();
         const TextElementConstructor = this.getTextElementConstructor();
         const oRet = this.createNode(oElement, oParentNode);
@@ -2587,6 +3200,17 @@
 							{
 								this.oBookmarkManager.addToStack(oRun, 0);
 							}
+            }
+						else if (oRun instanceof AscCommon.ParaComment)
+            {
+	            if (oLastText)
+	            {
+		            this.oCommentManager.addToStack(oRun, oLastText.elements.length);
+	            }
+	            else
+	            {
+		            this.oCommentManager.addToStack(oRun, 0);
+	            }
             }
             else
             {
@@ -2845,6 +3469,7 @@
 			this.IdName = {};
 			this.bookmarkStack = [];
 			this.mapBookmarkMeeting = {};
+			this.previousNode = null;
 		}
 
 	CComparisonBookmarkManager.prototype.init = function (oMainDocument, oRevisedDocument)
@@ -2906,11 +3531,11 @@
 		{
 			const oLabel = this.bookmarkStack[i];
 			const nBookmarkMeetingValue = this.mapBookmarkMeeting[oLabel.bookmark.GetBookmarkId()];
-			if ((oPreviousElement instanceof CTextElement) && oLabel.insertIndex === 0 && !oLabel.bookmark.IsStart() && (nBookmarkMeetingValue === CHECK_BOOKMARK_START_MEETING))
+			if ((oPreviousElement instanceof CTextElement) && oLabel.insertIndex === 0 && !oLabel.bookmark.IsStart() && (nBookmarkMeetingValue === CHECK_START_MEETING))
 			{
 				oPreviousElement.addBookmark(oLabel.bookmark, oPreviousElement.elements.length);
 			}
-			else if ((oLabel.insertIndex === oNode.element.elements.length) && oLabel.bookmark.IsStart() && nBookmarkMeetingValue !== CHECK_BOOKMARK_END_MEETING)
+			else if ((oLabel.insertIndex === oNode.element.elements.length) && oLabel.bookmark.IsStart() && nBookmarkMeetingValue !== CHECK_END_MEETING)
 			{
 				oLabel.insertIndex = 0;
 				arrNextStack.unshift(oLabel);
@@ -2918,7 +3543,7 @@
 			else
 			{
 				oNode.addBookmark(oLabel.bookmark, oLabel.insertIndex);
-				this.mapBookmarkMeeting[oLabel.bookmark.GetBookmarkId()] = oLabel.bookmark.IsStart() ? CHECK_BOOKMARK_START_MEETING : CHECK_BOOKMARK_END_MEETING;
+				this.mapBookmarkMeeting[oLabel.bookmark.GetBookmarkId()] = oLabel.bookmark.IsStart() ? CHECK_START_MEETING : CHECK_END_MEETING;
 			}
 		}
 		this.bookmarkStack = arrNextStack;
@@ -2927,6 +3552,70 @@
 	function CBookmarkLabel(oBookmark, nInsertIndex)
 	{
 		this.bookmark = oBookmark;
+		this.insertIndex = nInsertIndex;
+	}
+
+	function CComparisonCommentManager(oOriginalDocument, oRevisedDocument)
+	{
+		this.mainLogicDocument = oOriginalDocument;
+		// this.needUpdateComments = false;
+		this.mapOldIdToNew = {};
+		this.mapMergeComments = {};
+		this.commentsStack = [];
+		this.mapCommentMeeting = {};
+		this.previousNode = null;
+	}
+
+	CComparisonCommentManager.prototype.removeFromDocument = function (sCommentId)
+	{
+		
+	};
+
+	CComparisonCommentManager.prototype.checkMapMergeComments = function ()
+	{
+		
+	};
+
+	CComparisonCommentManager.prototype.getComment = function (oParaComment)
+	{
+
+	};
+
+	CComparisonCommentManager.prototype.addToStack = function (oComment, nInsertIndex)
+	{
+			const oLabel = new CCommentLabel(oComment, nInsertIndex);
+			this.commentsStack.push(oLabel);
+	};
+
+	CComparisonCommentManager.prototype.updateCommentsStack = function (oNode)
+	{
+		const arrNextStack = [];
+		const oPreviousElement = this.previousNode && this.previousNode.element;
+		for (let i = this.commentsStack.length - 1; i >= 0; i-= 1)
+		{
+			const oLabel = this.commentsStack[i];
+			const nBookmarkMeetingValue = this.mapCommentMeeting[oLabel.comment.GetCommentId()];
+			if ((oPreviousElement instanceof CTextElement) && oLabel.insertIndex === 0 && !oLabel.comment.IsCommentStart() && (nBookmarkMeetingValue === CHECK_START_MEETING))
+			{
+				oPreviousElement.addComment(oLabel.comment, oPreviousElement.elements.length);
+			}
+			else if ((oLabel.insertIndex === oNode.element.elements.length) && oLabel.comment.IsCommentStart() && nBookmarkMeetingValue !== CHECK_END_MEETING)
+			{
+				oLabel.insertIndex = 0;
+				arrNextStack.unshift(oLabel);
+			}
+			else
+			{
+				oNode.addComment(oLabel.comment, oLabel.insertIndex);
+				this.mapCommentMeeting[oLabel.comment.GetCommentId()] = oLabel.comment.IsCommentStart() ? CHECK_START_MEETING : CHECK_END_MEETING;
+			}
+		}
+		this.commentsStack = arrNextStack;
+	};
+
+	function CCommentLabel(oParaComment, nInsertIndex)
+	{
+		this.comment = oParaComment;
 		this.insertIndex = nInsertIndex;
 	}
 
