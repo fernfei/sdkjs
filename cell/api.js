@@ -5774,22 +5774,26 @@ var editor;
 		  this.wb.cellEditor.options.menuEditor;
   };
 
-  spreadsheet_api.prototype.asc_getActiveRangeStr = function(referenceType, opt_getActiveCell, opt_ignore_r1c1) {
-  	var ws = this.wb.getWorksheet();
-  	var res = null;
-  	var tmpR1C1;
+  spreadsheet_api.prototype.asc_getActiveRangeStr = function(referenceType, opt_getActiveCell, opt_ignore_r1c1, opt_only_range) {
+  	let ws = this.wb.getWorksheet();
+  	let res = null;
+  	let tmpR1C1;
   	if (opt_ignore_r1c1) {
 		tmpR1C1 = AscCommonExcel.g_R1C1Mode;
 		AscCommonExcel.g_R1C1Mode = false;
   	}
   	if (ws && ws.model && ws.model.selectionRange) {
-  		var range;
+  		let range;
   		if (opt_getActiveCell) {
-			var activeCell = ws.model.selectionRange.activeCell;
+			let activeCell = ws.model.selectionRange.activeCell;
 			range = new Asc.Range(activeCell.col, activeCell.row, activeCell.col, activeCell.row);
 		} else {
-			var lastRange = ws.model.selectionRange.getLast();
+			let lastRange = ws.model.selectionRange.getLast();
 			range = new Asc.Range(lastRange.c1, lastRange.r1, lastRange.c2, lastRange.r2);
+		}
+
+		if (opt_only_range && range.isOneCell()) {
+			return null;
 		}
 
 		res = range.getName(referenceType);
