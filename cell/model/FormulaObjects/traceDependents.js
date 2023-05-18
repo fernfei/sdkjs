@@ -81,11 +81,14 @@ function (window, undefined) {
 		let wb = this.ws.model.workbook;
 		let dependencyFormulas = wb.dependencyFormulas;
 		let cellAddress = AscCommonExcel.getFromCellIndex(cellIndex, true);
-		let findCellListeners = function () {
+
+		// return object which contain listening bbox range, count of listeners, and listeners object(parserFormula for each listener) 
+		let findCellListenersOld = function () {
 			if (curListener && curListener.areaMap) {
-				for (let j  in curListener.areaMap) {
+				for (let j in curListener.areaMap) {
 					if (curListener.areaMap.hasOwnProperty(j)) {
 						if (curListener.areaMap[j] && curListener.areaMap[j].bbox.contains(cellAddress.col, cellAddress.row)) {
+							// ??? instead return, add areaMap[j] and go to the next item
 							return curListener.areaMap[j];
 						}
 					}
@@ -94,6 +97,27 @@ function (window, undefined) {
 			return curListener.cellMap[cellIndex];
 		};
 
+		let findCellListeners = function () {
+			const listeners = {};
+			// go through the each object and add all listeners
+			if (curListener && curListener.areaMap) {
+				for (let j in curListener.areaMap) {
+					if (curListener.areaMap.hasOwnProperty(j)) {
+						if (curListener.areaMap[j] && curListener.areaMap[j].bbox.contains(cellAddress.col, cellAddress.row)) {
+							Object.assign(listeners, curListener.areaMap[j].listeners);
+						}
+					}
+				}
+			}
+			if (curListener && curListener.cellMap) {
+				if (Object.keys(curListener.cellMap).length > 0) {
+					Object.assign(listeners, curListener.cellMap[cellIndex].listeners);
+				}
+			}
+			return listeners;
+		};
+
+		// return cell index and add (; + worksheet.index) if cell isn't on current page
 		let getParentIndex = function (_parent) {
 			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
 			//parent -> cell/defname
@@ -105,6 +129,7 @@ function (window, undefined) {
 			return _parentCellIndex;
 		};
 
+		// return the object of parserFormulas of each listeners
 		let getListenersMap = function (_cellListeners) {
 			if (!_cellListeners) {
 				return;
@@ -147,17 +172,22 @@ function (window, undefined) {
 			return _listeners;
 		};
 
+		// let cellListenersOld = findCellListenersOld();
+		// let listenersMap = getListenersMap(cellListenersOld);
 		let cellListeners = findCellListeners();
-		let listenersMap = getListenersMap(cellListeners);
-		if (listenersMap) {
+		if (cellListeners) {
 			if (!this.dependents[cellIndex]) {
 				this.dependents[cellIndex] = {};
-				for (let i in listenersMap) {
-					if (listenersMap.hasOwnProperty(i)) {
-						let parent = listenersMap[i].parent;
+				for (let i in cellListeners) {
+					if (cellListeners.hasOwnProperty(i)) {
+						let parent = cellListeners[i].parent;
 						let parentCellIndex = getParentIndex(parent);
+						let formula = cellListeners[i].Formula;
 						if (parentCellIndex === null) {
 							continue;
+						}
+						// TODO split cArea/cArea3D into separate elements that listen to the cell  
+						if (formula.includes(":")) {
 						}
 						this._setDependents(cellIndex, parentCellIndex);
 						this._setPrecedents(parentCellIndex, cellIndex);
@@ -167,12 +197,15 @@ function (window, undefined) {
 				//if change formulas and add new sheetListeners
 				//check current tree
 				let isUpdated = false;
-				for (let i in listenersMap) {
-					if (listenersMap.hasOwnProperty(i)) {
-						let parent = listenersMap[i].parent;
+				for (let i in cellListeners) {
+					if (cellListeners.hasOwnProperty(i)) {
+						let parent = cellListeners[i].parent;
 						let parentCellIndex = getParentIndex(parent);
+						let formula = cellListeners[i].Formula;
 						if (parentCellIndex === null) {
 							continue;
+						}
+						if (formula.includes(":")) {
 						}
 						if (!this._getDependents(cellIndex, parentCellIndex)) {
 							this._setDependents(cellIndex, parentCellIndex);
@@ -226,7 +259,78 @@ function (window, undefined) {
 		}
 	};
 	TraceDependentsManager.prototype._calculatePrecedents = function (formulaParsed) {
+		// find all cells from parsedFormula that affect the given cell
+		if (!this.precedents) {
+			this.precedents = {};
+		}
+
+		// let wb = this.ws.model.workbook;
+		// let dependencyFormulas = wb.dependencyFormulas;
+		// let selection = ws.getSelection();
+		// let activeCell = selection.activeCell;
+		// let row = activeCell.row;
+		// let col = activeCell.col;
+		// let cellIndex = AscCommonExcel.getCellIndex(row, col);
+		// let sheetListeners = depFormulas.sheetListeners;
+		// let curListener = sheetListeners[ws.Id];
 		
+		// this.isHaveData();
+		// this.isHavePrecedents();
+		// // this._getPrecedents(cellIndex,);
+		// this._calculateDependents(cellIndex, curListener);
+
+		// let cellAddress = AscCommonExcel.getFromCellIndex(cellIndex, true);
+
+		// let cellListeners = findCellListeners();
+		// let listenersMap = getListenersMap(cellListeners);
+
+		const getElemIndex = function (_parent, is3D) {
+			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
+			if (_parent.parsedRef) {
+				_parentCellIndex = null;
+			} else if (_parent.ws !== t.ws.model) {
+				_parentCellIndex += ";" + _parent.ws.index;
+			}
+			return _parentCellIndex;
+		};
+
+		const getElemIndex2 = function (_row, _col, is3D, elem) {
+			let _cellIndex = AscCommonExcel.getCellIndex(_row, _col);
+			if (is3D) {
+				// ???get elem index
+				_cellIndex += ";" + elem.ws.index;
+			}
+			return _cellIndex;
+		};
+
+		let t = this;
+		let current_nRow = formulaParsed.parent.nRow;
+		let current_nCol = formulaParsed.parent.nCol;
+		// let currentCellIndex = AscCommonExcel.getCellIndex(current_nRow, current_nCol);
+		// let currentCellIndex = getElemIndex(formulaParsed.parent);
+		let currentCellIndex = getElemIndex2(formulaParsed.parent.nRow, formulaParsed.parent.nCol);
+
+		if (formulaParsed.outStack) {
+			// iterate and find all reference
+			// if reference already in the map, skip it
+			// write dependencies too
+			// two-way recording - if a cell depends on another, the other one affects the first
+			for (const elem of formulaParsed.outStack) {
+				let elemType = elem.type ? elem.type : null;
+				// 6 - ref
+				// 5 - cellsRange
+				// 12 - ref3D
+				// 13 - cellsRange3D
+				if (elemType === 6 || elemType === 5 || elemType === 12 || elemType === 13) {
+					let elemRange = elem.range.bbox ? elem.range.bbox : elem.range;
+					// let elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
+					let elemCellIndex = elemType === 12 || elemType === 13 ? getElemIndex2(elemRange.r1, elemRange.c1, true, elem) : getElemIndex2(elemRange.r1, elemRange.c1);
+					this._setPrecedents(currentCellIndex, elemCellIndex);
+					this._setDependents(elemCellIndex, currentCellIndex);
+				}
+			}
+		}
+
 	};
 	TraceDependentsManager.prototype._getPrecedents = function (from, to) {
 		return this.precedents[from] && this.precedents[from][to];

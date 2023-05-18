@@ -4844,8 +4844,8 @@
 
 		let ctx = this.overlayCtx;
 
-		let isRetina = AscBrowser.retinaPixelRatio === 2;
-		let isCustomScaling = AscBrowser.isCustomScaling();
+		// let isRetina = AscBrowser.retinaPixelRatio === 2;
+		// let isCustomScaling = AscBrowser.isCustomScaling();
 		let widthLine = 1, customScale = AscBrowser.retinaPixelRatio;
 		let zoom = this.getZoom();
 
@@ -4918,7 +4918,7 @@
 			}
 
 			// Angle and size for arrowhead
-			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 7 * zoom * customScale;
+			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 9 * zoom * customScale;
 
 			// Draw the line and subtract the padding to draw the arrowhead correctly
 			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -4943,6 +4943,13 @@
 
 		};
 
+		const drawExternalArrow = function (_from, _to, external) {
+
+		};
+
+		// TODO mini table is drawn differently depending on the call (prcedents/dependents)
+		// if call "trace dependents" - a dot is drawn in the call cell, and a mini table is drawn at the end of the line, above the arrow
+		// if call "trace precedents" - a dot is drawn at the beginning of the line, in the influencing cell, the mini-table is drawn above the point, at the beginning of the line
 		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
 			const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
 			const tableWidth = 15 * zoom * customScale;
@@ -5007,14 +5014,15 @@
 		const drawArrowHead = function (x2, y2, arrowSize, angle, color) {
 			ctx.beginPath();
 			ctx.moveTo(x2, y2);
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 8), y2 - arrowSize * Math.sin(angle - Math.PI / 8));
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 8), y2 - arrowSize * Math.sin(angle + Math.PI / 8));
+			// angle at the base of a triangle
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 10), y2 - arrowSize * Math.sin(angle - Math.PI / 10));
+			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 10), y2 - arrowSize * Math.sin(angle + Math.PI / 10));
 			ctx.setFillStyle(color);
 			ctx.closePath().fill()
 		};
 
 		const drawDot = function (x, y, color) {
-			const dotRadius = 3 * zoom * customScale;
+			const dotRadius = 2.75 * zoom * customScale;
 			ctx.beginPath();
 			ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
 			ctx.setFillStyle(color);
