@@ -4841,18 +4841,16 @@
 
 	WorksheetView.prototype.drawTraceArrows = function (visibleRange, offsetX, offsetY) {
 		let traceManager = this.traceDependentsManager;
-
 		let ctx = this.overlayCtx;
 
-		// let isRetina = AscBrowser.retinaPixelRatio === 2;
-		// let isCustomScaling = AscBrowser.isCustomScaling();
 		let widthLine = 1, customScale = AscBrowser.retinaPixelRatio;
 		let zoom = this.getZoom();
 
+		// let isRetina = AscBrowser.retinaPixelRatio === 2;
+		// let isCustomScaling = AscBrowser.isCustomScaling();
 		// if (isRetina) {
 		// 	widthLine = AscCommon.AscBrowser.convertToRetinaValue(widthLine, true);
 		// }
-
 		// if (isCustomScaling) {
 		// 	widthLine = customScale * widthLine * zoom;
 		// }
@@ -4865,7 +4863,7 @@
 		let externalLineColor = new CColor(0, 0, 0);
 
 		let t = this;
-		const doDrawArrow = function (_from, _to, external) {
+		const doDrawArrow = function (_from, _to, external, isPrecedent) {
 			// draw line
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
@@ -4874,6 +4872,7 @@
 			let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
 
 			let x2, y2, length, dashLength;
+			// TODO move external draw to a separate function
 			if (external) {
 				let miniTableCol, miniTableRow, isTableLeft;
 				//TODO max
@@ -5029,6 +5028,54 @@
 			ctx.closePath().fill();
 		};
 
+		// draw stroke for original cArea
+		const drawAreaStroke = function (areas) {
+			for (const area in areas) {
+				let x1, y1, x2, y2, x3, y3, x4, y4;
+				for (const cellIndex in areas[area]) {
+					const coords = AscCommonExcel.getFromCellIndex(areas[area][cellIndex], true);
+					
+					switch (cellIndex) {
+						// if top left
+						case "topLeftIndex": {
+							x1 = t._getColLeft(coords.col) - offsetX;
+							y1 = t._getRowTop(coords.row) - offsetY;
+							continue;
+						}
+						// if top right
+						case "topRightIndex": {
+							x2 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
+							y2 = t._getRowTop(coords.row) - offsetY;
+							continue;
+						}
+						// if bot right
+						case "bottomRightIndex": {
+							x3 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
+							y3 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
+							continue;
+						}
+						// if bot left
+						case "bottomLeftIndex": {
+							x4 = t._getColLeft(coords.col) - offsetX;
+							y4 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
+							continue;
+						}
+						default: return;
+					}
+				}
+				// do draw
+				ctx.beginPath();
+				ctx.setStrokeStyle(lineColor);
+				ctx.setLineWidth(1);
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.lineTo(x3, y3);
+				ctx.lineTo(x4, y4);
+				ctx.closePath().stroke();
+				// then go to the next area
+			}
+		};
+
 		let otherSheetMap = {};
 		traceManager.forEachDependents(function (from, to) {
 			if (from && to) {
@@ -5036,17 +5083,22 @@
 					let cellFrom = AscCommonExcel.getFromCellIndex(from, true);
 					if (-1 !== i.indexOf(";")) {
 						if (visibleRange.contains2(cellFrom) && !otherSheetMap[from]) {
-							doDrawArrow(cellFrom, null, true);
+							doDrawArrow(cellFrom, null, true, traceManager.isPrecedentsCall);
 						}
 					} else {
 						let cellTo = AscCommonExcel.getFromCellIndex(i, true);
 						if (visibleRange.contains2(cellFrom) || visibleRange.contains2(cellTo)) {
-							doDrawArrow(cellFrom, cellTo);
+							doDrawArrow(cellFrom, cellTo, false, traceManager.isPrecedentsCall);
 						}
 					}
 				}
 			}
 		});
+
+		// TODO if precedentsCall, make the line from area thicker
+		if (traceManager.isPrecedentsCall) {
+			drawAreaStroke(traceManager._getPrecedentsAreas());
+		}
 	};
 
 	WorksheetView.prototype._drawPageBreakPreviewText = function (drawingCtx, range, leftFieldInPx, topFieldInPx) {
