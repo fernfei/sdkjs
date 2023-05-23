@@ -4929,8 +4929,9 @@
 			let dy = (y2 - y1) / extLength;
 			let newX2 = x2 - dx * (arrowSize / 2);
 			let newY2 = y2 - dy * (arrowSize / 2);
-			ctx.moveTo(x1, y1);
-			ctx.lineTo(newX2, newY2);
+
+			ctx.lineDiag(x1, y1, newX2, newY2);
+
 			ctx.closePath().stroke();
 
 			if (zoom <= 0.8) {
