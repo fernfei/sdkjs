@@ -4867,57 +4867,61 @@
 			// draw line
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
+			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
 
-			let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 4;
-			let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
+			// TODO drawing priorities
+			if (isPrecedent) {
+				drawPrecedentLine(_from, _to, external);
+			} else if (!isPrecedent) {
+				drawDependentLine(_from, _to, external);
+			}
+		};
 
-			let x2, y2, length, dashLength;
-			// TODO move external draw to a separate function
+		const drawDependentLine = function (from, to, external) {
+			let x1 = t._getColLeft(from.col) - offsetX + t._getColumnWidth(from.col) / 4;
+			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
+			let arrowSize = 9 * zoom * customScale;
+
+			let x2, y2, length, dashLength, miniTableCol, miniTableRow, isTableLeft;
 			if (external) {
-				let miniTableCol, miniTableRow, isTableLeft;
-				//TODO max
-				// 4 pointer options:
-				if (_from.col < 2 && _from.row < 3) {
+				if (from.col < 2 && from.row < 3) {
 					// 1) Right down (+1r, +1c)
-					x2 = t._getColLeft(_from.col + 1) - offsetX + t._getColumnWidth(_from.col + 1);
-					y2 = t._getRowTop(_from.row + 1) - offsetY + t._getRowHeight(_from.row + 1);
-					miniTableCol = _from.col + 2;
-					miniTableRow = _from.row + 1;
-				} else if (_from.col < 2 && _from.row >= 3) {
+					x2 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
+					y2 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
+					miniTableCol = from.col + 2;
+					miniTableRow = from.row + 1;
+				} else if (from.col < 2 && from.row >= 3) {
 					// 2) Right up(-1r,+1c)
-					x2 = t._getColLeft(_from.col + 1) - offsetX + t._getColumnWidth(_from.col + 1);
-					y2 = t._getRowTop(_from.row - 1) - offsetY;
-					miniTableCol = _from.col + 2;
-					miniTableRow = _from.row - 2;
-				} else if (_from.col >= 2 && _from.row < 3) {
+					x2 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
+					y2 = t._getRowTop(from.row - 1) - offsetY;
+					miniTableCol = from.col + 2;
+					miniTableRow = from.row - 2;
+				} else if (from.col >= 2 && from.row < 3) {
 					// 3) Left down(+1r,-1c)
-					x2 = t._getColLeft(_from.col - 1) - offsetX;
-					y2 = t._getRowTop(_from.row + 1) - offsetY + t._getRowHeight(_from.row + 1);
-					miniTableCol = _from.col - 2;
-					miniTableRow = _from.row + 1;
+					x2 = t._getColLeft(from.col - 1) - offsetX;
+					y2 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
+					miniTableCol = from.col - 2;
+					miniTableRow = from.row + 1;
 					isTableLeft = true;
 				} else {
 					// 4) Left up(-1r,-1c)
-					x2 = t._getColLeft(_from.col - 1) - offsetX;
-					y2 = t._getRowTop(_from.row - 1) - offsetY;
-					miniTableCol = _from.col - 2;
-					miniTableRow = _from.row - 2;
+					x2 = t._getColLeft(from.col - 1) - offsetX;
+					y2 = t._getRowTop(from.row - 1) - offsetY;
+					miniTableCol = from.col - 2;
+					miniTableRow = from.row - 2;
 					isTableLeft = true;
 				}
+
 				// ?? line should always contain 7-10 dotted lines
 				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
 				dashLength = length / 20 * zoom;
-
-				// draw table in the end of arrow
-				drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
-
 			} else {
-				x2 = t._getColLeft(_to.col) - offsetX + t._getColumnWidth(_to.col) / 4;
-				y2 = t._getRowTop(_to.row) - offsetY + t._getRowHeight(_to.row) / 2;
+				x2 = t._getColLeft(to.col) - offsetX + t._getColumnWidth(to.col) / 4;
+				y2 = t._getRowTop(to.row) - offsetY + t._getRowHeight(to.row) / 2;
 			}
-
+			
 			// Angle and size for arrowhead
-			let angle = Math.atan2(y2 - y1, x2 - x1), arrowSize = 9 * zoom * customScale;
+			let angle = Math.atan2(y2 - y1, x2 - x1);
 
 			// Draw the line and subtract the padding to draw the arrowhead correctly
 			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -4925,7 +4929,6 @@
 			let dy = (y2 - y1) / extLength;
 			let newX2 = x2 - dx * (arrowSize / 2);
 			let newY2 = y2 - dy * (arrowSize / 2);
-			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(newX2, newY2);
 			ctx.closePath().stroke();
@@ -4934,21 +4937,89 @@
 				arrowSize = arrowSize / zoom;
 			}
 
-			// draw arrowhead in the end
+			// draw arrowhead
 			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
-
-			// draw dot at the beginning of the line
+			// draw dot
 			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
-
+			// draw mini table
+			!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
 		};
 
-		const drawExternalArrow = function (_from, _to, external) {
+		const drawPrecedentLine = function (from, to, external) {
+			// if external, make x1 the end of line and x2 is start
+			if (external) {
+				from = to;
+			}
+			let x1 = t._getColLeft(from.col) - offsetX + t._getColumnWidth(from.col) / 4;
+			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
+			let arrowSize = 9 * zoom * customScale;
 
+			let x2, y2, length, dashLength, miniTableCol, miniTableRow, isTableLeft;
+			if (external) {
+				// reverse the line
+				x2 = x1;
+				y2 = y1;
+				if (from.col < 2 && from.row < 3) {
+					// 1) Right down (+1r, +1c)
+					x1 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
+					y1 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
+					miniTableCol = from.col + 2;
+					miniTableRow = from.row + 1;
+				} else if (from.col < 2 && from.row >= 3) {
+					// 2) Right up(-1r,+1c)
+					x1 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
+					y1 = t._getRowTop(from.row - 1) - offsetY;
+					miniTableCol = from.col + 2;
+					miniTableRow = from.row - 2;
+				} else if (from.col >= 2 && from.row < 3) {
+					// 3) Left down(+1r,-1c)
+					x1 = t._getColLeft(from.col - 1) - offsetX;
+					y1 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
+					miniTableCol = from.col - 2;
+					miniTableRow = from.row + 1;
+					isTableLeft = true;
+				} else {
+					// 4) Left up(-1r,-1c)
+					x1 = t._getColLeft(from.col - 1) - offsetX;
+					y1 = t._getRowTop(from.row - 1) - offsetY;
+					miniTableCol = from.col - 2;
+					miniTableRow = from.row - 2;
+					isTableLeft = true;
+				}
+
+				// ?? line should always contain 7-10 dotted lines
+				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
+				dashLength = length / 20 * zoom;
+			} else {
+				x2 = t._getColLeft(to.col) - offsetX + t._getColumnWidth(to.col) / 4;
+				y2 = t._getRowTop(to.row) - offsetY + t._getRowHeight(to.row) / 2;
+			}
+			
+			// Angle and size for arrowhead
+			let angle = Math.atan2(y2 - y1, x2 - x1);
+
+			// Draw the line and subtract the padding to draw the arrowhead correctly
+			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+			let dx = (x2 - x1) / extLength;
+			let dy = (y2 - y1) / extLength;
+			let newX2 = x2 - dx * (arrowSize / 2);
+			let newY2 = y2 - dy * (arrowSize / 2);
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(newX2, newY2);
+			ctx.closePath().stroke();
+
+			if (zoom <= 0.8) {
+				arrowSize = arrowSize / zoom;
+			}
+
+			// draw arrowhead
+			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
+			// draw dot
+			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
+			// draw mini table
+			!external ? null : drawMiniTable(x1, y1, miniTableCol, miniTableRow, isTableLeft);
 		};
 
-		// TODO mini table is drawn differently depending on the call (prcedents/dependents)
-		// if call "trace dependents" - a dot is drawn in the call cell, and a mini table is drawn at the end of the line, above the arrow
-		// if call "trace precedents" - a dot is drawn at the beginning of the line, in the influencing cell, the mini-table is drawn above the point, at the beginning of the line
 		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
 			const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
 			const tableWidth = 15 * zoom * customScale;
@@ -5083,7 +5154,9 @@
 					let cellFrom = AscCommonExcel.getFromCellIndex(from, true);
 					if (-1 !== i.indexOf(";")) {
 						if (visibleRange.contains2(cellFrom) && !otherSheetMap[from]) {
-							doDrawArrow(cellFrom, null, true, traceManager.isPrecedentsCall);
+							let cellToIndex = i.split(";")[0];
+							let cellTo = traceManager.isPrecedentsCall ? AscCommonExcel.getFromCellIndex(cellToIndex, true) : null;
+							doDrawArrow(cellFrom, cellTo, true, traceManager.isPrecedentsCall);
 						}
 					} else {
 						let cellTo = AscCommonExcel.getFromCellIndex(i, true);

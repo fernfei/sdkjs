@@ -90,21 +90,6 @@ function (window, undefined) {
 		let dependencyFormulas = wb.dependencyFormulas;
 		let cellAddress = AscCommonExcel.getFromCellIndex(cellIndex, true);
 
-		// return object which contain listening bbox range, count of listeners, and listeners object(parserFormula for each listener) 
-		let findCellListenersOld = function () {
-			if (curListener && curListener.areaMap) {
-				for (let j in curListener.areaMap) {
-					if (curListener.areaMap.hasOwnProperty(j)) {
-						if (curListener.areaMap[j] && curListener.areaMap[j].bbox.contains(cellAddress.col, cellAddress.row)) {
-							// ??? instead return, add areaMap[j] and go to the next item
-							return curListener.areaMap[j];
-						}
-					}
-				}
-			}
-			return curListener.cellMap[cellIndex];
-		};
-
 		let findCellListeners = function () {
 			const listeners = {};
 			// go through the each object and add all listeners
@@ -151,51 +136,6 @@ function (window, undefined) {
 			return _parentCellIndex;
 		};
 
-		// return the object of parserFormulas of each listeners
-		let getListenersMap = function (_cellListeners) {
-			if (!_cellListeners) {
-				return;
-			}
-			let _listeners = {};
-			for (let j in _cellListeners.listeners) {
-				let pushListeners = function (_defNameListeners) {
-					if (_defNameListeners) {
-						for (let n in _defNameListeners.listeners) {
-							if (_defNameListeners.listeners.hasOwnProperty(n)) {
-								_listeners[n] = _defNameListeners.listeners[n];
-							}
-						}
-					}
-				};
-
-				if (cellListeners.listeners.hasOwnProperty(j)) {
-					if (_cellListeners.listeners[j].parent.parsedRef) {
-						//def name
-						let _name = _cellListeners.listeners[j].parent.name;
-						let defNameWs = dependencyFormulas.getDefNameByName(_name, t.ws.model.Id,true);
-						if (defNameWs) {
-							let _range = defNameWs && defNameWs.parsedRef && defNameWs.parsedRef.getFirstRange();
-							if (_range.bbox.r1 === cellAddress.row && _range.bbox.c1 === cellAddress.col) {
-								let defNameListeners = dependencyFormulas.defNameListeners[_name];
-								pushListeners(defNameListeners);
-							}
-						} else {
-							let defNameWb = dependencyFormulas.getDefNameByName(_name);
-							if (defNameWb) {
-								let defNameListeners = dependencyFormulas.defNameListeners[_name];
-								pushListeners(defNameListeners);
-							}
-						}
-					} else {
-						_listeners[j] = _cellListeners.listeners[j];
-					}
-				}
-			}
-			return _listeners;
-		};
-
-		// let cellListenersOld = findCellListenersOld();
-		// let listenersMap = getListenersMap(cellListenersOld);
 		let cellListeners = findCellListeners();
 		if (cellListeners) {
 			if (!this.dependents[cellIndex]) {
@@ -298,86 +238,11 @@ function (window, undefined) {
 		});
 
 		if (formulaParsed) {
-			// this._calculatePrecedents(formulaParsed);
-			this._calculatePrecedents2(formulaParsed, row, col);
+			this._calculatePrecedents(formulaParsed, row, col);
 			this.setPrecedentsCall();
 		}
 	};
-	TraceDependentsManager.prototype._calculatePrecedents = function (formulaParsed) {
-		// let wb = this.ws.model.workbook;
-		// let dependencyFormulas = wb.dependencyFormulas;
-		// let selection = ws.getSelection();
-		// let activeCell = selection.activeCell;
-		// let row = activeCell.row;
-		// let col = activeCell.col;
-		// let cellIndex = AscCommonExcel.getCellIndex(row, col);
-		// let sheetListeners = depFormulas.sheetListeners;
-		// let curListener = sheetListeners[ws.Id];
-		
-		// this.isHaveData();
-		// this.isHavePrecedents();
-		// // this._getPrecedents(cellIndex,);
-		// this._calculateDependents(cellIndex, curListener);
-
-		// let cellAddress = AscCommonExcel.getFromCellIndex(cellIndex, true);
-
-		// let cellListeners = findCellListeners();
-		// let listenersMap = getListenersMap(cellListeners);
-
-		// find all cells from parsedFormula that affect the given cell
-		if (!this.precedents) {
-			this.precedents = {};
-		}
-
-		const getElemIndex = function (_parent, is3D) {
-			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
-			if (_parent.parsedRef) {
-				_parentCellIndex = null;
-			} else if (_parent.ws !== t.ws.model) {
-				_parentCellIndex += ";" + _parent.ws.index;
-			}
-			return _parentCellIndex;
-		};
-
-		const getElemIndex2 = function (_row, _col, is3D, elem) {
-			let _cellIndex = AscCommonExcel.getCellIndex(_row, _col);
-			if (is3D) {
-				// ???get elem index
-				_cellIndex += ";" + elem.ws.index;
-			}
-			return _cellIndex;
-		};
-
-		let t = this;
-		let current_nRow = formulaParsed.parent.nRow;
-		let current_nCol = formulaParsed.parent.nCol;
-		// let currentCellIndex = AscCommonExcel.getCellIndex(current_nRow, current_nCol);
-		// let currentCellIndex = getElemIndex(formulaParsed.parent);
-		let currentCellIndex = getElemIndex2(formulaParsed.parent.nRow, formulaParsed.parent.nCol);
-
-		if (formulaParsed.outStack) {
-			// iterate and find all reference
-			// if reference already in the map, skip it
-			// write dependencies too
-			// two-way recording - if a cell depends on another, the other one affects the first
-			for (const elem of formulaParsed.outStack) {
-				let elemType = elem.type ? elem.type : null;
-				// 6 - ref
-				// 5 - cellsRange
-				// 12 - ref3D
-				// 13 - cellsRange3D
-				if (elemType === 6 || elemType === 5 || elemType === 12 || elemType === 13) {
-					let elemRange = elem.range.bbox ? elem.range.bbox : elem.range;
-					// let elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
-					let elemCellIndex = elemType === 12 || elemType === 13 ? getElemIndex2(elemRange.r1, elemRange.c1, true, elem) : getElemIndex2(elemRange.r1, elemRange.c1);
-					this._setPrecedents(currentCellIndex, elemCellIndex);
-					this._setDependents(elemCellIndex, currentCellIndex);
-				}
-			}
-		}
-
-	};
-	TraceDependentsManager.prototype._calculatePrecedents2 = function (formulaParsed, nRow, nCol) {
+	TraceDependentsManager.prototype._calculatePrecedents = function (formulaParsed, nRow, nCol) {
 		// find all cells from parsedFormula that affect the given cell
 		if (!this.precedents) {
 			this.precedents = {};
@@ -386,20 +251,9 @@ function (window, undefined) {
 			this.precedentsAreas = {};
 		}
 
-		const getElemIndex = function (_parent) {
-			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
-			if (_parent.parsedRef) {
-				_parentCellIndex = null;
-			} else if (_parent.ws !== t.ws.model) {
-				_parentCellIndex += ";" + _parent.ws.index;
-			}
-			return _parentCellIndex;
-		};
-
-		const getElemIndex2 = function (_row, _col, is3D, elem) {
+		const getElemIndex = function (_row, _col, is3D, elem) {
 			let _cellIndex = AscCommonExcel.getCellIndex(_row, _col);
 			if (is3D) {
-				// ???get elem index
 				_cellIndex += ";" + elem.wsTo.index;
 			}
 			return _cellIndex;
@@ -418,20 +272,20 @@ function (window, undefined) {
 				// 12 - ref3D
 				// 13 - cellsRange3D
 				if (elemType === 6 || elemType === 5 || elemType === 12 || elemType === 13) {
-					// write 4 indices to an object - top left cell, top right cell, bottom right cell, bottom left cell
 					const areaRange = {};
 					let is3D = elemType === 12 || elemType === 13;
 					let isArea = elemType === 5;
 					let elemRange = elem.range.bbox ? elem.range.bbox : elem.bbox;
-					// let elemCellIndex = is3D ? getElemIndex2(elemRange.r1, elemRange.c1, true, elem) : getElemIndex2(elemRange.r1, elemRange.c1);
-					let elemCellIndex = getElemIndex2(elemRange.r1, elemRange.c1);
-					let currentCellIndex = getElemIndex2(nRow, nCol);
+					let elemCellIndex = getElemIndex(elemRange.r1, elemRange.c1);
+					let currentCellIndex = getElemIndex(nRow, nCol);
 
 					if (is3D) {
 						currentCellIndex += ";" + elem.wsTo.index;
 					}
 
 					if (isArea) {
+						// write 4 index to an object - top left cell, top right cell, bottom right cell, bottom left cell
+						// TODO make it through the cycle
 						const tempObj = {};
 						const areaName = elem.value;	// areaName - unique key for areaRange
 						tempObj.topLeftIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
@@ -461,15 +315,6 @@ function (window, undefined) {
 		}
 		this.precedents[from][to] = 1;
 	};
-	TraceDependentsManager.prototype._setPrecedents2 = function (from, to) {
-		if (!this.precedents) {
-			this.precedents = {};
-		}
-		if (!this.precedents[from]) {
-			this.precedents[from] = {};
-		}
-		this.precedents[from][to] = 1;
-	};
 	TraceDependentsManager.prototype._setPrecedentsAreas = function (area) {
 		if (!this.precedentsAreas) {
 			this.precedentsAreas = {};
@@ -491,6 +336,11 @@ function (window, undefined) {
 	TraceDependentsManager.prototype.forEachDependents = function (callback) {
 		for (const i in this.dependents) {
 			callback(i, this.dependents[i]);
+		}
+	};
+	TraceDependentsManager.prototype.forEachPrecedents = function (callback) {
+		for (const i in this.precedents) {
+			callback(i, this.precedents[i]);
 		}
 	};
 	TraceDependentsManager.prototype.clear = function (type) {
