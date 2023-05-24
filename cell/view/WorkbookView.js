@@ -5239,6 +5239,7 @@
 				let ws = t.getWorksheet();
 				ws.draw();
 
+				callback && callback(true);
 				t.model.handlers.trigger("asc_onStartUpdateExternalReference", false);
 			};
 
@@ -5257,6 +5258,7 @@
 				});
 
 				if (!aRequests.length) {
+					callback && callback(false);
 					t.model.handlers.trigger("asc_onStartUpdateExternalReference", false);
 					return;
 				}
@@ -5391,8 +5393,8 @@
 		}
 	};
 
-	WorkbookView.prototype.updateExternalReferences = function (arr) {
-		this.doUpdateExternalReference(arr);
+	WorkbookView.prototype.updateExternalReferences = function (arr, callback) {
+		this.doUpdateExternalReference(arr, callback);
 	};
 
 	//*****user range protect*****
