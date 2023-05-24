@@ -55,7 +55,10 @@
 
     CMergeComparisonNode.prototype = Object.create(CNode.prototype);
     CMergeComparisonNode.prototype.constructor = CMergeComparisonNode;
+	CMergeComparisonNode.prototype.checkCommentsFromInsert = function ()
+	{
 
+	}
     CMergeComparisonNode.prototype.privateCompareElements = function (oNode, bCheckNeighbors) {
         const oElement1 = this.element;
         const oElement2 = oNode.element;
@@ -264,6 +267,7 @@
 
     function CDocumentResolveConflictComparison(oOriginalDocument, oRevisedDocument, oOptions) {
         CDocumentComparison.call(this, oOriginalDocument, oRevisedDocument, oOptions);
+	    this.needCopyForResolveEqualWords = false;
         this.parentParagraph = null;
         this.startPosition = 0;
         this.bSkipChangeMoveType = true;
@@ -277,6 +281,10 @@
     CDocumentResolveConflictComparison.prototype = Object.create(CDocumentComparison.prototype);
     CDocumentResolveConflictComparison.prototype.constructor = CDocumentResolveConflictComparison;
 
+	CDocumentResolveConflictComparison.prototype.removeCommentsFromMap = function ()
+	{
+
+	};
     CDocumentResolveConflictComparison.prototype.getNodeConstructor = function () {
         return CConflictResolveNode;
     }
@@ -857,6 +865,11 @@
         arrToRemove[arrToRemove.length - 1].Content.push(new AscWord.CRunParagraphMark());
         arrToInserts[arrToInserts.length - 1].Content.push(new AscWord.CRunParagraphMark());
         const comparison = new CDocumentResolveConflictComparison(this.originalDocument, this.revisedDocument, this.options);
+
+				const oOldCommentsMeeting = this.oCommentManager.mapCommentMeeting;
+	    this.oCommentManager.mapCommentMeeting = {};
+	    comparison.oCommentManager = this.oCommentManager;
+
 				const oOldBookmarkMeeting = this.oBookmarkManager.mapBookmarkMeeting;
 	      this.oBookmarkManager.mapBookmarkMeeting = {};
 	      comparison.oBookmarkManager = this.oBookmarkManager;
@@ -877,6 +890,7 @@
             comparison.compareRoots(originalDocument, revisedDocument);
         });
 	    this.oBookmarkManager.mapBookmarkMeeting = oOldBookmarkMeeting;
+	    this.oCommentManager.mapCommentMeeting = oOldCommentsMeeting;
         return originalParagraph.Content;
     }
 
