@@ -4863,87 +4863,30 @@
 		let externalLineColor = new CColor(0, 0, 0);
 
 		let t = this;
-		const doDrawArrow = function (_from, _to, external, isPrecedent) {
-			// draw line
+		let doDrawArrow = function (_from, _to, external, isPrecedent) {
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
 			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
 
-			// TODO drawing priorities
 			if (isPrecedent) {
 				drawPrecedentLine(_from, _to, external);
-			} else if (!isPrecedent) {
-				drawDependentLine(_from, _to, external);
-			}
-		};
-
-		const drawDependentLine = function (from, to, external) {
-			let x1 = t._getColLeft(from.col) - offsetX + t._getColumnWidth(from.col) / 4;
-			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
-			let arrowSize = 9 * zoom * customScale;
-
-			let x2, y2, length, dashLength, miniTableCol, miniTableRow, isTableLeft;
-			if (external) {
-				if (from.col < 2 && from.row < 3) {
-					// 1) Right down (+1r, +1c)
-					x2 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
-					y2 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
-					miniTableCol = from.col + 2;
-					miniTableRow = from.row + 1;
-				} else if (from.col < 2 && from.row >= 3) {
-					// 2) Right up(-1r,+1c)
-					x2 = t._getColLeft(from.col + 1) - offsetX + t._getColumnWidth(from.col + 1);
-					y2 = t._getRowTop(from.row - 1) - offsetY;
-					miniTableCol = from.col + 2;
-					miniTableRow = from.row - 2;
-				} else if (from.col >= 2 && from.row < 3) {
-					// 3) Left down(+1r,-1c)
-					x2 = t._getColLeft(from.col - 1) - offsetX;
-					y2 = t._getRowTop(from.row + 1) - offsetY + t._getRowHeight(from.row + 1);
-					miniTableCol = from.col - 2;
-					miniTableRow = from.row + 1;
-					isTableLeft = true;
-				} else {
-					// 4) Left up(-1r,-1c)
-					x2 = t._getColLeft(from.col - 1) - offsetX;
-					y2 = t._getRowTop(from.row - 1) - offsetY;
-					miniTableCol = from.col - 2;
-					miniTableRow = from.row - 2;
-					isTableLeft = true;
-				}
-
-				// ?? line should always contain 7-10 dotted lines
-				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
-				dashLength = length / 20 * zoom;
 			} else {
-				x2 = t._getColLeft(to.col) - offsetX + t._getColumnWidth(to.col) / 4;
-				y2 = t._getRowTop(to.row) - offsetY + t._getRowHeight(to.row) / 2;
+				let x1 = t._getColLeft(_from.col) - offsetX + t._getColumnWidth(_from.col) / 2;
+				let y1 = t._getRowTop(_from.row) - offsetY + t._getRowHeight(_from.row) / 2;
+	
+				let x2, y2;
+				if (external) {
+					x2 = t._getColLeft(_from.col === 0 ? _from.col + 1 :_from.col - 1) - offsetX;
+					y2 = t._getRowTop(_from.row === 0 ? _from.row + 1 :_from.row - 1) - offsetY;
+				} else {
+					x2 = t._getColLeft(_to.col) - offsetX + t._getColumnWidth(_to.col) / 2;
+					y2 = t._getRowTop(_to.row) - offsetY + t._getRowHeight(_to.row) / 2;
+				}
+	
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.closePath().stroke();
 			}
-			
-			// Angle and size for arrowhead
-			let angle = Math.atan2(y2 - y1, x2 - x1);
-
-			// Draw the line and subtract the padding to draw the arrowhead correctly
-			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-			let dx = (x2 - x1) / extLength;
-			let dy = (y2 - y1) / extLength;
-			let newX2 = x2 - dx * (arrowSize / 2);
-			let newY2 = y2 - dy * (arrowSize / 2);
-
-			ctx.lineDiag(x1, y1, newX2, newY2);
-
-			ctx.closePath().stroke();
-
-			if (zoom <= 0.8) {
-				arrowSize = arrowSize / zoom;
-			}
-
-			// draw arrowhead
-			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
-			// draw dot
-			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
-			// draw mini table
-			!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
 		};
 
 		const drawPrecedentLine = function (from, to, external) {
@@ -5007,148 +4950,23 @@
 			let newY2 = y2 - dy * (arrowSize / 2);
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(newX2, newY2);
+			// ctx.lineDiag(x1, y1, newX2, newY2);
 			ctx.closePath().stroke();
 
-			if (zoom <= 0.8) {
-				arrowSize = arrowSize / zoom;
-			}
+			// if (zoom <= 0.8) {
+			// 	arrowSize = arrowSize / zoom;
+			// }
 
-			// draw arrowhead
-			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
-			// draw dot
-			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
-			// draw mini table
-			!external ? null : drawMiniTable(x1, y1, miniTableCol, miniTableRow, isTableLeft);
-		};
-
-		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
-			const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
-			const tableWidth = 15 * zoom * customScale;
-			const tableHeight = 14 * zoom * customScale;
-			const cellWidth = tableWidth / 3;
-			const cellHeight = tableHeight / 5;
-			const lineWidth = 1 * zoom * customScale;
-			const whiteColor = new CColor(255, 255, 255);
-			const cellStrokesColor = new CColor(192, 192, 192);
-
-			const x1 = isTableLeft ? x - tableWidth : x;
-			// Padding for a table inside a cell
-			const y1 = y - tableHeight - paddingY;
-
-			ctx.setLineWidth(lineWidth);
-
-			// Draw a white canvas on which the table will be located
-			ctx.setFillStyle(whiteColor);
-			ctx.fillRect(x1 - 1, y1 - 1, tableWidth + 1, tableHeight + 1);
-		  	
-			ctx.setStrokeStyle(cellStrokesColor);
-			// Draw vertical lines between cells
-			for (let i = 1; i < 3; i++) {
-				const x2 = x1 + i * cellWidth;
-				ctx.beginPath();
-				ctx.setLineDash([]);
-				ctx.moveTo(x2, y1);
-				ctx.lineTo(x2, y1 + tableHeight);
-				ctx.stroke();
-			}
-		  
-			// Draw horizontal lines between cells
-			for (let i = 1; i < 5; i++) {
-				const y2 = y1 + i * cellHeight;
-				ctx.beginPath();
-				ctx.setLineDash([]);
-				ctx.moveTo(x1, y2);
-				ctx.lineTo(x1 + tableWidth, y2);
-				ctx.stroke();
-			}
-			
-			// Draw blue stripe
-			ctx.beginPath();
-			ctx.setFillStyle(lineColor);
-			ctx.setStrokeStyle(externalLineColor);
-			ctx.fillRect(x1, y1, tableWidth, cellHeight);
-			ctx.moveTo(x1, y1 + cellHeight);
-			ctx.lineTo(x1 + tableWidth, y1 + cellHeight);
-			ctx.closePath().stroke();
-
-			// Draw outer table border
-			ctx.beginPath();
-			ctx.setLineDash([]);
-			ctx.moveTo(x1, y1);
-			ctx.lineTo(x1 + tableWidth, y1);
-			ctx.lineTo(x1 + tableWidth, y1 + tableHeight);
-			ctx.lineTo(x1, y1 + tableHeight);
-			ctx.closePath();
-			ctx.stroke();
-		};
-
-		const drawArrowHead = function (x2, y2, arrowSize, angle, color) {
-			ctx.beginPath();
-			ctx.moveTo(x2, y2);
-			// angle at the base of a triangle
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 10), y2 - arrowSize * Math.sin(angle - Math.PI / 10));
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 10), y2 - arrowSize * Math.sin(angle + Math.PI / 10));
-			ctx.setFillStyle(color);
-			ctx.closePath().fill()
-		};
-
-		const drawDot = function (x, y, color) {
-			const dotRadius = 2.75 * zoom * customScale;
-			ctx.beginPath();
-			ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
-			ctx.setFillStyle(color);
-			ctx.closePath().fill();
-		};
-
-		// draw stroke for original cArea
-		const drawAreaStroke = function (areas) {
-			for (const area in areas) {
-				let x1, y1, x2, y2, x3, y3, x4, y4;
-				for (const cellIndex in areas[area]) {
-					const coords = AscCommonExcel.getFromCellIndex(areas[area][cellIndex], true);
-					
-					switch (cellIndex) {
-						// if top left
-						case "topLeftIndex": {
-							x1 = t._getColLeft(coords.col) - offsetX;
-							y1 = t._getRowTop(coords.row) - offsetY;
-							continue;
-						}
-						// if top right
-						case "topRightIndex": {
-							x2 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
-							y2 = t._getRowTop(coords.row) - offsetY;
-							continue;
-						}
-						// if bot right
-						case "bottomRightIndex": {
-							x3 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
-							y3 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
-							continue;
-						}
-						// if bot left
-						case "bottomLeftIndex": {
-							x4 = t._getColLeft(coords.col) - offsetX;
-							y4 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
-							continue;
-						}
-						default: return;
-					}
-				}
-				// do draw
-				ctx.beginPath();
-				ctx.setStrokeStyle(lineColor);
-				ctx.setLineWidth(1);
-				ctx.moveTo(x1, y1);
-				ctx.lineTo(x2, y2);
-				ctx.lineTo(x3, y3);
-				ctx.lineTo(x4, y4);
-				ctx.closePath().stroke();
-				// then go to the next area
-			}
+			// // draw arrowhead
+			// !external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
+			// // draw dot
+			// !external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
+			// // draw mini table
+			// !external ? null : drawMiniTable(x1, y1, miniTableCol, miniTableRow, isTableLeft);
 		};
 
 		let otherSheetMap = {};
+		console.log(traceManager);
 		traceManager.forEachDependents(function (from, to) {
 			if (from && to) {
 				for (let i in to) {
@@ -5168,11 +4986,6 @@
 				}
 			}
 		});
-
-		// TODO if precedentsCall, make the line from area thicker
-		if (traceManager.isPrecedentsCall) {
-			drawAreaStroke(traceManager._getPrecedentsAreas());
-		}
 	};
 
 	WorksheetView.prototype._drawPageBreakPreviewText = function (drawingCtx, range, leftFieldInPx, topFieldInPx) {
