@@ -248,6 +248,7 @@ function (window, undefined) {
 	window['AscCH'].historyitem_PivotTable_DataFieldSetShowDataAs = 57;
 	window['AscCH'].historyitem_PivotTable_DataFieldSetBaseField = 58;
 	window['AscCH'].historyitem_PivotTable_DataFieldSetBaseItem = 59;
+	window['AscCH'].historyitem_PivotTable_DataFieldSetNumFormat = 60;
 
 	window['AscCH'].historyitem_SharedFormula_ChangeFormula = 1;
 	window['AscCH'].historyitem_SharedFormula_ChangeShared = 2;
@@ -999,7 +1000,7 @@ CHistory.prototype.Create_NewPoint = function()
 			oAPI.cancelEyedropper();
 		}
 		if (oAPI.isInkDrawerOn()) {
-			oAPI.asc_StopInkDrawer();
+			oAPI.stopInkDrawer();
 		}
 	}
 	//this.workbook.handlers.trigger("cleanCutData");

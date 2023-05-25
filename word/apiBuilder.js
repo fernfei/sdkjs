@@ -1569,11 +1569,35 @@
 	/**
 	 * Returns a text from the specified range.
 	 * @memberof ApiRange
+	 * @param {object} oPr - The resulting string display properties.
+     * @param {boolean} [oPr.NewLineParagraph=false] - Defines if the resulting string will include paragraph line boundaries or not.
+     * @param {boolean} [oPr.Numbering=false] - Defines if the resulting string will include numbering or not.
+     * @param {boolean} [oPr.Math=false] - Defines if the resulting string will include mathematical expressions or not.
+	 * @param {string} [oPr.NewLineSeparator='\r'] - Defines how the line separator will be specified in the resulting string.
+     * @param {string} [oPr.TableCellSeparator='\t'] - Defines how the table cell separator will be specified in the resulting string.
+     * @param {string} [oPr.TableRowSeparator='\r\n'] - Defines how the table row separator will be specified in the resulting string.
+     * @param {string} [oPr.ParaSeparator='\r\n'] - Defines how the paragraph separator will be specified in the resulting string.
+	 * @param {string} [oPr.TabSymbol='\t'] - Defines how the tab will be specified in the resulting string (does not apply to numbering)
 	 * @typeofeditors ["CDE"]
 	 * @returns {String} - returns "" if range is empty.
-	 */	
-	ApiRange.prototype.GetText = function()
+	 */
+	ApiRange.prototype.GetText = function(oPr)
 	{
+		if (!oPr) {
+			oPr = {};
+		}
+		
+		let oProp = {
+			NewLineSeparator:	(oPr.hasOwnProperty("NewLineSeparator")) ? oPr["NewLineSeparator"] : "\r",
+			NewLineParagraph:	(oPr.hasOwnProperty("NewLineParagraph")) ? oPr["NewLineParagraph"] : true,
+			Numbering:			(oPr.hasOwnProperty("Numbering")) ? oPr["Numbering"] : true,
+			Math:				(oPr.hasOwnProperty("Math")) ? oPr["Math"] : true,
+			TableCellSeparator:	oPr["TableCellSeparator"],
+			TableRowSeparator:	oPr["TableRowSeparator"],
+			ParaSeparator:		oPr["ParaSeparator"],
+			TabSymbol:			oPr["TabSymbol"]
+		}
+
 		private_RefreshRangesPosition();
 		private_RemoveEmptyRanges();
 
@@ -1588,7 +1612,7 @@
 		}
 		private_TrackRangesPositions();
 
-		var Text = this.Controller.GetSelectedText(false); 
+		var Text = this.Controller.GetSelectedText(false, oProp); 
 		Document.LoadDocumentState(oldSelectionInfo);
 		Document.UpdateSelection();
 
@@ -5328,7 +5352,7 @@
 		return arrApiOleObjects;
 	};
 	/**
-	 * Returns an array of all paragraphs from the current document content
+	 * Returns an array of all paragraphs from the current document content.
 	 * @memberof ApiDocumentContent
 	 * @typeofeditors ["CDE"]
 	 * @return {ApiParagraph[]}
@@ -5343,7 +5367,7 @@
 		return result;
 	};
 	/**
-	 * Returns an array of all tables from the current document content
+	 * Returns an array of all tables from the current document content.
 	 * @memberof ApiDocumentContent
 	 * @typeofeditors ["CDE"]
 	 * @return {ApiParagraph[]}
@@ -5677,21 +5701,21 @@
 	};
 	
 	/**
-	 * Review record type
+	 * Review record type.
 	 * @typedef {("TextAdd" | "TextRem" | "ParaAdd" | "ParaRem" | "TextPr" | "ParaPr" | "Unknown")} ReviewReportRecordType
 	 */
 	
 	/**
-	 * Record of one review change
+	 * Record of one review change.
 	 * @typedef {Object} ReviewReportRecord
-	 * @property {ReviewReportRecordType} Type - change type
-	 * @property {string} [Value=undefined] - value is set for types "TextAdd" and "TextRem" only
-	 * @property {number} Date - date-time when this change was made
+	 * @property {ReviewReportRecordType} Type - Review record type.
+	 * @property {string} [Value=undefined] - Review change value that is set for the "TextAdd" and "TextRem" types only.
+	 * @property {number} Date - The time when this change was made.
 	 */
 	
 	/**
-	 * Report on all review changes
-	 * This is a dictionary where the keys are usernames
+	 * Report on all review changes.
+	 * This is a dictionary where the keys are usernames.
 	 * @typedef {Object.<string, Array.<ReviewReportRecord>>} ReviewReport
 	 * @example
 	 * 	{
@@ -6998,8 +7022,8 @@
         }
 	};
 	/**
-	 * Returns the number of pages in a document
-	 * <note>This method can be slow for large documents, because it runs the document calculation
+	 * Returns a number of pages in the current document.
+	 * <note>This method can be slow for large documents because it runs the document calculation
 	 * process before the full recalculation.</note>
 	 * @memberof ApiDocument
 	 * @typeofeditors ["CDE"]
@@ -7009,6 +7033,23 @@
 	{
 		this.ForceRecalculate();
 		return this.Document.GetPagesCount();
+	};
+	/**
+	 * Returns all styles of current document.
+	 * @memberof ApiDocument
+	 * @typeofeditors ["CDE"]
+	 * @returns {ApiStyle[]}
+	 */
+	ApiDocument.prototype.GetAllStyles = function()
+	{
+		let aApiStyles = [];
+		var aStyles  = this.Document.Get_Styles().Style;
+		
+		aStyles.forEach(function(style) {
+			aApiStyles.push(new ApiStyle(style));
+		});
+
+		return aApiStyles;
 	};
 	//------------------------------------------------------------------------------------------------------------------
 	//
@@ -7942,7 +7983,7 @@
 
 		for (var Index = 0; Index < arrAllDrawing.length; Index++)
 		{
-			if (arrAllDrawing[Index].GraphicObj instanceof CImageShape)
+			if (arrAllDrawing[Index].GraphicObj instanceof AscFormat.CImageShape)
 				arrApiImages.push(new ApiImage(arrAllDrawing[Index].GraphicObj));
 		}
 
@@ -7961,7 +8002,7 @@
 
 		for (var Index = 0; Index < arrAllDrawing.length; Index++)
 		{
-			if (arrAllDrawing[Index].GraphicObj instanceof CChartSpace)
+			if (arrAllDrawing[Index].GraphicObj instanceof AscFormat.CChartSpace)
 				arrApiCharts.push(new ApiChart(arrAllDrawing[Index].GraphicObj));
 		}
 
@@ -8046,12 +8087,29 @@
 	/**
 	 * Returns the paragraph text.
 	 * @memberof ApiParagraph
+	 * @param {object} oPr - The resulting string display properties.
+     * @param {boolean} [oPr.Numbering=false] - Defines if the resulting string will include numbering or not.
+     * @param {boolean} [oPr.Math=false] - Defines if the resulting string will include mathematical expressions or not.
+	 * @param {string} [oPr.NewLineSeparator='\r'] - Defines how the line separator will be specified in the resulting string.
+	 * @param {string} [oPr.TabSymbol='\t'] - Defines how the tab will be specified in the resulting string (does not apply to numbering).
 	 * @typeofeditors ["CDE"]
-	 * @return {string}  
+	 * @return {string}
 	 */
-	ApiParagraph.prototype.GetText = function()
+	ApiParagraph.prototype.GetText = function(oPr)
 	{
-		return this.Paragraph.GetText({ParaEndToSpace: false});
+		if (!oPr) {
+			oPr = {};
+		}
+
+		let oProp =	{
+			NewLineSeparator:	(oPr.hasOwnProperty("NewLineSeparator")) ? oPr["NewLineSeparator"] : "\r",
+			Numbering:			(oPr.hasOwnProperty("Numbering")) ? oPr["Numbering"] : true,
+			Math:				(oPr.hasOwnProperty("Math")) ? oPr["Math"] : true,
+			TabSymbol:			oPr["TabSymbol"],
+			ParaEndToSpace:		false
+		}
+
+		return this.Paragraph.GetText(oProp);
 	};
 	/**
 	 * Returns the paragraph text properties.
@@ -8792,7 +8850,7 @@
 	};
 
 	/**
-     * Gets the section of paragraph.
+     * Returns the paragraph section.
      * @memberof ApiParagraph
      * @typeofeditors ["CDE"]
      * @returns {ApiSection}
@@ -8806,10 +8864,10 @@
 		return new ApiSection(oSectPr);
 	};
 	/**
-     * Sets the specified section to paragraph.
+     * Sets the specified section to the current paragraph.
      * @memberof ApiParagraph
      * @typeofeditors ["CDE"]
-     * @param {ApiSection} oSection - the section which will setted to the paragraph.
+     * @param {ApiSection} oSection - The section which will be set to the paragraph.
      * @returns {boolean}
      */
 	ApiParagraph.prototype.SetSection = function(oSection)
@@ -8859,7 +8917,7 @@
 	 */
 	ApiRun.prototype.GetTextPr = function()
 	{
-		return new ApiTextPr(this, this.Run.Pr.Copy());
+		return new ApiTextPr(this, this.TextPr);
 	};
 	/**
 	 * Clears the content from the current run.
@@ -9538,6 +9596,31 @@
 		oDocument.LoadDocumentState(oDocumentState);
 		oDocument.UpdateSelection();
 		return comment;
+	};
+
+	/**
+	 * Returns a text from the text run.
+	 * @memberof ApiRun
+	 * @param {object} oPr - The resulting string display properties.
+     * @param {string} [oPr.NewLineSeparator='\r'] - Defines how the line separator will be specified in the resulting string.
+	 * @param {string} [oPr.TabSymbol='\t'] - Defines how the tab will be specified in the resulting string.
+	 * @typeofeditors ["CDE"]
+	 * @returns {string}
+	 */	
+	ApiRun.prototype.GetText = function(oPr)
+	{
+		if (!oPr) {
+			oPr = {};
+		}
+
+		let oProp = {
+			Text: "",
+			NewLineSeparator:	(oPr.hasOwnProperty("NewLineSeparator")) ? oPr["NewLineSeparator"] : "\r",
+			TabSymbol:			oPr["TabSymbol"],
+			ParaSeparator:		oPr["ParaSeparator"]
+		}
+
+		return this.Run.GetText(oProp);
 	};
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -10805,7 +10888,7 @@
 	};
 
 	/**
-     * Adds a caption table after (or before) the current table.
+     * Adds a caption paragraph after (or before) the current table.
 	 * <note>Please note that the current table must be in the document (not in the footer/header).
 	 * And if the current table is placed in a shape, then a caption is added after (or before) the parent shape.</note>
      * @memberof ApiTable
@@ -16760,7 +16843,7 @@
 	};
 
 	/**
-     * Adds a caption content control after (or before) the current content control.
+     * Adds a caption paragraph after (or before) the current content control.
 	 * <note>Please note that the current content control must be in the document (not in the footer/header).
 	 * And if the current content control is placed in a shape, then a caption is added after (or before) the parent shape.</note>
      * @memberof ApiBlockLvlSdt
@@ -16923,7 +17006,7 @@
 		if (this.GetFormType() === "radioButtonForm")
 		{
 			sKey = sKey === "" ? "Group 1" : sKey;
-			Sdt.GetCheckBoxPr().SetGroupKey(sKey);
+			this.Sdt.GetCheckBoxPr().SetGroupKey(sKey);
 		}
 		else
 		{
@@ -18227,7 +18310,10 @@
 		{
 			var oDocument = this.GetDocument();
 			arrSelectedParas = oDocument.Document.GetSelectedParagraphs();
-			
+			if(arrSelectedParas.length <= 0 )
+			{
+				return;
+			}
 			ReplaceInParas(arrSelectedParas);
 			
 			if (arrSelectedParas[0] && arrSelectedParas[0].Parent)
@@ -18328,7 +18414,7 @@
 	};
 
 	/**
-	 * Returns full name of current opened file.
+	 * Returns the full name of the currently opened file.
 	 * @memberof Api
 	 * @typeofeditors ["CDE, CPE, CSE"]
 	 * @returns {string}
@@ -18360,12 +18446,12 @@
 	};
 	
 	/**
-	 * Returns the id of the current comment. If the comment doesn't have an id, null is returned.
+	 * Returns the current comment ID. If the comment doesn't have an ID, null is returned.
 	 * @memberof ApiComment
 	 * @typeofeditors ["CDE"]
 	 * @returns {?string}
 	 */
-	ApiComment.prototype.GetCommentId = function ()
+	ApiComment.prototype.GetId = function ()
 	{
 		let durableId = this.Comment.GetDurableId();
 		if (-1 === durableId || null === durableId)
@@ -18858,6 +18944,7 @@
 	ApiDocument.prototype["GetCommentById"]              = ApiDocument.prototype.GetCommentById;
 	ApiDocument.prototype["GetStatistics"]               = ApiDocument.prototype.GetStatistics;
 	ApiDocument.prototype["GetPageCount"]                = ApiDocument.prototype.GetPageCount;
+	ApiDocument.prototype["GetAllStyles"]                = ApiDocument.prototype.GetAllStyles;
 	
 	ApiDocument.prototype["GetSelectedDrawings"]         = ApiDocument.prototype.GetSelectedDrawings;
 	ApiDocument.prototype["ReplaceCurrentImage"]         = ApiDocument.prototype.ReplaceCurrentImage;
@@ -18992,6 +19079,7 @@
 	ApiRun.prototype["WrapInMailMergeField"]         = ApiRun.prototype.WrapInMailMergeField;
 	ApiRun.prototype["ToJSON"]                       = ApiRun.prototype.ToJSON;
 	ApiRun.prototype["AddComment"]                   = ApiRun.prototype.AddComment;
+	ApiRun.prototype["GetText"]                      = ApiRun.prototype.GetText;
 
 
 	ApiHyperlink.prototype["GetClassType"]           = ApiHyperlink.prototype.GetClassType;
@@ -19494,6 +19582,7 @@
 	ApiCheckBoxForm.prototype["Copy"]          = ApiCheckBoxForm.prototype.Copy;
 
 	ApiComment.prototype["GetClassType"]	= ApiComment.prototype.GetClassType;
+	ApiComment.prototype["GetId"]           = ApiComment.prototype.GetId;
 	ApiComment.prototype["GetText"]			= ApiComment.prototype.GetText;
 	ApiComment.prototype["SetText"]			= ApiComment.prototype.SetText;
 	ApiComment.prototype["GetAuthorName"]	= ApiComment.prototype.GetAuthorName;

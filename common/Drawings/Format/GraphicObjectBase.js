@@ -788,7 +788,7 @@
 				if (!sMacro) {
 					return null;
 				}
-				for (nSp = 1; nSp < this.spTree.length; ++nSp) {
+				for (let nSp = 1; nSp < this.spTree.length; ++nSp) {
 					if (sMacro !== this.spTree[nSp].getMacroOwnOrGroup()) {
 						return null;
 					}
@@ -979,6 +979,13 @@
 		}
 		return null;
 	};
+	CGraphicObjectBase.prototype.getOuterShdwAsc = function () {
+		const oShdw = this.getOuterShdw();
+		if(!oShdw) {
+			return oShdw;
+		}
+		return oShdw.getAscShdw();
+	};
 	CGraphicObjectBase.prototype.recalculateShdw = function () {
 
 		this.shdwSp = null;
@@ -1051,15 +1058,6 @@
 			}, this, []);
 		}
 	};
-	CGraphicObjectBase.prototype.check_bounds = function (checker) {
-		checker._s();
-		checker._m(0, 0);
-		checker._l(this.extX, 0);
-		checker._l(this.extX, this.extY);
-		checker._l(0, this.extY);
-		checker._z();
-		checker._e();
-	};
 	CGraphicObjectBase.prototype.handleObject = function (fCallback) {
 		fCallback(this);
 	};
@@ -1104,6 +1102,9 @@
 	};
 	CGraphicObjectBase.prototype.isImage = function () {
 		return this.getObjectType() === AscDFH.historyitem_type_ImageShape;
+	};
+	CGraphicObjectBase.prototype.isInk = function () {
+		return false;
 	};
 	CGraphicObjectBase.prototype.isPlaceholder = function () {
 		let oUniPr = this.getUniNvProps();
@@ -2526,6 +2527,7 @@
 				aButtons.push(AscCommon.PlaceholderButtonType.Chart);
 				aButtons.push(AscCommon.PlaceholderButtonType.Image);
 				aButtons.push(AscCommon.PlaceholderButtonType.ImageUrl);
+				aButtons.push(AscCommon.PlaceholderButtonType.SmartArt);
 				if (isLocalDesktop) {
 					aButtons.push(AscCommon.PlaceholderButtonType.Video);
 					aButtons.push(AscCommon.PlaceholderButtonType.Audio);
@@ -2571,6 +2573,7 @@
 				aButtons.push(AscCommon.PlaceholderButtonType.Chart);
 				aButtons.push(AscCommon.PlaceholderButtonType.Image);
 				aButtons.push(AscCommon.PlaceholderButtonType.ImageUrl);
+				aButtons.push(AscCommon.PlaceholderButtonType.SmartArt);
 				if (isLocalDesktop) {
 					aButtons.push(AscCommon.PlaceholderButtonType.Video);
 					aButtons.push(AscCommon.PlaceholderButtonType.Audio);
@@ -3059,8 +3062,8 @@
 		}
 	};
 	CGraphicObjectBase.prototype.IsUseInDocument = function () {
-		if (CShape.prototype.IsUseInDocument) {
-			return CShape.prototype.IsUseInDocument.call(this);
+		if (AscFormat.CShape.prototype.IsUseInDocument) {
+			return AscFormat.CShape.prototype.IsUseInDocument.call(this);
 		}
 		return true;
 	};

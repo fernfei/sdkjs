@@ -169,7 +169,7 @@ StartAddNewShape.prototype =
                     this.drawingObjects.clearTrackObjects();
                     this.drawingObjects.clearPreTrackObjects();
                     this.drawingObjects.updateOverlay();
-                    if(Asc["editor"])
+                    if(Asc["editor"] && Asc["editor"].wb)
                     {
                         if(!e.fromWindow || this.bStart)
                         {
@@ -252,7 +252,7 @@ StartAddNewShape.prototype =
                                 oEffect.cTn.setPresetSubtype(0);
                             }
                             oPresentation.FinalizeAction();
-                            if(Asc["editor"])
+                            if(Asc["editor"] && Asc["editor"].wb)
                             {
                                 if(!e.fromWindow || this.bStart)
                                 {
@@ -331,7 +331,7 @@ StartAddNewShape.prototype =
 						oThis.drawingObjects.drawingObjects.sendGraphicObjectProps();
 					}
                 }
-
+	            oThis.drawingObjects.updateOverlay();
             };
             if(Asc.editor && Asc.editor.checkObjectsLock)
             {
@@ -344,8 +344,7 @@ StartAddNewShape.prototype =
         }
         this.drawingObjects.clearTrackObjects();
         this.drawingObjects.clearPreTrackObjects();
-        this.drawingObjects.updateOverlay();
-        if(Asc["editor"])
+        if(Asc["editor"] && Asc["editor"].wb)
         {
             if(!e.fromWindow || this.bStart)
             {
@@ -2119,7 +2118,7 @@ SplineBezierState.prototype =
 
     onMouseUp: function(e, X, Y, pageIndex)
     {
-        if(Asc["editor"])
+        if(Asc["editor"] && Asc["editor"].wb)
         {
             Asc["editor"].asc_endAddShape();
         }
@@ -2621,7 +2620,7 @@ PolyLineAddState.prototype =
     onMouseUp: function()
     {
 
-        if(Asc["editor"])
+        if(Asc["editor"] && Asc["editor"].wb)
         {
             Asc["editor"].asc_endAddShape();
         }
@@ -2654,6 +2653,11 @@ PolyLineAddState2.prototype =
 
     onMouseMove: function(e, x, y, pageIndex)
     {
+	    if(!e.IsLocked)
+	    {
+		    //todo: implement inheritance from AscCommon.CDrawingControllerStateBase
+		    return AscCommon.CDrawingControllerStateBase.prototype.emulateMouseUp.call(this, e, x, y, pageIndex);
+	    }
         var tr_x, tr_y;
         if(pageIndex === this.drawingObjects.startTrackPos.pageIndex)
         {
@@ -2684,7 +2688,7 @@ PolyLineAddState2.prototype =
             this.drawingObjects.updateOverlay();
             this.drawingObjects.changeCurrentState(new NullState(this.drawingObjects));
 
-            if(Asc["editor"])
+            if(Asc["editor"] && Asc["editor"].wb)
             {
                 Asc["editor"].asc_endAddShape();
             }
@@ -2753,7 +2757,7 @@ AddPolyLine2State2.prototype =
             return {objectId: "1", bMarker: true, cursorType: "crosshair"};
         if(e.ClickCount > 1)
         {
-            if(Asc["editor"])
+            if(Asc["editor"] && Asc["editor"].wb)
             {
                 Asc["editor"].asc_endAddShape();
             }

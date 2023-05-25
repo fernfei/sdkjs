@@ -4431,7 +4431,8 @@ function(window, undefined) {
 				bKoeff = oCrossAxis.scale[1] - oCrossAxis.scale[0];
 			}
 			fAxisPos = oCrossGrid.fStart;
-			if(oCurAxis.isRadarValues()) {
+			const bRadarValues = oCurAxis.isRadarValues();
+			if(bRadarValues) {
 				fAxisPos = oRect.x + oRect.w / 2;
 			}
 			else {
@@ -4453,23 +4454,28 @@ function(window, undefined) {
 
 			if(nLabelsPos !== c_oAscTickLabelsPos.TICK_LABEL_POSITION_NONE) {
 				oLabelsBox = new CLabelsBox(oCurAxis.grid.aStrings, oCurAxis, this);
-				switch(nLabelsPos) {
-					case c_oAscTickLabelsPos.TICK_LABEL_POSITION_NEXT_TO:
-					{
-						fPos = fAxisPos;
-						break;
+				if(!bRadarValues) {
+					switch(nLabelsPos) {
+						case c_oAscTickLabelsPos.TICK_LABEL_POSITION_NEXT_TO:
+						{
+							fPos = fAxisPos;
+							break;
+						}
+						case c_oAscTickLabelsPos.TICK_LABEL_POSITION_HIGH:
+						{
+							fPos = oCrossGrid.fStart + oCrossGrid.nCount * oCrossGrid.fStride;
+							fDistanceSign = -fDistanceSign;
+							break;
+						}
+						case c_oAscTickLabelsPos.TICK_LABEL_POSITION_LOW:
+						{
+							fPos = oCrossGrid.fStart;
+							break;
+						}
 					}
-					case c_oAscTickLabelsPos.TICK_LABEL_POSITION_HIGH:
-					{
-						fPos = oCrossGrid.fStart + oCrossGrid.nCount * oCrossGrid.fStride;
-						fDistanceSign = -fDistanceSign;
-						break;
-					}
-					case c_oAscTickLabelsPos.TICK_LABEL_POSITION_LOW:
-					{
-						fPos = oCrossGrid.fStart;
-						break;
-					}
+				}
+				else {
+					fPos = fAxisPos;
 				}
 			}
 

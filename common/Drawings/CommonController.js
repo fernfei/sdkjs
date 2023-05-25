@@ -1874,7 +1874,7 @@
 							tx = invert_transform_text.TransformPointX(x, y);
 							ty = invert_transform_text.TransformPointY(x, y);
 							if (!this.isSlideShow() && (this.document || (this.drawingObjects.cSld && !(this.noNeedUpdateCursorType === true)))) {
-								if (this.document && this.document.IsDocumentEditor() && object instanceof CShape && object.isForm()) {
+								if (this.document && this.document.IsDocumentEditor() && object instanceof AscFormat.CShape && object.isForm()) {
 									var oForm = object.getInnerForm();
 									if (oForm)
 										oForm.DrawContentControlsTrack(AscCommon.ContentControlTrack.Hover, tx, ty, 0, false);
@@ -2261,8 +2261,11 @@
 					} else if (oChart) {
 						oChart.drawSelect(drawingDocument, pageIndex);
 					} else if (oWrp) {
-						if (oWrp.selectStartPage === pageIndex)
-							oWrp.DrawEditWrapPointsPolygon(oWrp.parent.wrappingPolygon.calculatedPoints, new AscCommon.CMatrix());
+						if (oWrp.selectStartPage === pageIndex) {
+							if(oTrackDrawer.DrawEditWrapPointsPolygon) {
+								oTrackDrawer.DrawEditWrapPointsPolygon(oWrp.parent.wrappingPolygon.calculatedPoints, new AscCommon.CMatrix());
+							}
+						}
 					} else {
 						for (i = 0; i < this.selectedObjects.length; ++i) {
 							let oDrawing = this.selectedObjects[i];
@@ -5958,7 +5961,7 @@
 				checkEndAddShape: function () {
 					if (this.checkTrackDrawings()) {
 						this.endTrackNewShape();
-						if (Asc["editor"]) {
+						if (Asc["editor"] && Asc["editor"].wb) {
 							Asc["editor"].asc_endAddShape();
 							var ws = Asc["editor"].wb.getWorksheet();
 							if (ws) {
@@ -5997,7 +6000,9 @@
 					this.clearTrackObjects();
 					this.changeCurrentState(new AscFormat.NullState(this, this.drawingObjects));
 					this.updateSelectionState();
-					Asc["editor"] && Asc["editor"].asc_endAddShape();
+					if(Asc["editor"] && Asc["editor"].wb) {
+						Asc["editor"].asc_endAddShape();
+					}
 				},
 
 				resetSelectionState2: function () {
@@ -6623,7 +6628,7 @@
 					}
 					const oApi = this.getEditorApi();
 					if(oApi.isInkDrawerOn()) {
-						oApi.asc_StopInkDrawer();
+						oApi.stopInkDrawer();
 					}
 				},
 
@@ -7120,7 +7125,7 @@
 										textFitType: drawing.getTextFitType(),
 										vertOverflowType: drawing.getVertOverflowType(),
 										signatureId: drawing.getSignatureLineGuid(),
-										shadow: drawing.getOuterShdw(),
+										shadow: drawing.getOuterShdwAsc(),
 										anchor: drawing.getDrawingBaseType(),
 										protectionLockText: (bGroupSelection || !drawing.group) ? drawing.getProtectionLockText() : null,
 										protectionLocked: drawing.getProtectionLocked(),
@@ -7221,7 +7226,7 @@
 										textFitType: null,
 										vertOverflowType: null,
 										signatureId: null,
-										shadow: drawing.getOuterShdw(),
+										shadow: drawing.getOuterShdwAsc(),
 										anchor: drawing.getDrawingBaseType(),
 										protectionLockText: (bGroupSelection || !drawing.group) ? drawing.getProtectionLockText() : null,
 										protectionLocked: drawing.getProtectionLocked(),
@@ -9180,13 +9185,24 @@
 				hitInGuide: function (x, y) {
 					return null;
 				},
+				resetDrawStateBeforeAction: function() {
+					const oAPI = this.getEditorApi();
+					oAPI.stopInkDrawer();
+				},
 				checkInkState: function () {
+					if (typeof AscCommonSlide !== "undefined" &&
+						AscCommonSlide.CNotes &&
+						this.drawingObjects instanceof AscCommonSlide.CNotes) {
+						return;
+					}
 					const oAPI = this.getEditorApi();
 					if(oAPI.isInkDrawerOn()) {
 						if(oAPI.isDrawInkMode()) {
 							if(!(this.curState instanceof  AscFormat.CInkDrawState)) {
 								this.changeCurrentState(new AscFormat.CInkDrawState(this));
-
+							}
+							else {
+								this.curState.checkStartState();
 							}
 						}
 						else {
@@ -9204,9 +9220,44 @@
 					else {
 						this.clearTrackObjects();
 						this.clearPreTrackObjects();
+						if(this.loadStartDocState) {
+							this.loadStartDocState();
+						}
 						this.changeCurrentState(new AscFormat.NullState(this));
 						this.updateOverlay();
 					}
+				},
+
+				changeTextCase: function (nCaseType) {
+					this.checkSelectedObjectsAndCallback(function () {
+						const oTargetDocContent = this.getTargetDocContent(undefined, true);
+						const bTextSelection = AscCommon.isRealObject(oTargetDocContent);
+						const oStateBeforeLoadChanges = {};
+						this.Save_DocumentStateBeforeLoadChanges(oStateBeforeLoadChanges);
+						let fCallback = function () {
+							var oParagraph;
+							if (bTextSelection) {
+								if (!this.IsSelectionUse()) {
+									oParagraph = this.GetCurrentParagraph();
+									if (oParagraph) {
+										oParagraph.SelectCurrentWord();
+									}
+								}
+							} else {
+								this.SelectAll();
+							}
+							if (this.IsSelectionUse() && !this.IsSelectionEmpty()) {
+								var aParagraphs = [];
+								this.GetCurrentParagraph(false, aParagraphs, {});
+
+								let oChangeEngine = new AscCommonWord.CChangeTextCaseEngine(nCaseType);
+								oChangeEngine.ProcessParagraphs(aParagraphs);
+							}
+						};
+						this.applyDocContentFunction(fCallback, [], fCallback);
+						this.loadDocumentStateAfterLoadChanges(oStateBeforeLoadChanges);
+						this.startRecalculate();
+					}, [], false, 0);
 				}
 			};
 
@@ -10713,12 +10764,18 @@
 			e.Type = nOldType;
 			return nResult;
 		};
+		CDrawingControllerStateBase.prototype.saveDocumentSelectionState = function() {
+			if(this.controller && this.controller.saveDocumentState) {
+				this.controller.saveDocumentState();
+			}
+		};
 
 		function CInkEraseState(drawingObjects) {
 			CDrawingControllerStateBase.call(this, drawingObjects);
 			const API = Asc.editor || editor;
 			this.inkDrawer = API.inkDrawer;
 			this.startState = API.inkDrawer.getState();
+			this.saveDocumentSelectionState();
 		}
 		CInkEraseState.prototype = Object.create(CDrawingControllerStateBase.prototype);
 		CInkEraseState.prototype.superclass = CDrawingControllerStateBase;
@@ -10727,28 +10784,35 @@
 			return this.onMouseMove(e, x, y, pageIndex);
 		};
 		CInkEraseState.prototype.onMouseMove = function (e, x, y, pageIndex) {
-
-
 			if(this.controller.handleEventMode === HANDLE_EVENT_MODE_HANDLE) {
 				if(e.IsLocked) {
 					this.inkDrawer.startSilentMode();
 					const aDrawings = this.controller.getDrawingObjects(pageIndex);
+					let bDocStartAction = false;
 					for(let nIdx = aDrawings.length - 1; nIdx > -1; --nIdx) {
 						let oDrawing = aDrawings[nIdx];
-						if(oDrawing.isShape() && !oDrawing.getPresetGeom())  {
+						if(oDrawing.isInk())  {
 							if(oDrawing.hit(x, y)) {
 								this.controller.resetSelection();
 								this.controller.selectObject(oDrawing, pageIndex);
 								if(this.controller.document) {
-									this.controller.checkSelectedObjectsAndCallback(this.controller.remove, [], true, 0, []);
+									bDocStartAction = true;
+									const oThis = this;
+									this.controller.checkSelectedObjectsAndCallback(
+										function() {
+											oThis.controller.remove();
+											oThis.controller.checkInkState();
+										}, [], true, 0, []);
 								}
 								else {
 									this.controller.remove();
 								}
+								break;
 							}
 						}
 					}
-					this.changeControllerState(this);
+					this.saveDocumentSelectionState();
+					this.controller.checkInkState();
 					this.inkDrawer.restoreState(this.startState);
 
 					this.inkDrawer.endSilentMode();
@@ -10772,7 +10836,9 @@
 			this.drawingState = this.getPolylineState();
 			const API = Asc.editor || editor;
 			this.inkDrawer = API.inkDrawer;
-			this.startState = API.inkDrawer.getState();
+
+			this.checkStartState();
+			this.saveDocumentSelectionState();
 		}
 		CInkDrawState.prototype = Object.create(CDrawingControllerStateBase.prototype);
 		CInkDrawState.prototype.superclass = CDrawingControllerStateBase;
@@ -10811,6 +10877,7 @@
 			if(oControllerState === this) {
 				return;
 			}
+			this.saveDocumentSelectionState();
 			this.controller.resetSelection();
 			this.changeControllerState(this);
 			let oDrawingState = oControllerState;
@@ -10819,6 +10886,10 @@
 			}
 			this.drawingState = oDrawingState;
 			this.inkDrawer.restoreState(this.startState);
+		};
+		CInkDrawState.prototype.checkStartState = function() {
+			const API = Asc.editor || editor;
+			this.startState = API.inkDrawer.getState();
 		};
 
 		function CDrawTask(rect) {

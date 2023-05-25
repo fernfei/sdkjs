@@ -2977,9 +2977,6 @@ window.AscCommon.g_cIsBeta = "false";
 		UpperRoman                   : 61,
 		VietnameseCounting           : 62,
 
-		BulletFlag                   : 0x1000,
-		NumberedFlag                 : 0x2000,
-
 		Ea1JpnKor                    : 0x3000,
 		CircleNumWdBlack             : 0x3001,
 		Ea1JpnChsDb                  : 0x3002,

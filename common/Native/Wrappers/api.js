@@ -307,18 +307,17 @@ function asc_menu_WriteFontFamily(_type, _family, _stream)
 
     _stream["WriteByte"](255);
 }
-// ASCCOLOR
-function asc_menu_ReadColor(_params, _cursor)
-{
-    const _color = new Asc.asc_CColor();
-    _color.read(_params, _cursor);
-    return _color;
-}
+
 function asc_menu_WriteColor(_type, _color, _stream)
 {
     if (!_color)
         return;
-    _color.write(_type, _stream);
+
+    // TODO:
+    if (_color.write)
+        _color.write(_type, _stream);
+    else
+        Asc.asc_CColor.prototype.write.call(_color, _type, _stream);
 }
 
 // PARAINDENT
@@ -485,7 +484,7 @@ function asc_menu_ReadParaBorder(_params, _cursor)
         {
             case 0:
             {
-                _border.Color = asc_menu_ReadColor(_params, _cursor);
+                _border.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 1:
@@ -619,7 +618,7 @@ function asc_menu_ReadParaShd(_params, _cursor)
             }
             case 1:
             {
-                _shd.Color = asc_menu_ReadColor(_params, _cursor);
+                _shd.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 255:
@@ -1056,7 +1055,7 @@ Asc['asc_docs_api'].prototype["Call_Menu_Event"] = function(type, _params)
                     {
                         var Unifill = new AscFormat.CUniFill();
                         Unifill.fill = new AscFormat.CSolidFill();
-                        var color = asc_menu_ReadColor(_params, _current);
+                        var color = AscCommon.asc_menu_ReadColor(_params, _current);
                         Unifill.fill.color = AscFormat.CorrectUniColor(color, Unifill.fill.color, 1);
                         _textPr.Unifill = Unifill;
                         break;
@@ -1068,7 +1067,7 @@ Asc['asc_docs_api'].prototype["Call_Menu_Event"] = function(type, _params)
                     }
                     case 8:
                     {
-                        var color = asc_menu_ReadColor(_params, _current);
+                        var color = AscCommon.asc_menu_ReadColor(_params, _current);
                         if (color.a < 1) {
                             _textPr.HighLight = AscCommonWord.highlight_None;
                         } else {
@@ -1472,7 +1471,7 @@ Asc['asc_docs_api'].prototype["Call_Menu_Event"] = function(type, _params)
                     }
                     case 4:
                     {
-                        _tablePr.TableDefaultMargins = asc_menu_ReadPaddings(_params, _current);
+                        _tablePr.TableDefaultMargins = AscCommon.asc_menu_ReadPaddings(_params, _current);
                         break;
                     }
                     case 5:
@@ -1497,7 +1496,7 @@ Asc['asc_docs_api'].prototype["Call_Menu_Event"] = function(type, _params)
                     }
                     case 9:
                     {
-                        _tablePr.TablePaddings = asc_menu_ReadPaddings(_params, _current);
+                        _tablePr.TablePaddings = AscCommon.asc_menu_ReadPaddings(_params, _current);
                         break;
                     }
                     case 10:
@@ -1622,7 +1621,7 @@ Asc['asc_docs_api'].prototype["Call_Menu_Event"] = function(type, _params)
                     }
                     case 4:
                     {
-                        _imagePr.Paddings = asc_menu_ReadPaddings(_params, _current);
+                        _imagePr.Paddings = AscCommon.asc_menu_ReadPaddings(_params, _current);
                         break;
                     }
                     case 5:
@@ -2961,12 +2960,6 @@ function asc_menu_WriteParagraphPr(_paraPr, _stream)
 ///////////////////////////////////////////////////////////////////////////
 // TABLE
 ///////////////////////////////////////////////////////////////////////////
-function asc_menu_ReadPaddings(_params, _cursor){
-    const _paddings = new Asc.asc_CPaddings();
-    _paddings.read(_params, _cursor);
-    return _paddings;
-}
-
 function asc_menu_ReadCellMargins(_params, _cursor)
 {
     var _paddings = new Asc.CMargins();
@@ -3124,7 +3117,7 @@ function asc_menu_ReadCellBackground(_params, _cursor)
         {
             case 0:
             {
-                _background.Color = asc_menu_ReadColor(_params, _cursor);
+                _background.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 1:
@@ -6389,7 +6382,7 @@ window["AscCommon"].getFullImageSrc2 = function(src) {
     if (0 !== start.indexOf("http:") && 0 !== start.indexOf("data:") && 0 !== start.indexOf("https:") && 0 !== start.indexOf("file:") && 0 !== start.indexOf("ftp:")) {
       var srcFull = AscCommon.g_oDocumentUrls.getImageUrl(src);
       var srcFull2 = srcFull;
-      if (src.indexOf(".svg") === src.length - 4) {
+      if (src.endsWith(".svg")) {
         var sName = src.slice(0, src.length - 3);
         src = sName + "wmf";
         srcFull = AscCommon.g_oDocumentUrls.getImageUrl(src);

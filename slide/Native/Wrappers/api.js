@@ -61,18 +61,16 @@ window["ftm"] = FT_Memory;
 
 
 // ASCCOLOR
-function asc_menu_ReadColor(_params, _cursor)
-{
-    const _color = new Asc.asc_CColor();
-    _color.read(_params, _cursor);
-    return _color;
-}
 function asc_menu_WriteColor(_type, _color, _stream)
 {
     if (!_color)
         return;
 
-    _color.write(_type, _stream);
+    // TODO:
+    if (_color.write)
+        _color.write(_type, _stream);
+    else
+        Asc.asc_CColor.prototype.write.call(_color, _type, _stream);
 }
 
 function asc_WriteColorSchemes(schemas, s) {
@@ -294,7 +292,7 @@ function asc_menu_ReadParaBorder(_params, _cursor)
         {
             case 0:
             {
-                _border.Color = asc_menu_ReadColor(_params, _cursor);
+                _border.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 1:
@@ -428,7 +426,7 @@ function asc_menu_ReadParaShd(_params, _cursor)
             }
             case 1:
             {
-                _shd.Color = asc_menu_ReadColor(_params, _cursor);
+                _shd.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 255:
@@ -644,7 +642,7 @@ function asc_menu_ReadCellBackground(_params, _cursor)
         {
             case 0:
             {
-                _background.Color = asc_menu_ReadColor(_params, _cursor);
+                _background.Color = AscCommon.asc_menu_ReadColor(_params, _cursor);
                 break;
             }
             case 1:
@@ -1005,13 +1003,6 @@ function asc_menu_WriteParagraphPr(_paraPr, _stream)
 
     _stream["WriteByte"](255);
 }
-
-function asc_menu_ReadPaddings(_params, _cursor){
-    const _paddings = new Asc.asc_CPaddings();
-    _paddings.read(_params, _cursor);
-    return _paddings;
-}
-
 
 function asc_menu_WriteImagePosition(_type, _position, _stream){
     if (!_position)
