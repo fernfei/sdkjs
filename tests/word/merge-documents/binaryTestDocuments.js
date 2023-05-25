@@ -38,6 +38,21 @@ mockEditor.pre_Paste = function (first, second, callback)
 AscCommon.sendImgUrls = function (oApi, arrImages, fCallback) {fCallback()};
 AscCommon.ResetNewUrls = function () {};
 
+let oMainComments;
+mockEditor.sync_AddComment = function ()
+{
+	
+}
+mockEditor.sync_RemoveComment = function ()
+{
+	
+}
+AscCommon.ParaComment.prototype.getTestObject = function (arrParentContent)
+{
+	let oComment = oMainComments.Get_ById(this.GetCommentId());
+	const oContentObject = {type: 'comment', text: oComment.Data.Get_Text(), quoteText: oComment.Data.Get_QuoteText(), content: []};
+	arrParentContent.push(oContentObject);
+}
 AscCommonWord.CDocument.prototype.getTestObject = function ()
 {
 	const oContentObject = {type: 'document', content: []};
@@ -287,6 +302,7 @@ function readMainDocument(oMainDocumentInfo)
 	mockEditor.WordControl.m_oDrawingDocument.m_oLogicDocument = oDocument;
 	mockEditor.WordControl.m_oLogicDocument = oDocument;
 	oDocument.Api = mockEditor;
+	oMainComments = oDocument.Comments;
 	createTestDocument(oDocument, oMainDocumentInfo);
 	return oDocument
 }
@@ -310,9 +326,16 @@ function readRevisedDocument(oRevisedDocumentInfo)
 
 	return oRevisedDocument;
 }
-
+function getComment(oDocument, oCommentData)
+{
+	const oData = new AscCommon.CCommentData();
+	oData.Set_Text(oCommentData.text);
+	oData.Set_QuoteText(oCommentData.quoteText);
+	return new AscCommon.CComment(oDocument.Comments, oData);
+}
 function createTestDocument(oDocument, arrParagraphsTextInfo)
 {
+	const mapParaComments = {};
 	for (let i = 0; i < arrParagraphsTextInfo.length; i += 1)
 	{
 		const oParagraphTextInfo = arrParagraphsTextInfo[i];
@@ -334,6 +357,13 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 				arrStartBookmarkInfo = oParagraphTextInfo[j].bookmark.start;
 				arrEndBookmarkInfo = oParagraphTextInfo[j].bookmark.end;
 			}
+			let arrStartCommentsInfo;
+			let arrEndCommentsInfo;
+			if (oParagraphTextInfo[j].options && oParagraphTextInfo[j].options.comments)
+			{
+				arrStartCommentsInfo = oParagraphTextInfo[j].options.comments.start;
+				arrEndCommentsInfo = oParagraphTextInfo[j].options.comments.end;
+			}
 			if (arrStartBookmarkInfo)
 			{
 				for (let k = 0; k < arrStartBookmarkInfo.length; k += 1)
@@ -343,16 +373,38 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 					oParagraph.AddToContentToEnd(oBookmark);
 				}
 			}
+			if (arrStartCommentsInfo)
+			{
+				for (let k = 0; k < arrStartCommentsInfo.length; k += 1)
+				{
+					const oStartCommentInfo = arrStartCommentsInfo[k];
+					let oComment
+					const oParaComment = new AscCommon.ParaComment(!!oStartCommentInfo.start);
+					if (!oParaComment.IsCommentStart())
+					{
+						oComment = getComment(oDocument, oStartCommentInfo.data);
+						oParaComment.SetCommentId(oComment.GetId());
+						const oStartParaComment = mapParaComments[oStartCommentInfo.id];
+						oStartParaComment.SetCommentId(oComment.GetId());
+
+					}
+					else
+					{
+						mapParaComments[oStartCommentInfo.id] = oParaComment;
+					}
+					oParagraph.AddToContentToEnd(oParaComment);
+					if (oComment)
+					{
+						oDocument.Comments.Add(oComment);
+					}
+				}
+			}
 			const oParaRun = new AscWord.ParaRun();
 			if (oParagraphTextInfo[j].text)
 			{
 				oParaRun.AddText(oParagraphTextInfo[j].text);
 				oParaRun.SetReviewTypeWithInfo(oParagraphTextInfo[j].reviewType, oParagraphTextInfo[j].reviewInfo);
 				oParagraph.AddToContentToEnd(oParaRun);
-			}
-			else
-			{
-				oParagraph.GetParaEndRun().SetReviewTypeWithInfo(oParagraphTextInfo[j].reviewType, oParagraphTextInfo[j].reviewInfo, false);
 			}
 			if (arrEndBookmarkInfo)
 			{
@@ -363,8 +415,38 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 					oParagraph.AddToContentToEnd(oBookmark);
 				}
 			}
-		}
+			if (arrEndCommentsInfo)
+			{
+				for (let k = 0; k < arrEndCommentsInfo.length; k += 1)
+				{
+					const oEndCommentInfo = arrEndCommentsInfo[k];
+					let oComment;
+					const oParaComment = new AscCommon.ParaComment(!!oEndCommentInfo.start);
+					if (!oParaComment.IsCommentStart())
+					{
+						oComment = getComment(oDocument, oEndCommentInfo.data);
+						oParaComment.SetCommentId(oComment.GetId());
+						const oStartParaComment = mapParaComments[oEndCommentInfo.id];
+						oStartParaComment.SetCommentId(oComment.GetId());
 
+					}
+					else
+					{
+						mapParaComments[oEndCommentInfo.id] = oParaComment;
+					}
+					oParagraph.AddToContentToEnd(oParaComment);
+					if (oComment)
+					{
+						oDocument.Comments.Add(oComment);
+					}
+				}
+			}
+			if (!oParagraphTextInfo[j].text && oParagraphTextInfo[j].reviewType && oParagraphTextInfo[j].reviewInfo)
+			{
+				oParagraph.GetParaEndRun().SetReviewTypeWithInfo(oParagraphTextInfo[j].reviewType, oParagraphTextInfo[j].reviewInfo, false);
+			}
+		}
+		oDocument.Comments.CheckMarks();
 		if (i !== 0)
 		{
 			oDocument.AddToContent(oDocument.Content.length, oParagraph);
@@ -373,12 +455,13 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 	return oDocument;
 }
 
-function createParagraphInfo(sText, oMainReviewInfoOptions, oAdditionalReviewInfoOptions, oBookmarkInfo)
+function createParagraphInfo(sText, oMainReviewInfoOptions, oAdditionalReviewInfoOptions, oBookmarkInfo, oOptions)
 {
 	const oResult = {
 		text      : sText,
 		reviewType: reviewtype_Common,
-		bookmark  : oBookmarkInfo
+		bookmark  : oBookmarkInfo,
+		options   : oOptions,
 	};
 	let oMainReviewInfo;
 	if (oMainReviewInfoOptions)
