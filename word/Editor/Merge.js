@@ -874,6 +874,7 @@
 	      this.oBookmarkManager.mapBookmarkMeeting = {};
 	      comparison.oBookmarkManager = this.oBookmarkManager;
         comparison.oComparisonMoveMarkManager = this.oComparisonMoveMarkManager;
+        comparison.CommentsMap = this.CommentsMap;
         const originalDocument = new CMockDocument();
         const revisedDocument = new CMockDocument();
         const originalParagraph = new CMockParagraph();
@@ -1008,11 +1009,16 @@
         if (!(oApi && oOriginalDocument)) {
             return;
         }
+				this.comparison.removeCommentsFromMap();
         this.comparison.correctMoveMarks();
         oOriginalDocument.SetTrackRevisions(this.oldTrackRevisions);
         const oTrackRevisionManager = oOriginalDocument.TrackRevisionsManager;
         oTrackRevisionManager.SkipPreDeleteMoveMarks = this.oldSkipPreDeleteMoveMarks;
         oOriginalDocument.End_SilentMode(false);
+	    if (this.comparison.oBookmarkManager.needUpdateBookmarks)
+	    {
+		    oOriginalDocument.UpdateBookmarks();
+	    }
         oOriginalDocument.Recalculate();
         oOriginalDocument.UpdateInterface();
         oOriginalDocument.FinalizeAction();

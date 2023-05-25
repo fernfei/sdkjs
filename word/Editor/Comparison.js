@@ -3696,6 +3696,7 @@
 		for (let i = 0; i < arrRevisedComments.length; i += 1)
 		{
 			const sComment = arrRevisedComments[i].commentText;
+			const sRevisedQuoteLength = arrRevisedComments[i].quoteText ? arrRevisedComments[i].quoteText.length : 0;
 			const revisedCommentId = arrRevisedComments[i].element.GetCommentId();
 			if (!this.isChecked(revisedCommentId))
 			{
@@ -3707,20 +3708,20 @@
 					if (!this.isForDelete(arrMainComments[j].element.GetCommentId()))
 					{
 						const sMainComment = arrMainComments[j].commentText;
+						const sMainQuoteLength = arrMainComments[j].quoteText ? arrMainComments[j].quoteText.length : 0;
 						if (sMainComment === sComment)
 						{
 							if (!oMaxComment)
 							{
 								oMaxComment = arrMainComments[j];
-								nMaxDifference = oMaxComment && oMaxComment.quoteText.length;
+								nMaxDifference = sRevisedQuoteLength - sMainQuoteLength;
 							}
 							else
 							{
-								const sMainQuoteText = arrMainComments[j].quoteText;
-								if (nMaxDifference < sMainQuoteText.length)
+								if (nMaxDifference > sRevisedQuoteLength - sMainQuoteLength)
 								{
 									oMaxComment = arrMainComments[j];
-									nMaxDifference = sMainQuoteText.length;
+									nMaxDifference = sRevisedQuoteLength - sMainQuoteLength;
 								}
 							}
 						}
