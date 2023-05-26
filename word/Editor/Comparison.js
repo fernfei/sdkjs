@@ -44,7 +44,7 @@
 	const CHECK_END_MEETING = 0;
 	const CHECK_START_MEETING = 1;
 
-	function insertBookmarkAndContinue(oLabelChange, oTextIterator, oBookmarkIterator)
+	function insertLabelsAndContinue(oLabelChange, oTextIterator, oLabelIterator)
 	{
 		const bRet = oTextIterator.skipTo(oLabelChange.elementIndex, oLabelChange.innerElementIndex - oLabelChange.addingValue);
 		if (bRet)
@@ -55,14 +55,14 @@
 			{
 				changeFirstTextElement(oTextIterator, oRun);
 			}
-			for (let i = 0; i < oLabelChange.labels.length; i += 1)
+			oLabelChange.forEach(function (oLabel, i)
 			{
-				oTextIterator.parent.AddToContent(oTextIterator.runIndex + 1, oLabelChange.labels[i]);
-			}
-			if (oBookmarkIterator.check())
+				oTextIterator.parent.AddToContent(oTextIterator.runIndex + 1, oLabel);
+			});
+			if (oLabelIterator.check())
 			{
-				oBookmarkIterator.next();
-				return oBookmarkIterator.value();
+				oLabelIterator.next();
+				return oLabelIterator.value();
 			}
 		}
 	}
@@ -259,6 +259,34 @@
 		this.innerElementIndex = nInnerElementIndex;
 		this.addingValue = nAddingValue;
 	}
+	CLabelChange.prototype.forEach = function (fCallback)
+	{
+
+	};
+	function CBookmarkChange(arrLabels, nElementIndex, nInnerElementIndex, nAddingValue)
+	{
+		CLabelChange.call(this, arrLabels, nElementIndex, nInnerElementIndex, nAddingValue)
+	}
+	AscFormat.InitClassWithoutType(CBookmarkChange, CLabelChange);
+	CBookmarkChange.prototype.forEach = function (fCallback)
+	{
+		for (let i = 0; i < this.labels.length; i += 1)
+		{
+			fCallback(this.labels[i], i);
+		}
+	};
+	function CCommentChange(arrLabels, nElementIndex, nInnerElementIndex, nAddingValue)
+	{
+		CLabelChange.call(this, arrLabels, nElementIndex, nInnerElementIndex, nAddingValue);
+	}
+	AscFormat.InitClassWithoutType(CCommentChange, CLabelChange);
+	CCommentChange.prototype.forEach = function (fCallback)
+	{
+		for (let i = this.labels.length - 1; i >= 0; i -= 1)
+		{
+			fCallback(this.labels[i], i);
+		}
+	};
 
 	function CLabelBaseIterator(arrElements, oCopyPr)
 	{
@@ -304,8 +332,13 @@
 		if (oElement && this.innerLabelElementIndex < this.elementLabelIndexes.length)
 		{
 			const nInsertIndex = this.getInsertIndex();
-			this.nextLabel = new CLabelChange(this._getInsertElements(oElement, nInsertIndex), this.elementIndex, nInsertIndex, this.getAddingValue());
+			const CLabelConstructor = this.getLabelConstructor();
+			this.nextLabel = new CLabelConstructor(this._getInsertElements(oElement, nInsertIndex), this.elementIndex, nInsertIndex, this.getAddingValue());
 		}
+	}
+	CLabelBaseIterator.prototype.getLabelConstructor = function ()
+	{
+		return CLabelChange;
 	}
 	CLabelBaseIterator.prototype.getElement = function ()
 	{
@@ -346,6 +379,10 @@
 	{
 		return this.getElement().getBookmarkInsertIndexes();
 	}
+	CBookmarkChangesIterator.prototype.getLabelConstructor = function ()
+	{
+		return CBookmarkChange;
+	}
 
 	function CCommentChangesIterator(arrElements, arrMainNodes, oCommentsManager, oCopyPr)
 	{
@@ -371,6 +408,10 @@
 		const arrMainComments = this.getMainNode().element.comments[nInsertIndex];
 		this.oCommentManager.checkComments(arrMainComments, arrRevisedComments);
 		return false;
+	}
+	CCommentChangesIterator.prototype.getLabelConstructor = function ()
+	{
+		return CCommentChange;
 	}
 	CCommentChangesIterator.prototype.getMainNode = function ()
 	{
@@ -618,7 +659,7 @@
 
 						while (oLabelChange && ((oReviewChange.startElementIndex <= oLabelChange.elementIndex) ||
 							(oReviewChange.startElementIndex === oLabelChange.elementIndex && oReviewChange.startInnerElementIndex <= oLabelChange.innerElementIndex))){
-							oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+							oLabelChange = insertLabelsAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
 						}
 						oReviewChange = applyStartChangeReview(oReviewChange, oTextIterator, oChangesIterator, comparison, oNeedReviewWithUser);
 					}
@@ -626,14 +667,14 @@
 					{
 						while (oLabelChange && (oLabelChange.elementIndex > oReviewChange.endElementIndex || oLabelChange.elementIndex === oReviewChange.endElementIndex && oLabelChange.innerElementIndex > oReviewChange.endInnerElementIndex))
 						{
-							oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+							oLabelChange = insertLabelsAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
 						}
 					}
 				}
 
 				while (oLabelChange)
 				{
-					oLabelChange = insertBookmarkAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
+					oLabelChange = insertLabelsAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
 				}
 				while (oReviewChange)
 				{
