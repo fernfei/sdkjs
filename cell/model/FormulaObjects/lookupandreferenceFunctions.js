@@ -1552,7 +1552,7 @@ function (window, undefined) {
 
 			let BBox = _arg2.getBBox0();
 
-			if (_arg1.getRowCount() !== (BBox.r2 - BBox.r1) && _arg1.getCountElementInRow() !== (BBox.c2 - BBox.c1)) {
+			if (_arg1.getRowCount() !== (BBox.r2 - BBox.r1) + 1 && _arg1.getCountElementInRow() !== (BBox.c2 - BBox.c1) + 1) {
 				return new cError(cErrorType.not_available);
 			}
 
