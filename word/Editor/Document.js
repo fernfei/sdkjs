@@ -8873,6 +8873,15 @@ CDocument.prototype.OnKeyDown = function(e)
 			bRetValue = keydownresult_PreventAll;
 			break;
 		}
+		case Asc.c_oAscDocumentShortcutType.DesktopPasteTextWithoutFormat:
+		{
+			if (!this.IsSelectionLocked(AscCommon.changestype_Paragraph_Content))
+			{
+				Asc.editor.PasteWithoutFormattingDesktop();
+			}
+			bRetValue = keydownresult_PreventAll;
+			break;
+		}
 		case Asc.c_oAscDocumentShortcutType.EditRedo:
 		{
 			if (this.CanEdit() || this.IsEditCommentsMode() || this.IsFillingFormMode())
