@@ -154,19 +154,17 @@
 		this.bookmarkIterator = new CBookmarkChangesIterator(arrElements, oCopyPr);
 		this.commentsIterator = new CCommentChangesIterator(arrElements, arrMainNodes, oCommentsManager, oCopyPr);
 		this._value = null;
-		this.init();
+		this.checkValue();
 	}
 	CLabelsIterator.prototype.nextComment = function ()
 	{
 		this.commentsIterator.next();
-		this._value = this.commentsIterator.value();
 	};
 	CLabelsIterator.prototype.nextBookmark = function ()
 	{
 		this.bookmarkIterator.next();
-		this._value = this.bookmarkIterator.value();
 	}
-	CLabelsIterator.prototype.init = function ()
+	CLabelsIterator.prototype.checkValue = function ()
 	{
 		const oCurrentBookmark = this.bookmarkIterator.currentLabel;
 		const oCurrentComment = this.commentsIterator.currentLabel;
@@ -192,8 +190,8 @@
 	}
 	CLabelsIterator.prototype.next = function ()
 	{
-		const oNextBookmark = this.bookmarkIterator.nextLabel;
-		const oNextComment = this.commentsIterator.nextLabel;
+		const oNextBookmark = this.bookmarkIterator.currentLabel;
+		const oNextComment = this.commentsIterator.currentLabel;
 		if (oNextBookmark && oNextComment)
 		{
 			if (oNextBookmark.elementIndex > oNextComment.elementIndex || oNextBookmark.elementIndex === oNextComment.elementIndex && oNextBookmark.innerElementIndex >= oNextComment.innerElementIndex)
@@ -213,6 +211,7 @@
 		{
 			this.nextBookmark();
 		}
+		this.checkValue();
 	}
 	CLabelsIterator.prototype.value = function ()
 	{
@@ -309,17 +308,15 @@
 	{
 		this.elements = arrElements;
 		this.currentLabel = null;
-		this.nextLabel = null;
 		this.elementIndex = arrElements.length - 1;
 		this.elementLabelIndexes = this.getInsertIndexes();
 		this.innerLabelElementIndex = -1;
 		this.copyPr = oCopyPr;
 		this.next();
-		this.next();
 	}
 	CLabelBaseIterator.prototype.check = function ()
 	{
-		return !!this.nextLabel;
+		return !!this.currentLabel;
 	}
 	CLabelBaseIterator.prototype.value = function ()
 	{
@@ -336,8 +333,7 @@
 	}
 	CLabelBaseIterator.prototype.next = function ()
 	{
-		this.currentLabel = this.nextLabel;
-		this.nextLabel = null;
+		this.currentLabel = null;
 		this.innerLabelElementIndex += 1;
 		while (this.innerLabelElementIndex === this.elementLabelIndexes.length && this.elementIndex > 0)
 		{
@@ -350,7 +346,7 @@
 		{
 			const nInsertIndex = this.getInsertIndex();
 			const CLabelConstructor = this.getLabelConstructor();
-			this.nextLabel = new CLabelConstructor(this._getInsertElements(oElement, nInsertIndex), this.elementIndex, nInsertIndex, this.getAddingValue());
+			this.currentLabel = new CLabelConstructor(this._getInsertElements(oElement, nInsertIndex), this.elementIndex, nInsertIndex, this.getAddingValue());
 		}
 	}
 	CLabelBaseIterator.prototype.getLabelConstructor = function ()
