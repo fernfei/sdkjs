@@ -51,17 +51,26 @@
 		{
 			const oRun = oTextIterator.splitCurrentRun(oTextIterator.runElementIndex + oLabelChange.addingValue);
 			oTextIterator.addToCollectBack(oRun);
-			if (oLabelChange.elementIndex === 0 && oLabelChange.innerElementIndex === 0)
-			{
-				changeFirstTextElement(oTextIterator, oRun);
-			}
-			oLabelChange.forEach(function (oLabel, i)
+			oLabelChange.forEach(function (oLabel)
 			{
 				oTextIterator.parent.AddToContent(oTextIterator.runIndex + 1, oLabel);
 			});
+			if (oLabelChange.elementIndex === 0 && oLabelChange.innerElementIndex === 0)
+			{
+				const oElement = oTextIterator.getCurrentElement();
+				const oLastLabel = oLabelChange.getLastLabel();
+				if (oLastLabel)
+				{
+					oElement.lastSwitchElement = oLastLabel;
+				}
+				else
+				{
+					changeFirstTextElement(oTextIterator, oRun);
+				}
+			}
+			oLabelIterator.next();
 			if (oLabelIterator.check())
 			{
-				oLabelIterator.next();
 				return oLabelIterator.value();
 			}
 		}
@@ -275,6 +284,10 @@
 			fCallback(this.labels[i], i);
 		}
 	};
+	CBookmarkChange.prototype.getLastLabel = function ()
+	{
+		return this.labels[this.labels.length - 1];
+	};
 	function CCommentChange(arrLabels, nElementIndex, nInnerElementIndex, nAddingValue)
 	{
 		CLabelChange.call(this, arrLabels, nElementIndex, nInnerElementIndex, nAddingValue);
@@ -286,6 +299,10 @@
 		{
 			fCallback(this.labels[i], i);
 		}
+	};
+	CCommentChange.prototype.getLastLabel = function ()
+	{
+		return this.labels[0];
 	};
 
 	function CLabelBaseIterator(arrElements, oCopyPr)
@@ -1006,7 +1023,12 @@
             const oChildNode = this.children[index];
             if(oChildNode)
             {
-                const oFirstText = oChildNode.element;
+	            let oFirstText = oChildNode.element;
+							if (oFirstText.lastSwitchElement)
+							{
+								oFirstText = oFirstText.lastSwitchElement;
+							}
+
                 for(let j = 0; j < applyingParagraph.Content.length; ++j)
                 {
                     if(Array.isArray(applyingParagraph.Content))
@@ -1015,7 +1037,7 @@
                         // если совпали ран, после которого нужно вставлять и ран из цикла
                         if(oFirstText === oCurRun)
                         {
-                            this.applyInsert(aContentToInsert, [], j + 1, comparison);
+                            this.applyInsert(aContentToInsert, [], j, comparison);
                             break;
                         }
                         // иначе надо посмотреть, возможно стоит вставлять элементы не после рана, а после конкретного элемента и текущий ран из цикла нужно засплитить
