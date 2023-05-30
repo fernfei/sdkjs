@@ -670,8 +670,8 @@
 					{
 						applyEndChangeReview(oReviewChange, oTextIterator);
 
-						while (oLabelChange && ((oReviewChange.startElementIndex <= oLabelChange.elementIndex) ||
-							(oReviewChange.startElementIndex === oLabelChange.elementIndex && oReviewChange.startInnerElementIndex <= oLabelChange.innerElementIndex))){
+						while (oLabelChange && ((oReviewChange.startElementIndex < oLabelChange.elementIndex) ||
+							(oReviewChange.startElementIndex === oLabelChange.elementIndex && oReviewChange.startInnerElementIndex < oLabelChange.innerElementIndex))){
 							oLabelChange = insertLabelsAndContinue(oLabelChange, oTextIterator, oLabelsIterator);
 						}
 						oReviewChange = applyStartChangeReview(oReviewChange, oTextIterator, oChangesIterator, comparison, oNeedReviewWithUser);
