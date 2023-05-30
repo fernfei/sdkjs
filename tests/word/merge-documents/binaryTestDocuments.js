@@ -50,7 +50,7 @@ mockEditor.sync_RemoveComment = function ()
 AscCommon.ParaComment.prototype.getTestObject = function (arrParentContent)
 {
 	let oComment = oMainComments.Get_ById(this.GetCommentId());
-	const oContentObject = {type: 'comment', text: oComment.Data.Get_Text(), quoteText: oComment.Data.Get_QuoteText(), content: []};
+	const oContentObject = {type: 'comment', text: oComment.Data.Get_Text(), quoteText: oComment.Data.Get_QuoteText(), arrAnswers: oComment.Data.m_aReplies.map((e) => e.Get_Text())};
 	arrParentContent.push(oContentObject);
 }
 AscCommonWord.CDocument.prototype.getTestObject = function ()
@@ -331,6 +331,16 @@ function getComment(oDocument, oCommentData)
 	const oData = new AscCommon.CCommentData();
 	oData.Set_Text(oCommentData.text);
 	oData.Set_QuoteText(oCommentData.quoteText);
+	if (oCommentData.arrAnswers)
+	{
+		for (let i = 0; i < oCommentData.arrAnswers.length; i += 1)
+		{
+			const oAnswer = new AscCommon.CCommentData();
+			oAnswer.Set_Text(oCommentData.arrAnswers[i]);
+			oData.Add_Reply(oAnswer);
+		}
+	}
+
 	return new AscCommon.CComment(oDocument.Comments, oData);
 }
 function createTestDocument(oDocument, arrParagraphsTextInfo)
@@ -364,15 +374,6 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 				arrStartCommentsInfo = oParagraphTextInfo[j].options.comments.start;
 				arrEndCommentsInfo = oParagraphTextInfo[j].options.comments.end;
 			}
-			if (arrStartBookmarkInfo)
-			{
-				for (let k = 0; k < arrStartBookmarkInfo.length; k += 1)
-				{
-					const oStartBookmarkInfo = arrStartBookmarkInfo[k];
-					const oBookmark = new AscCommonWord.CParagraphBookmark(!!oStartBookmarkInfo.name, oStartBookmarkInfo.id, oStartBookmarkInfo.name);
-					oParagraph.AddToContentToEnd(oBookmark);
-				}
-			}
 			if (arrStartCommentsInfo)
 			{
 				for (let k = 0; k < arrStartCommentsInfo.length; k += 1)
@@ -399,6 +400,16 @@ function createTestDocument(oDocument, arrParagraphsTextInfo)
 					}
 				}
 			}
+			if (arrStartBookmarkInfo)
+			{
+				for (let k = 0; k < arrStartBookmarkInfo.length; k += 1)
+				{
+					const oStartBookmarkInfo = arrStartBookmarkInfo[k];
+					const oBookmark = new AscCommonWord.CParagraphBookmark(!!oStartBookmarkInfo.name, oStartBookmarkInfo.id, oStartBookmarkInfo.name);
+					oParagraph.AddToContentToEnd(oBookmark);
+				}
+			}
+
 			const oParaRun = new AscWord.ParaRun();
 			if (oParagraphTextInfo[j].text)
 			{
