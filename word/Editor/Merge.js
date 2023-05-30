@@ -55,10 +55,6 @@
 
     CMergeComparisonNode.prototype = Object.create(CNode.prototype);
     CMergeComparisonNode.prototype.constructor = CMergeComparisonNode;
-	CMergeComparisonNode.prototype.checkCommentsFromInsert = function ()
-	{
-
-	}
     CMergeComparisonNode.prototype.privateCompareElements = function (oNode, bCheckNeighbors) {
         const oElement1 = this.element;
         const oElement2 = oNode.element;
