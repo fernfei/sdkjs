@@ -922,16 +922,17 @@
 			{
 				for (let sInsertIndex in oTextElement.comments)
 				{
-					for (let j = 0; j < oTextElement.comments[sInsertIndex].length; j += 1)
+					const arrComments = oTextElement.comments[sInsertIndex];
+					for (let j = 0; j < arrComments.length; j += 1)
 					{
-						const oParaComment = oTextElement.comments[sInsertIndex][j].element;
+						const oParaComment = arrComments[j].element;
 						if (oParaComment.IsCommentStart())
 						{
 							delete mapRevisedComments[oParaComment.GetCommentId()];
 						}
 						else
 						{
-							mapRevisedComments[oParaComment.GetCommentId()] = oTextElement.comments[sInsertIndex][j];
+							mapRevisedComments[oParaComment.GetCommentId()] = arrComments[j];
 						}
 					}
 				}
@@ -953,8 +954,9 @@
 		}
 		if (oCheckCommentNode && oCheckCommentNode.element.comments)
 		{
-			const arrMainComments = oCheckCommentNode.element.comments[oCheckCommentNode.element.elements.length];
-			comparison.oCommentManager.checkComments(arrMainComments, arrRevisedComments);
+			const nLastIndex = oCheckCommentNode.element.elements.length;
+			const arrMainComments = oCheckCommentNode.element.comments[nLastIndex];
+			comparison.oCommentManager.checkComments(arrMainComments, arrRevisedComments, oCheckCommentNode.element, nLastIndex);
 		}
 	}
     CNode.prototype.getArrOfInsertsFromChanges = function (idxOfChange, comparison) {
