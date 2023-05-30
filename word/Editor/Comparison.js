@@ -976,7 +976,7 @@
             // изменения находятся внутри одного рана или это один и тот же элемент
             if( (oLastText.lastRun && oFirstText.firstRun) && oLastText.lastRun === oFirstText.firstRun || (!oLastText.lastRun && !oFirstText.firstRun) && oLastText === oFirstText)
             {
-                this.cleanStartOfInsertSameRun(aContentToInsert[0], idxOfChange);
+                this.cleanStartOfInsertSameRun(aContentToInsert[aContentToInsert.length - 1], idxOfChange);
             }
             else
             {

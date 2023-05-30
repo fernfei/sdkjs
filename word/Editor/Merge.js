@@ -95,11 +95,39 @@
         }
     }
 
-    CMergeComparisonNode.prototype.insertContentAfterRemoveChanges = function (aContentToInsert, nInsertPosition, comparison) {
-        const oElement = this.getApplyParagraph(comparison);
+    CMergeComparisonNode.prototype.insertContentAfterRemoveChanges = function (aContentToInsert, nInsertPosition, comparison, options) {
+			const oElement = this.getApplyParagraph(comparison);
+	    let t = 0;
+			const arrSkippedComments = [];
+			if (options && AscFormat.isRealNumber(options.nCommentInsertIndex))
+			{
+				for (t;t < aContentToInsert.length; t += 1)
+				{
+					if (aContentToInsert[t] instanceof AscCommon.ParaComment)
+					{
+						const sCommentId = aContentToInsert[t].GetCommentId();
+						if (comparison.oCommentManager.mapLink[sCommentId])
+						{
+							oElement.AddToContent(options.nCommentInsertIndex, aContentToInsert[t]);
+						}
+						else
+						{
+							arrSkippedComments.push(aContentToInsert[t]);
+						}
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
         if(nInsertPosition > -1)
         {
-            for (let t = 0; t < aContentToInsert.length; t += 1) {
+	        for (let i = 0; i < arrSkippedComments.length; i++)
+	        {
+		        oElement.AddToContent(nInsertPosition, arrSkippedComments[i]);
+	        }
+            for (t; t < aContentToInsert.length; t += 1) {
                 if(comparison.isElementForAdd(aContentToInsert[t]))
                 {
                     if (aContentToInsert[t] instanceof AscCommon.CParaRevisionMove) {
@@ -464,7 +492,7 @@
         this.setReviewTypeForRemoveChanges(comparison, idxOfChange, posLastRunInContent, nInsertPosition, arrSetRemoveReviewType);
 
         const nInsertPosition2 = arrSetRemoveReviewType[arrSetRemoveReviewType.length - 1].GetPosInParent();
-        this.applyInsert(aContentToInsert, arrSetRemoveReviewType, nInsertPosition2, comparison, {needReverse: true});
+        this.applyInsert(aContentToInsert, arrSetRemoveReviewType, nInsertPosition2, comparison, {needReverse: true, nCommentInsertIndex: nInsertPosition});
     };
 
     // обновим ноды в любом случае, для дальнейшего разрешения типов
