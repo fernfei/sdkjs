@@ -407,10 +407,22 @@
 	CCommentChangesIterator.prototype.getInsertElements = function (oElement, nInsertIndex)
 	{
 		this.checkComment();
-		return oElement.comments[nInsertIndex].map(function (oElement)
+		const arrElements = [];
+		for (let i = 0; i < oElement.comments[nInsertIndex].length; i += 1)
 		{
-			return oElement.element;
-		});
+			const oParaComment = oElement.comments[nInsertIndex][i].element;
+			arrElements.push(oParaComment);
+			if (oParaComment.IsCommentStart())
+			{
+				const sCommentId = oParaComment.GetCommentId();
+				const arrLaterMerge = this.oCommentManager.getMergeLater(sCommentId);
+				if (arrLaterMerge)
+				{
+					arrElements.push.apply(arrElements, arrLaterMerge);
+				}
+			}
+		}
+		return arrElements;
 	};
 	CCommentChangesIterator.prototype.checkComment = function ()
 	{
