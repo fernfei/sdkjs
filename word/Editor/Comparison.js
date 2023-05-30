@@ -1428,10 +1428,131 @@
 			this.element = oParaComment;
 			if (oComment)
 			{
-				this.commentText = oComment.Data.Get_Text();
-				this.quoteText = oComment.Data.Get_QuoteText();
+				this.data = oComment.Data;
 			}
 		}
+	CCommentElement.prototype.getQuoteText = function ()
+	{
+		if (this.data)
+		{
+			return this.data.Get_QuoteText();
+		}
+		return '';
+	}
+	CCommentElement.prototype.getCommentId = function ()
+	{
+		return this.element.GetCommentId();
+	}
+	CCommentElement.prototype.getFullMergeComments = function (oAnotherElement)
+	{
+		const arrMainAnswers = this.getAnswers();
+		const arrAnotherAnswers = oAnotherElement.getAnswers();
+		for (let i = 0; i < arrMainAnswers.length; i++)
+		{
+			if (arrAnotherAnswers[i] === undefined)
+			{
+				break;
+			}
+			const sMainAnswer = arrMainAnswers[i].Get_Text();
+			const sAnotherAnswer = arrAnotherAnswers[i].Get_Text();
+			if (sMainAnswer !== sAnotherAnswer)
+			{
+				return null;
+			}
+		}
+		return Math.abs(arrMainAnswers.length - arrAnotherAnswers.length);
+	}
+	CCommentElement.prototype.getAnswerMap = function ()
+	{
+		const oAnswerMap = {};
+		const arrAnswers = this.getAnswers();
+		for (let i = 0; i < arrAnswers.length; i += 1)
+		{
+			const oAnswer = arrAnswers[i];
+			const sText = oAnswer.Get_Text();
+			if (!oAnswerMap[sText])
+			{
+				oAnswerMap[sText] = [];
+			}
+			oAnswerMap[sText].push(oAnswer);
+		}
+		return oAnswerMap;
+	}
+	CCommentElement.prototype.getPartMergeComments = function (oAnotherElement)
+	{
+		let nDifference = 0;
+		const oMainAnswerMap = this.getAnswerMap();
+		const oRevisedAnswerMap = oAnotherElement.getAnswerMap();
+		let arrData = [];
+		for (let sCommentText in oMainAnswerMap)
+		{
+			const arrMainAnswers = oMainAnswerMap[sCommentText];
+			if (oRevisedAnswerMap[sCommentText])
+			{
+				const nDeleteCount = oRevisedAnswerMap[sCommentText].length;
+				arrMainAnswers.splice(0, nDeleteCount);
+				arrData = arrData.concat(arrMainAnswers);
+				nDifference += Math.abs(nDeleteCount);
+			}
+			else
+			{
+				arrData = arrData.concat(arrMainAnswers);
+				nDifference += arrMainAnswers.length;
+			}
+		}
+		for (let sCommentText in oRevisedAnswerMap)
+		{
+			if (!oMainAnswerMap[sCommentText])
+			{
+				nDifference += oRevisedAnswerMap[sCommentText].length;
+			}
+		}
+		return {arrData: arrData, difference: nDifference};
+	};
+
+	CCommentElement.prototype.getDifference = function (oAnotherElement)
+	{
+		const sText = this.getText();
+		const sAnotherText = oAnotherElement.getText();
+		if (sText !== sAnotherText)
+		{
+			return null;
+		}
+		const oRes = {mainElement: this, anotherElement: oAnotherElement, quoteDifference: this.getQuoteDifference(oAnotherElement)};
+		const nCommentDifference = this.getFullMergeComments(oAnotherElement);
+		if (nCommentDifference !== null)
+		{
+			oRes.commentDifference = nCommentDifference;
+			return oRes;
+		}
+		const oPartDifference = this.getPartMergeComments(oAnotherElement);
+		oRes.commentDifference = oPartDifference.difference;
+		oRes.arrData = oPartDifference.arrData;
+		return oRes;
+	};
+	CCommentElement.prototype.getQuoteDifference = function (oAnotherElement)
+	{
+		const sMainQuoteText = this.getQuoteText();
+		const sAnotherQuoteText = oAnotherElement.getQuoteText();
+
+		return Math.abs(sMainQuoteText.length - sAnotherQuoteText.length);
+	};
+	CCommentElement.prototype.getText = function ()
+	{
+		if (this.data)
+		{
+			return this.data.Get_Text();
+		}
+		return '';
+	}
+	CCommentElement.prototype.getAnswers = function ()
+	{
+		if (this.data)
+		{
+			return this.data.m_aReplies;
+		}
+		return [];
+	}
     function CTextElement()
     {
         this.elements = [];
@@ -1439,6 +1560,7 @@
         this.lastRun = null;
 				this.bookmarks = {};
 				this.comments = {};
+	    this.lastSwitchElement = null;
     }
 	CTextElement.prototype.getSortedInsertIndexesFromMap = function (arrLabels)
 	{
