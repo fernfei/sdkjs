@@ -3334,18 +3334,6 @@
 							{
 								this.oCommentManager.addToStack(oElement, 0);
 							}
-
-	            if(oLastText && oLastText.elements.length > 0)
-	            {
-		            oLastText.updateHash(oHashWords);
-		            this.createNode(oLastText, oRet);
-	            }
-	            if(aLastWord.length > 0)
-	            {
-		            oHashWords.update(aLastWord);
-		            aLastWord.length = 0;
-	            }
-	            oLastText = null;
             }
             else
             {
