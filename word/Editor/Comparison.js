@@ -431,7 +431,7 @@
 		const arrRevisedComments = oRevisedElement.comments[nInsertIndex];
 
 		const arrMainComments = this.getMainNode().element.comments[nInsertIndex];
-		this.oCommentManager.checkComments(arrMainComments, arrRevisedComments);
+		this.oCommentManager.checkComments(arrMainComments, arrRevisedComments, oRevisedElement, nInsertIndex);
 		return false;
 	}
 	CCommentChangesIterator.prototype.getLabelConstructor = function ()
@@ -836,6 +836,10 @@
     CNode.prototype.pushToArrInsertContentWithCopy = function (aContentToInsert, elem, comparison) {
         const elemCopy = elem.Copy(false, comparison.copyPr);
         this.pushToArrInsertContent(aContentToInsert, elemCopy, comparison);
+				if (elem instanceof AscCommon.ParaComment)
+				{
+					comparison.oCommentManager.pushToArrInsertContentFromMerge(elem, aContentToInsert);
+				}
     }
 
     CNode.prototype.cleanStartOfInsertSameRun = function (oNewRun, idxOfChange) {
@@ -1104,8 +1108,19 @@
         const oChange = this.changes[idxOfChange];
         const oApplyParagraph = this.getApplyParagraph(comparison);
         const oLastText = oChange.remove[oChange.remove.length - 1].element;
-        const oEndOfRemoveRun = oLastText.lastRun || oLastText;
-
+	    let oEndOfRemoveRun;
+			if (oLastText.lastRun)
+			{
+				oEndOfRemoveRun = oLastText.lastRun;
+			}
+			else if (oLastText instanceof CCommentElement)
+			{
+				oEndOfRemoveRun = oLastText.element;
+			}
+			else
+			{
+				oEndOfRemoveRun = oLastText;
+			}
         let k = oApplyParagraph.Content.length - 1;
         let nInsertPosition = -1;
         
@@ -1116,6 +1131,9 @@
             {
                 if(oLastText instanceof CTextElement)
                 {
+									const arrComments = oLastText.comments[oLastText.elements.length];
+									arrSetRemove.push.apply(arrSetRemove, arrComments)
+
                     let t = oEndOfRemoveRun.Content.length - 1;
                     for(t; t > -1; t--)
                     {
@@ -1193,10 +1211,10 @@
     }
 
     CNode.prototype.applyInsert = function (arrToInsert, arrToRemove, nInsertPosition, comparison, options) {
-        for (let i = 0; i < arrToRemove.length; i += 1) {
+			for (let i = 0; i < arrToRemove.length; i += 1) {
             comparison.setRemoveReviewType(arrToRemove[i]);
         }
-        this.insertContentAfterRemoveChanges(arrToInsert, nInsertPosition, comparison);
+        this.insertContentAfterRemoveChanges(arrToInsert, nInsertPosition, comparison, options);
     }
 
     CNode.prototype.applyInsertsToParagraphsWithRemove = function (comparison, aContentToInsert, idxOfChange) {
@@ -1907,7 +1925,7 @@
         this.nRemoveChangesType = reviewtype_Remove;
         this.oComparisonMoveMarkManager = new CMoveMarkComparisonManager();
 				this.oBookmarkManager = new CComparisonBookmarkManager(oOriginalDocument, oRevisedDocument);
-				this.oCommentManager = new CComparisonCommentManager(oOriginalDocument, oRevisedDocument);
+				this.oCommentManager = new CComparisonCommentManager(this);
     }
     CDocumentComparison.prototype.checkOriginalAndSplitRun = function (oOriginalRun, oSplitRun) {
 
@@ -2941,6 +2959,10 @@
                     oComment.Parent = oOrigComments;
                     oCopyComment = oComment.Copy();
                     this.CommentsMap[sId] = oCopyComment;
+										if (this.oCommentManager.mapLink[sId])
+										{
+											this.oCommentManager.addToLink(oCopyComment.GetId(), sId);
+										}
                     this.originalDocument.Comments.Add(oCopyComment);
                     this.api.sync_AddComment(oCopyComment.Id, oCopyComment.Data);
                     oComment.Parent = oOldParent;
