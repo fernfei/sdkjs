@@ -2432,49 +2432,6 @@
         callback();
     };
 
-	CDocumentComparison.prototype.mergeBookmarks = function (oNode)
-	{
-		const oTextElement = oNode.element;
-		if (oTextElement instanceof CTextElement)
-		{
-			const oPartner = oNode.partner;
-			if (!oPartner)
-				return;
-
-			const oPartnerElement = oPartner.element;
-			const oIterator = new CTextElementRunIterator([oTextElement]);
-			const arrInsertIndexes = oPartnerElement.getBookmarkInsertIndexes();
-			for (let i = 0; i < arrInsertIndexes.length; i += 1)
-			{
-				const nBookmarkInsertIndex = arrInsertIndexes[i];
-				const arrBookmarks = oPartnerElement.bookmarks[nBookmarkInsertIndex];
-				for (let nBookmarkIndex = 0; nBookmarkIndex < arrBookmarks.length; nBookmarkIndex += 1)
-				{
-					const oBookmark = arrBookmarks[nBookmarkIndex].Copy(undefined, this.copyPr);
-					for (oIterator; oIterator.check(); oIterator.next())
-					{
-						let nInsertIndex = null;
-						if (nBookmarkInsertIndex === 0 && oIterator.innerElementIndex === 0)
-						{
-							nInsertIndex = oIterator.runElementIndex;
-						}
-						else if (nBookmarkInsertIndex === oIterator.innerElementIndex + 1)
-						{
-							nInsertIndex = oIterator.runElementIndex + 1;
-						}
-						if (nInsertIndex !== null)
-						{
-							const oRun = oIterator.getRun();
-							oRun.Split2(nInsertIndex, oIterator.parent, oIterator.runIndex);
-							oIterator.parent.AddToContent(oIterator.runIndex + 1, oBookmark);
-							break;
-						}
-					}
-				}
-			}
-		}
-
-	}
 	CDocumentComparison.prototype.applyResolveTypes = function () {};
 
     CDocumentComparison.prototype.applyChangesToParagraph = function(oNode)
