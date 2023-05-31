@@ -52,6 +52,13 @@ function (window, undefined) {
 		this.isPrecedentsCall = null;
 		this.precedentsAreas = null;
 	}
+
+	TraceDependentsManager.prototype.setPrecedentsCall = function () {
+		this.isPrecedentsCall = true;
+	};
+	TraceDependentsManager.prototype.setDependentsCall = function () {
+		this.isPrecedentsCall = null;
+	};
 	TraceDependentsManager.prototype.setPrecedentExternal = function (cellIndex) {
 		if (!this.precedentsExternal) {
 			this.precedentsExternal = new Set();
@@ -63,12 +70,6 @@ function (window, undefined) {
 			return false;
 		}
 		return this.precedentsExternal.has(cellIndex);
-	};
-	TraceDependentsManager.prototype.setDependentsCall = function () {
-		this.isPrecedentsCall = null;
-	};
-	TraceDependentsManager.prototype.setPrecedentsCall = function () {
-		this.isPrecedentsCall = true;
 	};
 	TraceDependentsManager.prototype.calculateDependents = function (row, col) {
 		let ws = this.ws && this.ws.model;
@@ -104,7 +105,7 @@ function (window, undefined) {
 		let wb = this.ws.model.workbook;
 		let dependencyFormulas = wb.dependencyFormulas;
 		let cellAddress = AscCommonExcel.getFromCellIndex(cellIndex, true);
-		let findCellListeners = function () {
+		const findCellListeners = function () {
 			const listeners = {};
 			if (curListener && curListener.areaMap) {
 				for (let j in curListener.areaMap) {
@@ -123,8 +124,11 @@ function (window, undefined) {
 			return listeners;
 		};
 
-		let getAllAreaIndexes = function (cell) {
+		const getAllAreaIndexes = function (cell) {
 			const indexes = [], range = cell.ref;
+			if (!range) {
+				return;
+			}
 			for (let i = range.c1; i <= range.c2; i++) {
 				for (let j = range.r1; j <= range.r2; j++) {
 					let index = AscCommonExcel.getCellIndex(j, i);
@@ -135,7 +139,7 @@ function (window, undefined) {
 			return indexes;
 		};
 
-		let getParentIndex = function (_parent) {
+		const getParentIndex = function (_parent) {
 			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
 			//parent -> cell/defname
 			if (_parent.parsedRef/*parent instanceof AscCommonExcel.DefName*/) {
@@ -146,7 +150,7 @@ function (window, undefined) {
 			return _parentCellIndex;
 		};
 
-		let cellListeners = findCellListeners();
+		const cellListeners = findCellListeners();
 		if (cellListeners) {
 			if (!this.dependents[cellIndex]) {
 				this.dependents[cellIndex] = {};
@@ -158,17 +162,19 @@ function (window, undefined) {
 						if (parentCellIndex === null) {
 							continue;
 						}
-						// TODO in one formula there can be both references to the external area and internal area
+						// TODO in one formula there can be both references to the external and internal area
 						if (formula.includes(":") && !cellListeners[i].is3D) {
 							let areaIndexes;
 							// call splitAreaListeners which return cellIndexes of each element(this will be parentCellIndex)
 							// go through the values and _setDependents/Precedents for each
 							areaIndexes = getAllAreaIndexes(cellListeners[i]);
-							for (let index of areaIndexes) {
-								this._setDependents(cellIndex, index);
-								// this._setPrecedents(index, cellIndex);
+							if (areaIndexes) {
+								for (let index of areaIndexes) {
+									this._setDependents(cellIndex, index);
+									// this._setPrecedents(index, cellIndex);
+								}
+								continue;
 							}
-							continue;
 						}
 						this._setDependents(cellIndex, parentCellIndex);
 						// this._setPrecedents(parentCellIndex, cellIndex);
@@ -185,16 +191,23 @@ function (window, undefined) {
 						let formula = cellListeners[i].Formula;
 						if (parentCellIndex === null) {
 							continue;
+						} else if (parentCellIndex == cellIndex) {
+							// TODO bug the cell refers to itself and the call stack overflows
+							// temporary exception
+							isUpdated = true;
+							break;
 						}
-						// TODO in one formula there can be both references to the external area and internal area
+						// TODO in one formula there can be both references to the external and internal area
 						if (formula.includes(":") && !cellListeners[i].is3D) {
-							let areaIndexes;
-							// call splitAreaListeners which return cellIndexes of each element(this will be parentCellIndex)
-							// go through the values and _setDependents/Precedents for each
-							areaIndexes = getAllAreaIndexes(cellListeners[i]);
-							for (let index of areaIndexes) {
-								this._setDependents(cellIndex, index);
-								// this._setPrecedents(index, cellIndex);
+							// call getAllAreaIndexes which return cellIndexes of each element(this will be parentCellIndex)
+							let areaIndexes = getAllAreaIndexes(cellListeners[i]);
+							if (areaIndexes) {
+								// go through the values and _setDependents/Precedents for each
+								for (let index of areaIndexes) {
+									this._setDependents(cellIndex, index);
+									// this._setPrecedents(index, cellIndex);
+								}
+								continue;
 							}
 						}
 						if (!this._getDependents(cellIndex, parentCellIndex)) {
@@ -204,7 +217,7 @@ function (window, undefined) {
 						}
 					}
 				}
-				// TODO bug (ссылка на себя в ячейке O3: =O2, O2: =O1, O1: =cEmpty) происходит переполнение стека(невозможно найти cellIndex)
+				
 				if (!isUpdated) {
 					for (let i in this.dependents[cellIndex]) {
 						if (this.dependents[cellIndex].hasOwnProperty(i)) {
@@ -302,31 +315,36 @@ function (window, undefined) {
 							tempObj.bottomRightIndex = AscCommonExcel.getCellIndex(elemRange.r2, elemRange.c2);
 							tempObj.bottomLeftIndex = AscCommonExcel.getCellIndex(elemRange.r2, elemRange.c1);
 							areaRange[areaName] = tempObj;
+
 							this._setPrecedentsAreas(areaRange);
 						}
 					}
 				}
 			}
-		} else if (!this.inLoop) {
+		} else if (!this.getPrecedentsLoop()) {
 			const currentPrecedent = {...this.precedents};
-			let isUpdated = false;
-			this.inLoop = true;
-			if (!isUpdated) {
-				for (let i in currentPrecedent) {
-					if (currentPrecedent.hasOwnProperty(i)) {
-						for (let j in currentPrecedent[i]) {
-							if (currentPrecedent[i].hasOwnProperty(j)) {
-								// get row col from cell index
-								let coords = AscCommonExcel.getFromCellIndex(j, true);
-								this.calculatePrecedents(coords.row, coords.col);
-							}
+			this.setPrecedentsLoop(true);
+
+			for (let i in currentPrecedent) {
+				if (currentPrecedent.hasOwnProperty(i)) {
+					for (let j in currentPrecedent[i]) {
+						if (currentPrecedent[i].hasOwnProperty(j)) {
+							// get row col from cell index
+							let coords = AscCommonExcel.getFromCellIndex(j, true);
+							this.calculatePrecedents(coords.row, coords.col);
 						}
 					}
 				}
-				isUpdated = true;
-				this.inLoop = false;
 			}
+
+			this.setPrecedentsLoop(false);
 		}
+	};
+	TraceDependentsManager.prototype.setPrecedentsLoop = function (inLoop) {
+		this.inLoop = inLoop;
+	};
+	TraceDependentsManager.prototype.getPrecedentsLoop = function () {
+		return this.inLoop;
 	};
 	TraceDependentsManager.prototype._getPrecedents = function (from, to) {
 		return this.precedents[from] && this.precedents[from][to];
@@ -359,11 +377,6 @@ function (window, undefined) {
 		return !!this.precedents;
 	};
 	TraceDependentsManager.prototype.forEachDependents = function (callback) {
-		for (let i in this.dependents) {
-			callback(i, this.dependents[i]);
-		}
-	};
-	TraceDependentsManager.prototype.forEachDependents2 = function (callback) {
 		for (let i in this.dependents) {
 			callback(i, this.dependents[i], this.isPrecedentsCall);
 		}

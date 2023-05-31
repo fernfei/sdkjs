@@ -4948,7 +4948,6 @@
 					isTableLeft = true;
 				}
 
-				// ?? line should always contain 7-10 dotted lines
 				length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
 				dashLength = length / 20 * zoom;
 			} else {
@@ -4961,24 +4960,32 @@
 
 			// Draw the line and subtract the padding to draw the arrowhead correctly
 			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-			let dx = (x2 - x1) / extLength;
-			let dy = (y2 - y1) / extLength;
-			let newX2 = x2 - dx * (arrowSize / 2);
-			let newY2 = y2 - dy * (arrowSize / 2);
+			if (extLength === 0 || angle === 0) {
+				// temporary exception
+				ctx.lineDiag(x1, y1, x2, y2);
+				ctx.closePath().stroke();
 
-			ctx.lineDiag(x1, y1, newX2, newY2);
-			ctx.closePath().stroke();
-
-			if (zoom <= 0.8) {
-				arrowSize = arrowSize / zoom;
+				!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
+			} else {
+				let dx = (x2 - x1) / extLength;
+				let dy = (y2 - y1) / extLength;
+				let newX2 = x2 - dx * (arrowSize / 2);
+				let newY2 = y2 - dy * (arrowSize / 2);
+	
+				ctx.lineDiag(x1, y1, newX2, newY2);
+				ctx.closePath().stroke();
+	
+				if (zoom <= 0.8) {
+					arrowSize = arrowSize / zoom;
+				}
+	
+				// draw arrowhead
+				!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
+				// draw dot
+				!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
+				// draw mini table
+				!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
 			}
-
-			// draw arrowhead
-			!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
-			// draw dot
-			!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
-			// draw mini table
-			!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
 		};
 		const drawExternalPrecedentLine = function (from) {
 			// make x1 the end of line and x2 is start
@@ -5018,7 +5025,6 @@
 				isTableLeft = true;
 			}
 
-			// ?? line should always contain 7-10 dotted lines
 			length = Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2));
 			dashLength = length / 20 * zoom;
 			
@@ -5031,8 +5037,6 @@
 			let dy = (y2 - y1) / extLength;
 			let newX2 = x2 - dx * (arrowSize / 2);
 			let newY2 = y2 - dy * (arrowSize / 2);
-			// ctx.moveTo(x1, y1);
-			// ctx.lineTo(newX2, newY2);
 			ctx.lineDiag(x1, y1, newX2, newY2);
 			ctx.closePath().stroke();
 
@@ -5174,27 +5178,9 @@
 			}
 		};
 
+		console.log(traceManager);
 		let otherSheetMap = {};
-		// traceManager.forEachDependents(function (from, to) {
-		// 	if (from && to) {
-		// 		for (let i in to) {
-		// 			let cellFrom = AscCommonExcel.getFromCellIndex(from, true);
-		// 			if (-1 !== i.indexOf(";")) {
-		// 				if (visibleRange.contains2(cellFrom) && !otherSheetMap[from]) {
-		// 					let cellToIndex = i.split(";")[0];
-		// 					let cellTo = traceManager.isPrecedentsCall ? AscCommonExcel.getFromCellIndex(cellToIndex, true) : null;
-		// 					doDrawArrow(cellFrom, cellTo, true, traceManager.isPrecedentsCall);
-		// 				}
-		// 			} else {
-		// 				let cellTo = AscCommonExcel.getFromCellIndex(i, true);
-		// 				if (visibleRange.contains2(cellFrom) || visibleRange.contains2(cellTo)) {
-		// 					doDrawArrow(cellFrom, cellTo, false, traceManager.isPrecedentsCall);
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// });
-		traceManager.forEachDependents2(function (from, to, isPrecedent) {
+		traceManager.forEachDependents(function (from, to, isPrecedent) {
 			if (from && to) {
 				for (let i in to) {
 					let cellFrom = AscCommonExcel.getFromCellIndex(from, true);

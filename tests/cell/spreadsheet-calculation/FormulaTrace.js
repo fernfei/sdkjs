@@ -75,13 +75,18 @@ $(function() {
 	};
 	window["Asc"]["editor"] = api;
 
+	function traceTests() {
+		QUnit.test("Test: \"test\"", function (assert) {
 
-	QUnit.module("FromulaTrace");
+		});
+	}
+
+	QUnit.module("FormulaTrace");
 
 	function startTests() {
 		QUnit.start();
-
-		//testFunc();
-
+		traceTests();
 	}
+
+	startTests();
 });
