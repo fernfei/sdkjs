@@ -887,13 +887,21 @@ const arrTestObjectsInfo = [
 			[createParagraphInfo('Привет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, {start: [{id: '1', name: 's1'}]}, {comments:{start:[{start: true, id: 0}]}}), createParagraphInfo(' ', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, {start: [{id: '3', name: 's3'}]}), createParagraphInfo('при', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, {start: [{id: '2', name: 's2'}]}, {comments:{start:[{start: true, id: 1}]}}), createParagraphInfo('вет', new CCreatingReviewInfo('Mark Potato', reviewtype_Add, 1000), undefined, {start: [{id: '3'}]}), createParagraphInfo(' приве', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, undefined, {comments:{start:[{start: false, id: 1, data:{text: '123', quoteText: 'привет', arrAnswers: null}}]}}), createParagraphInfo('т', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, {start: [{id: '2'}]}), createParagraphInfo(undefined, undefined, undefined, {start: [{id: '1'}]}, {comments:{start:[{start: false, id: 0, data:{text: '123', quoteText: 'Привет привет привет', arrAnswers: null}}]}})]
 		]
 	},
-	///////////////////////// -> 36 <- /////////////////////////////
+	///////////////////////// -> 37 <- /////////////////////////////
 	{
 		originalDocument: [
 			[createParagraphInfo('Привет привет привет')]
 		],
 		revisedDocument : [
 			[createParagraphInfo('При', undefined, undefined, undefined, {comments:{start:[{start: true, id: 0}, {start: true, id: 1}]}}), createParagraphInfo('в', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined), createParagraphInfo('е', new CCreatingReviewInfo('Mark Potato', reviewtype_Add, 1000), undefined, undefined, {comments:{start:[{start: true, id: 2}]}}), createParagraphInfo('т', undefined, undefined), createParagraphInfo(' ', new CCreatingReviewInfo('Mark Potato', reviewtype_Add, 1000), undefined, undefined, {comments:{start:[{start: false, id: 1, data:{text: '432', quoteText: 'Привет', arrAnswers: null}}]}}), createParagraphInfo('п', new CCreatingReviewInfo('Mark Potato', reviewtype_Add, 1000), undefined, undefined, {comments:{start:[{start: true, id: 3}]}}), createParagraphInfo('р', new CCreatingReviewInfo('Mark Potato', reviewtype_Add, 1000), undefined, undefined, {comments:{start:[{start: true, id: 4}]}}), createParagraphInfo('иве', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined), createParagraphInfo('т', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, undefined, {comments:{start:[{start: false, id: 2, data:{text: '432', quoteText: 'ет приве', arrAnswers: null}}, {start: false, id: 4, data:{text: '432', quoteText: 'риве', arrAnswers: null}}]}}), createParagraphInfo(' привет', new CCreatingReviewInfo('Mark Potato', reviewtype_Remove, 1000), undefined, undefined, {comments:{start:[{start: false, id: 0, data:{text: '123', quoteText: 'Привет привет', arrAnswers: null}}]}}), createParagraphInfo(undefined, undefined, undefined, undefined, {comments:{start:[{start: false, id: 3, data:{text: '432', quoteText: 'привет привет', arrAnswers: null}}]}})]
+		]
+	},
+	///////////////////////// -> 38 <- /////////////////////////////
+	{
+		originalDocument: [
+			[createParagraphInfo('Привет привет ', undefined, undefined), createParagraphInfo('привет', undefined, undefined, undefined, {comments:{start:[{start: true, id: 0}]}})], [createParagraphInfo('Привет привет привет', undefined, undefined), createParagraphInfo(undefined, undefined, undefined, undefined, {comments:{start:[{start: false, id: 0, data:{text: '123', quoteText: 'приветПривет привет привет', arrAnswers: null}}]}})]		],
+		revisedDocument : [
+			[createParagraphInfo('Привет ', undefined, undefined), createParagraphInfo('привет привет', undefined, undefined, undefined, {comments:{start:[{start: true, id: 0}]}})], [createParagraphInfo('Привет привет привет', undefined, undefined), createParagraphInfo(undefined, undefined, undefined, undefined, {comments:{start:[{start: false, id: 0, data:{text: '123', quoteText: 'привет приветПривет привет привет', arrAnswers: null}}]}})]
 		]
 	}
 ];
@@ -1801,6 +1809,12 @@ const arrAnswers = [
 				}
 			})]
 		]
+	},
+	/////////////////////////////////// -> 38 <- ////////////////////////////////////////////
+	{
+		finalDocument: [
+			[createParagraphInfo('Привет ', undefined, undefined), createParagraphInfo('привет привет', undefined, undefined, undefined, {comments:{start:[{start: true, id: 0}]}})], [createParagraphInfo('Привет привет привет', undefined, undefined), createParagraphInfo(undefined, undefined, undefined, undefined, {comments:{start:[{start: false, id: 0, data:{text: '123', quoteText: 'привет приветПривет привет привет', arrAnswers: null}}]}})]
+		]
 	}
 ];
 
@@ -1841,6 +1855,8 @@ const comments = [
 	'Adding a separate answer as a comment',
 	'Merging bookmarks and comments',
 	'Merging bookmarks, comments and review',
+	'Merging comments and review',
+	'Merging two paragraph with different starts of comment'
 ];
 
 function merge(oMainDocument, oRevisedDocument, fCallback)

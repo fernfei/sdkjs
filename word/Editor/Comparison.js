@@ -3922,7 +3922,8 @@
 		{
 			const oRevisedElement = arrRevisedComments[i];
 			const sRevisedCommentId = oRevisedElement.element.GetCommentId();
-			if (!this.isChecked(sRevisedCommentId))
+			const bIsStart = oRevisedElement.element.IsCommentStart();
+			if (!this.isChecked(sRevisedCommentId) && !bIsStart)
 			{
 				this.check(sRevisedCommentId);
 				let oMinDifference;

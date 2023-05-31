@@ -50,8 +50,11 @@ mockEditor.sync_RemoveComment = function ()
 AscCommon.ParaComment.prototype.getTestObject = function (arrParentContent)
 {
 	let oComment = oMainComments.Get_ById(this.GetCommentId());
-	const oContentObject = {type: 'comment', text: oComment.Data.Get_Text(), quoteText: oComment.Data.Get_QuoteText(), arrAnswers: oComment.Data.m_aReplies.map((e) => e.Get_Text())};
-	arrParentContent.push(oContentObject);
+	if (oComment)
+	{
+		const oContentObject = {type: 'comment', text: oComment.Data.Get_Text(), quoteText: oComment.Data.Get_QuoteText(), arrAnswers: oComment.Data.m_aReplies.map((e) => e.Get_Text())};
+		arrParentContent.push(oContentObject);
+	}
 }
 AscCommonWord.CDocument.prototype.getTestObject = function ()
 {
