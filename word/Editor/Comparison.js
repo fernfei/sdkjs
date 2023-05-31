@@ -3978,10 +3978,17 @@
 				{
 					const arrRevisedAnswers = oRevisedElement.getAnswers();
 					const arrMainAnswers = oMainElement.getAnswers();
-					for (let j = arrRevisedAnswers.length; j < arrMainAnswers.length; j += 1)
+					const oComment = this.getComment(sRevisedCommentId);
+					if (oComment)
 					{
-						const oCopyAnswer = arrMainAnswers[j].Copy();
-						oRevisedElement.data.Add_Reply(oCopyAnswer);
+						const oCopyData = oComment.Data.Copy();
+						for (let j = arrRevisedAnswers.length; j < arrMainAnswers.length; j += 1)
+						{
+							const oCopyAnswer = arrMainAnswers[j].Copy();
+							oCopyData.Add_Reply(oCopyAnswer);
+						}
+						oComment.SetData(oCopyData);
+						this.comparison.api.sync_ChangeCommentData(oComment.Id, oCopyData);
 					}
 				}
 				this.addToLink(sRevisedCommentId, sMainCommentId);
@@ -4007,17 +4014,12 @@
 		this.mapDelete[sCommentId] = true;
 	};
 
-	CComparisonCommentManager.prototype.getComment = function (oParaComment)
+	CComparisonCommentManager.prototype.getComment = function (sCommentId)
 	{
-		return this.comparison.getComment(oParaComment.GetCommentId());
-	};
-	CComparisonCommentManager.prototype.addOriginal = function ()
-	{
+		if (this.comparison.CommentsMap[sCommentId])
+			return this.comparison.CommentsMap[sCommentId];
 
-	};
-	CComparisonCommentManager.prototype.addRevised = function ()
-	{
-
+		return this.comparison.getComment(sCommentId);
 	};
 	CComparisonCommentManager.prototype.addToStack = function (oComment, nInsertIndex)
 	{

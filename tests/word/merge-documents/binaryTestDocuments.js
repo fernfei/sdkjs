@@ -43,6 +43,10 @@ mockEditor.sync_AddComment = function ()
 {
 	
 }
+mockEditor.sync_ChangeCommentData = function ()
+{
+
+}
 mockEditor.sync_RemoveComment = function ()
 {
 	
