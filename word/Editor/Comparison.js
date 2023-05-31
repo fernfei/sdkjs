@@ -677,7 +677,7 @@
 
 				while (oLabelChange && oReviewChange)
 				{
-					if ((oReviewChange.endElementIndex >= oLabelChange.elementIndex) ||
+					if ((oReviewChange.endElementIndex > oLabelChange.elementIndex) ||
 						(oReviewChange.endElementIndex === oLabelChange.elementIndex && oReviewChange.endInnerElementIndex >= oLabelChange.innerElementIndex))
 					{
 						applyEndChangeReview(oReviewChange, oTextIterator);
