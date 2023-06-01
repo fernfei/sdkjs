@@ -187,6 +187,10 @@
 		{
 			this._value = this.bookmarkIterator.value();
 		}
+		else
+		{
+			this._value = null;
+		}
 	}
 	CLabelsIterator.prototype.next = function ()
 	{
@@ -649,10 +653,8 @@
     }
 	CNode.prototype.resolveTypesWithPartner = function (comparison, bNeedCopyLabel)
 	{
-		this.forEachRight(function (oNode)
-		{
-			const oPartnerNode = oNode.partner;
-			const oOriginalTextElement = oNode.element;
+			const oPartnerNode = this.partner;
+			const oOriginalTextElement = this.element;
 			if (oOriginalTextElement instanceof CTextElement && oPartnerNode)
 			{
 				const oRevisedTextElement = oPartnerNode.element;
@@ -670,7 +672,7 @@
 				{
 					oCopyPr = comparison.copyPr;
 				}
-				const oLabelsIterator = new CLabelsIterator([oRevisedTextElement], [oNode], comparison.oCommentManager, oCopyPr);
+				const oLabelsIterator = new CLabelsIterator([oRevisedTextElement], [this], comparison.oCommentManager, oCopyPr);
 				let oLabelChange = oLabelsIterator.value(bNeedCopyLabel);
 
 				const oTextIterator = new AscCommonWord.CTextElementRunIterator([oOriginalTextElement]);
@@ -708,7 +710,6 @@
 				}
 				comparison.applyResolveTypes(oNeedReviewWithUser);
 			}
-		});
 	}
     CNode.prototype.getElement = function()
     {
