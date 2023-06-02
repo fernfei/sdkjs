@@ -589,32 +589,6 @@ var editor;
 		}
 	};
 
-	spreadsheet_api.prototype._getFileFromUrl = function (url, fileType, token, outputFormat, callback) {
-		if (this.canEdit()) {
-			var document = {url: url, format: fileType, token: token};
-			this.insertDocumentUrlsData = {
-				imageMap: null, documents: [document], convertCallback: function (_api, url) {
-					_api.insertDocumentUrlsData.imageMap = url;
-					if (url['output.xlsx']) {
-						callback(url['output.xlsx']);
-					} else if (url['output.xlst']) {
-						callback(url['output.xlst']);
-					} else {
-						callback(null);
-					}
-					_api.endInsertDocumentUrls();
-				}, endCallback: function (_api) {
-					callback(null);
-				}
-			};
-
-			var _options = new Asc.asc_CDownloadOptions(outputFormat);
-			_options.isNaturalDownload = true;
-			_options.isGetTextFromUrl = true;
-			this.downloadAs(Asc.c_oAscAsyncAction.DownloadAs, _options);
-		}
-	};
-
 	spreadsheet_api.prototype._getTextFromFile = function (options, callback) {
 		var t = this;
 

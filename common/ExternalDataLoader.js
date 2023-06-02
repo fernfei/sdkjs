@@ -1,0 +1,249 @@
+/*
+ * (c) Copyright Ascensio System SIA 2010-2023
+ *
+ * This program is a free software product. You can redistribute it and/or
+ * modify it under the terms of the GNU Affero General Public License (AGPL)
+ * version 3 as published by the Free Software Foundation. In accordance with
+ * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
+ * that Ascensio System SIA expressly excludes the warranty of non-infringement
+ * of any third-party rights.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
+ * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ *
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
+ * street, Riga, Latvia, EU, LV-1050.
+ *
+ * The  interactive user interfaces in modified source and object code versions
+ * of the Program must display Appropriate Legal Notices, as required under
+ * Section 5 of the GNU AGPL version 3.
+ *
+ * Pursuant to Section 7(b) of the License you must retain the original Product
+ * logo when distributing the program. Pursuant to Section 7(e) we decline to
+ * grant you any rights under trademark law for use of our trademarks.
+ *
+ * All the Product's GUI elements, including illustrations and icon sets, as
+ * well as technical writing content are licensed under the terms of the
+ * Creative Commons Attribution-ShareAlike 4.0 International. See the License
+ * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
+ *
+ */
+
+"use strict";
+
+(function (window)
+{
+	function CExternalDataLoader(arrExternalReference, oApi, fCallback)
+	{
+		this.externalReferences = arrExternalReference || [];
+		this.api = oApi;
+		this.isLocalDesktop = window["AscDesktopEditor"] && window["AscDesktopEditor"]["IsLocalFile"]();
+		this.fCallback = fCallback;
+	}
+
+	CExternalDataLoader.prototype.updateExternalData = function ()
+	{
+		if (this.externalReferences)
+		{
+			if (this.isLocalDesktop)
+			{
+				this.resolveUpdateData();
+			}
+			else
+			{
+				this.api.sendEvent("asc_onUpdateExternalReference", this.externalReferences, this.resolveUpdateData.bind(this));
+			}
+		}
+	};
+
+	CExternalDataLoader.prototype.resolveUpdateData = function (arrData)
+	{
+		arrData = arrData || [];
+		const nLength = Math.max(arrData.length, this.externalReferences.length);
+		const arrPromise = [];
+		for (let i = 0; i < nLength; i += 1)
+		{
+			if (this.isLocalDesktop || (arrData[i] && (!arrData[i]["error"] || this.externalReferences[i].isExternalLink())))
+			{
+				const oPromiseGetter = new CExternalDataPromiseGetter(this.api, this.getExternalReference(i), arrData[i]);
+				arrPromise.push(oPromiseGetter.getPromise());
+			}
+		}
+		this.doUpdate(arrPromise);
+	};
+	CExternalDataLoader.prototype.doUpdate = function (arrPromise)
+	{
+		const oThis = this;
+		Promise.all(arrPromise).then(function (arrValues)
+		{
+			oThis.fCallback(arrValues);
+		});
+	}
+	CExternalDataLoader.prototype.getExternalReference = function (nId)
+	{
+		if (this.externalReferences[nId])
+		{
+			return this.externalReferences[nId].asc_getPath();
+		}
+	};
+
+	function CExternalDataPromiseGetter(oApi, sExternalReference, oData)
+	{
+		this.externalReference = sExternalReference;
+		this.data = oData;
+		this.api = oApi;
+		this.fileUrl = this.getFileUrl();
+	}
+
+	CExternalDataPromiseGetter.prototype.isLocalDesktop = function ()
+	{
+		return window["AscDesktopEditor"] && window["AscDesktopEditor"]["IsLocalFile"]();
+	}
+	CExternalDataPromiseGetter.prototype.resolveStream = function (arrStream, fResolve)
+	{
+		fResolve({stream: arrStream, externalReferenceId: this.externalReference, data: this.data});
+	}
+	CExternalDataPromiseGetter.prototype.getLocalDesktopPromise = function ()
+	{
+		const oThis = this;
+		return new Promise(function (resolve)
+		{
+			if (oThis.fileUrl)
+			{
+				window["AscDesktopEditor"]["convertFile"](oThis.fileUrl, 0x2002, function (_file)
+				{
+					let arrStream = null;
+					if (_file)
+					{
+						arrStream = new Uint8Array(_file["get"]());
+						_file["close"]();
+					}
+					oThis.resolveStream(arrStream, resolve);
+				});
+			}
+			else
+			{
+				oThis.resolveStream(null, resolve);
+			}
+		});
+	};
+
+	CExternalDataPromiseGetter.prototype.getLocalFileLink = function ()
+	{
+		let res = this.externalReference;
+		if (res)
+		{
+			res = res.replace(/^file:\/\/\//, '');
+			res = res.replace(/^file:\/\//, '');
+		}
+		return res;
+	};
+
+	CExternalDataPromiseGetter.prototype.isExternalLink = function ()
+	{
+		const p = /^(?:http:|https:)/;
+		return this.externalReference.match(p);
+	};
+
+	CExternalDataPromiseGetter.prototype.getFileUrl = function ()
+	{
+		if (this.isLocalDesktop() && !this.isExternalLink())
+		{
+			return this.getLocalFileLink();
+		}
+		else if (this.data && !this.data["error"])
+		{
+			return this.data["url"];
+		}
+		return this.externalReference;
+	};
+	CExternalDataPromiseGetter.prototype.isXlsx = function ()
+	{
+		const p = /^.*\.(xlsx)$/i;
+		return this.fileUrl.match(p);
+	};
+	CExternalDataPromiseGetter.prototype.isSupportOOXML = function ()
+	{
+		return this.api["asc_isSupportFeature"]("ooxml");
+	};
+	CExternalDataPromiseGetter.prototype.getPromise = function ()
+	{
+		const oThis = this;
+		if (this.isLocalDesktop())
+		{
+			return this.getLocalDesktopPromise();
+		}
+		else if (!window["NATIVE_EDITOR_ENJINE"])
+		{
+			return this.getSDKPromise();
+		}
+		else
+		{
+			return new Promise(function (fResolve)
+			{
+				oThis.resolveStream(null, fResolve);
+			});
+		}
+	};
+
+	CExternalDataPromiseGetter.prototype.loadFileContentFromUrl = function (sFileUrl, resolve)
+	{
+		const oThis = this;
+		AscCommon.loadFileContent(sFileUrl, function (httpRequest)
+		{
+			let arrStream = null;
+			if (httpRequest)
+			{
+				arrStream = AscCommon.initStreamFromResponse(httpRequest);
+			}
+			oThis.resolveStream(arrStream, resolve);
+		}, "arraybuffer");
+	};
+
+	CExternalDataPromiseGetter.prototype.getSDKPromise = function ()
+	{
+		const oThis = this;
+		return new Promise(function (fResolve)
+		{
+			const bIsXLSX = oThis.isXlsx();
+			const nOutputFormat = oThis.isSupportOOXML() ? Asc.c_oAscFileType.XLSX : Asc.c_oAscFileType.XLSY;
+			const sFileUrl = oThis.getFileUrl();
+			const sFileType = oThis.data["fileType"];
+			const sToken = oThis.data["token"];
+			const sDirectUrl = oThis.data["directUrl"];
+
+			if ((sFileUrl && !bIsXLSX) || !oThis.isSupportOOXML())
+			{
+				let bLoad = false;
+				oThis.api.getConvertedXLSXFileFromUrl(sFileUrl, sFileType, sToken, nOutputFormat,
+					function (sFileUrlAfterConvert)
+					{
+						if (sFileUrlAfterConvert)
+						{
+							oThis.loadFileContentFromUrl(sFileUrlAfterConvert, fResolve);
+							bLoad = true;
+						}
+						else if (!bLoad)
+						{
+							oThis.resolveStream(null, fResolve);
+						}
+					});
+			}
+			else if (sDirectUrl || sFileUrl)
+			{
+				oThis.api._downloadOriginalFile(sDirectUrl, sFileUrl, sFileType, sToken, function (arrStream)
+				{
+					oThis.resolveStream(arrStream, fResolve);
+				});
+			}
+			else
+			{
+				oThis.resolveStream(null, fResolve);
+			}
+		});
+	};
+
+	AscCommon.CExternalDataLoader = CExternalDataLoader;
+})(window);
+
