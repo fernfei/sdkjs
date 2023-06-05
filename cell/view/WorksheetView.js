@@ -4881,8 +4881,9 @@
 		let traceManager = this.traceDependentsManager;
 		let ctx = this.overlayCtx;
 
-		let widthLine = 1, customScale = AscBrowser.retinaPixelRatio;
-		let zoom = this.getZoom();
+		let widthLine = 2, 
+			customScale = AscBrowser.retinaPixelRatio,
+			zoom = this.getZoom();
 
 		// let isRetina = AscBrowser.retinaPixelRatio === 2;
 		// let isCustomScaling = AscBrowser.isCustomScaling();
@@ -4919,7 +4920,7 @@
 			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
 			let arrowSize = 7 * zoom * customScale;
 
-			let x2, y2, miniTableCol, miniTableRow, isTableLeft;
+			let x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop;
 			if (external) {
 				if (from.col < 2 && from.row < 3) {
 					// 1) Right down (+1r, +1c)
@@ -4933,6 +4934,7 @@
 					y2 = t._getRowTop(from.row - 1) - offsetY;
 					miniTableCol = from.col + 2;
 					miniTableRow = from.row - 2;
+					isTableTop = true;
 				} else if (from.col >= 2 && from.row < 3) {
 					// 3) Left down(+1r,-1c)
 					x2 = t._getColLeft(from.col - 1) - offsetX;
@@ -4947,6 +4949,7 @@
 					miniTableCol = from.col - 2;
 					miniTableRow = from.row - 2;
 					isTableLeft = true;
+					isTableTop = true;
 				}
 			} else {
 				x2 = t._getColLeft(to.col) - offsetX + t._getColumnWidth(to.col) / 4;
@@ -4985,7 +4988,7 @@
 				// draw dot
 				!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
 				// draw mini table
-				!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft);
+				!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop);
 			}
 		};
 		const drawExternalPrecedentLine = function (from) {
@@ -5010,6 +5013,7 @@
 				y1 = t._getRowTop(from.row - 1) - offsetY;
 				miniTableCol = from.col + 2;
 				miniTableRow = from.row - 2;
+				isTableTop = true;
 			} else if (from.col >= 2 && from.row < 3) {
 				// 3) Left down(+1r,-1c)
 				x1 = t._getColLeft(from.col - 1) - offsetX;
@@ -5024,6 +5028,7 @@
 				miniTableCol = from.col - 2;
 				miniTableRow = from.row - 2;
 				isTableLeft = true;
+				isTableTop = true
 			}
 			
 			// Angle and size for arrowhead
@@ -5092,9 +5097,11 @@
 			ctx.setFillStyle(color);
 			ctx.closePath().fill();
 		};
-		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft) {
-			const paddingX = 1 * zoom * customScale > 6 * customScale ? 6 * customScale : 1 * zoom * customScale;
-			const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
+		const drawMiniTable = function (x, y, destCol, destRow, isTableLeft, isTableTop) {
+			// const paddingX = 1 * zoom * customScale > 6 * customScale ? 6 * customScale : 1 * zoom * customScale;
+			// const paddingY = (2 * zoom * customScale) > 6 * customScale ? 6 * customScale : 2 * zoom * customScale;
+			const paddingX = 8 * zoom * customScale;
+			const paddingY = 4 * zoom * customScale;
 			const tableWidth = 16 * zoom * customScale;
 			const tableHeight = 11 * zoom * customScale;
 			const cellWidth = tableWidth / 3;
@@ -5105,13 +5112,7 @@
 
 			// Padding for a table inside the cell
 			const x1 = isTableLeft ? x - tableWidth - paddingX : x + paddingX;
-			const y1 = y - tableHeight - paddingY;
-
-			// TODO Draw a white canvas on which the table will be located
-			// ctx.setFillStyle(whiteColor);
-			// let xW = t._getColLeft(destCol) - offsetX;
-			// let yW = t._getRowTop(destRow) - offsetY;
-			// ctx.fillRect(x1, y1, tableWidth, tableHeight + (paddingY * 0.5));
+			const y1 = isTableTop ? y - tableHeight - (paddingY * 2) : y + paddingY;
 
 			ctx.setLineWidth(lineWidth);
 			ctx.setFillStyle(cellStrokesColor);
@@ -5120,28 +5121,27 @@
 			// Draw a rounded stroke
 			ctx.beginPath();
 			ctx.setLineDash([]);
-			ctx.arc(x1 + cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI, Math.PI+Math.PI / 2, false);
-			ctx.lineTo(x1 + tableWidth - cornerRadius, y1 - lineWidth);
+			ctx.arc(x1 + cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI, Math.PI + Math.PI / 2, false);
+			ctx.lineHor(x1 + cornerRadius, y1 - lineWidth, x1 + tableWidth - cornerRadius);
 			ctx.arc(x1 + tableWidth - cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI + Math.PI / 2, Math.PI * 2, false);
-			ctx.lineTo(x1 + tableWidth, y1 + tableHeight - cornerRadius);
+			ctx.lineVer(x1 + tableWidth, y1 - lineWidth, y1 + tableHeight - cornerRadius);
 			ctx.arc(x1 + tableWidth - cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI * 2, Math.PI / 2, false);
-			ctx.lineTo(x1 + cornerRadius, y1 + tableHeight);
+			ctx.lineHor(x1 + cornerRadius, y1 + tableHeight, x1 + tableWidth - cornerRadius);
 			ctx.arc(x1 + cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI / 2, Math.PI, false);
-			ctx.closePath();
+			ctx.lineVer(x1, y1 + tableHeight - cornerRadius, y1 - lineWidth);
+			// ctx.closePath();
 			ctx.stroke();
 
 			// Draw additional rectangle
 			ctx.beginPath();
-			ctx.fillRect(x1, y1 - lineWidth, tableWidth, lineWidth);
+			ctx.fillRect(x1, y1 - lineWidth, tableWidth, lineWidth * 1.5);
 			ctx.closePath().stroke();
 
 			// Vertical lines
 			for (let i = 1; i < 3; i++) {
 				let x2 = i * cellWidth;
 				ctx.beginPath();
-				ctx.moveTo(x2 + x1, y1);
-				ctx.lineTo(x2 + x1, y1 + tableHeight);
-				ctx.closePath();
+				ctx.lineVer(x2 + x1, y1, y1 + tableHeight);
 				ctx.stroke();
 			}
 
@@ -5149,9 +5149,7 @@
 			for (let j = 1; j < 3; j++) {
 				let y2 = j * cellHeight;
 				ctx.beginPath();
-				ctx.moveTo(x1, y1 + y2);
-				ctx.lineTo(x1 + tableWidth, y1 + y2);
-				ctx.closePath();
+				ctx.lineHor(x1, y1 + y2, x1 + tableWidth);
 				ctx.stroke();
 			}
 		};
@@ -5197,9 +5195,9 @@
 				ctx.setStrokeStyle(lineColor);
 				ctx.setLineWidth(1);
 				ctx.moveTo(x1, y1);
-				ctx.lineTo(x2, y2);
-				ctx.lineTo(x3, y3);
-				ctx.lineTo(x4, y4);
+				ctx.lineHor(x1, y1, x2);
+				ctx.lineVer(x2, y2, y3);
+				ctx.lineHor(x3, y3, x4);
 				ctx.closePath().stroke();
 				// then go to the next area
 			}
