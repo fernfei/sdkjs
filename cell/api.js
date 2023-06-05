@@ -840,15 +840,6 @@ var editor;
 		this.downloadAs(Asc.c_oAscAsyncAction.DownloadAs, options);
 	};
 
-	spreadsheet_api.prototype.endInsertDocumentUrls = function()
-	{
-		if (this.insertDocumentUrlsData) {
-			this.insertDocumentUrlsData.endCallback(this);
-			this.insertDocumentUrlsData = null;
-			//this.sync_EndAction(c_oAscAsyncActionType.BlockInteraction, c_oAscAsyncAction.DownloadAs);
-		}
-	};
-
 	spreadsheet_api.prototype.asc_TextToColumns = function (options, opt_text, opt_activeRange) {
 		if (this.canEdit()) {
 			var ws = this.wb.getWorksheet();

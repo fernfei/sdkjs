@@ -3045,14 +3045,6 @@ background-repeat: no-repeat;\
 			AscCommon.baseEditorsApi.prototype.processSavedFile.call(this, url, downloadType, filetype);
 		}
 	};
-	asc_docs_api.prototype.endInsertDocumentUrls = function()
-	{
-		if (this.insertDocumentUrlsData) {
-			this.insertDocumentUrlsData.endCallback(this);
-			this.insertDocumentUrlsData = null;
-			//this.sync_EndAction(c_oAscAsyncActionType.BlockInteraction, c_oAscAsyncAction.DownloadAs);
-		}
-	};
 	asc_docs_api.prototype.startGetDocInfo              = function()
 	{
 		/*

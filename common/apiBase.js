@@ -2037,8 +2037,12 @@
 	{
 	};
 	// Download
-	baseEditorsApi.prototype.endInsertDocumentUrls              = function ()
+	baseEditorsApi.prototype.endInsertDocumentUrls               = function()
 	{
+		if (this.insertDocumentUrlsData) {
+			this.insertDocumentUrlsData.endCallback(this);
+			this.insertDocumentUrlsData = null;
+		}
 	};
 	baseEditorsApi.prototype._downloadAs                        = function ()
 	{
