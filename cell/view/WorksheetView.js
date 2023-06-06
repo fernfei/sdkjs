@@ -5114,6 +5114,12 @@
 			const x1 = isTableLeft ? x - tableWidth - paddingX : x + paddingX;
 			const y1 = isTableTop ? y - tableHeight - (paddingY * 2) : y + paddingY;
 
+			// draw white canvas behind the table
+			ctx.setFillStyle(whiteColor);
+			ctx.beginPath();
+			ctx.fillRect(x1, y1 - lineWidth, tableWidth, tableHeight + (lineWidth * 2));
+			ctx.closePath().stroke();
+
 			ctx.setLineWidth(lineWidth);
 			ctx.setFillStyle(cellStrokesColor);
 			ctx.setStrokeStyle(cellStrokesColor);
@@ -5198,6 +5204,7 @@
 				ctx.lineHor(x1, y1, x2);
 				ctx.lineVer(x2, y2, y3);
 				ctx.lineHor(x3, y3, x4);
+				ctx.lineVer(x4, y4, y1);
 				ctx.closePath().stroke();
 				// then go to the next area
 			}
@@ -6368,6 +6375,10 @@
 			return;
 		}
 
+		if (!this.overlayCtx) {
+			return;
+		}
+
         var selectionDialogMode = this.getSelectionDialogMode();
         var dialogOtherRanges = this.getDialogOtherRanges();
 
@@ -6610,6 +6621,10 @@
 		if (window['IS_NATIVE_EDITOR']) {
             return;
         }
+
+		if (!this.overlayCtx) {
+			return;
+		}
 
         isFrozen = !!isFrozen;
         if (range === undefined) {

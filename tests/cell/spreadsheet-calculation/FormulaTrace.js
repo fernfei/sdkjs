@@ -65,18 +65,87 @@ $(function() {
 	AscCommon.baseEditorsApi.prototype._onEndLoadSdk = function() {
 	};
 
-	var api = new Asc.spreadsheet_api({
-		'id-view': 'editor_sdk'
-	});
-	api.FontLoader = {
-		LoadDocumentFonts: function() {
-			setTimeout(startTests, 0)
+	let g_oIdCounter = AscCommon.g_oIdCounter;
+
+	let wb, ws, sData = AscCommon.getEmpty(), api;
+	if (AscCommon.c_oSerFormat.Signature === sData.substring(0, AscCommon.c_oSerFormat.Signature.length)) {
+		Asc.spreadsheet_api.prototype._init = function() {
+		};
+		
+		api = new Asc.spreadsheet_api({
+			'id-view': 'editor_sdk'
+		});
+
+		api.FontLoader = {
+			LoadDocumentFonts: function() {
+				setTimeout(startTests, 0)
+			}
+		};
+
+		let docInfo = new Asc.asc_CDocInfo();
+		docInfo.asc_putTitle("TeSt.xlsx");
+		api.DocInfo = docInfo;
+
+		window["Asc"]["editor"] = api;
+		AscCommon.g_oTableId.init();
+		if (this.User) {
+			g_oIdCounter.Set_UserId(this.User.asc_getId());
 		}
-	};
-	window["Asc"]["editor"] = api;
+		api._onEndLoadSdk();
+		api.isOpenOOXInBrowser = false;
+		api._openDocument(AscCommon.getEmpty());	// this func set api.wbModel
+		// api._openOnClient();
+		api.collaborativeEditing = new AscCommonExcel.CCollaborativeEditing({});
+		api.wb = new AscCommonExcel.WorkbookView(api.wbModel, api.controller, api.handlers, api.HtmlElement,
+			api.topLineEditorElement, api, api.collaborativeEditing, api.fontRenderingMode);
+		wb = api.wbModel;
+
+		AscCommonExcel.g_oUndoRedoCell = new AscCommonExcel.UndoRedoCell(wb);
+		AscCommonExcel.g_oUndoRedoWorksheet = new AscCommonExcel.UndoRedoWoorksheet(wb);
+		AscCommonExcel.g_oUndoRedoWorkbook = new AscCommonExcel.UndoRedoWorkbook(wb);
+		AscCommonExcel.g_oUndoRedoCol = new AscCommonExcel.UndoRedoRowCol(wb, false);
+		AscCommonExcel.g_oUndoRedoRow = new AscCommonExcel.UndoRedoRowCol(wb, true);
+		AscCommonExcel.g_oUndoRedoComment = new AscCommonExcel.UndoRedoComment(wb);
+		AscCommonExcel.g_oUndoRedoAutoFilters = new AscCommonExcel.UndoRedoAutoFilters(wb);
+		AscCommonExcel.g_DefNameWorksheet = new AscCommonExcel.Worksheet(wb, -1);
+		g_oIdCounter.Set_Load(false);
+
+		let oBinaryFileReader = new AscCommonExcel.BinaryFileReader();
+		oBinaryFileReader.Read(sData, wb);
+		// ws = wb.getWorksheet(wb.getActive());
+		ws = api.wbModel.aWorksheets[0];
+		AscCommonExcel.getFormulasInfo();
+
+		api.collaborativeEditing = new AscCommonExcel.CCollaborativeEditing({});
+		api.wb = new AscCommonExcel.WorkbookView(api.wbModel, api.controller, api.handlers, api.HtmlElement,
+			api.topLineEditorElement, api, api.collaborativeEditing, api.fontRenderingMode);
+
+	}
 
 	function traceTests() {
 		QUnit.test("Test: \"test\"", function (assert) {
+			// create cells with dependencies
+			ws.getRange2("A1").setValue("1");
+			ws.getRange2("B101").setValue("=A1");
+			ws.getRange2("C101").setValue("=B101");
+	
+			// click" on the button show dependences/precendence
+			api.asc_setCellBold();
+			api.asc_setCellBold();
+
+			// check the object with dependency cell numbers for compliance
+			let wsView = api.wb.getWorksheet();
+			let traceManager = wsView.traceDependentsManager;
+
+			let A1Index = AscCommonExcel.getCellIndex(ws.getRange2("A1").bbox.r1, ws.getRange2("A1").bbox.c1),
+				B101Index = AscCommonExcel.getCellIndex(ws.getRange2("B101").bbox.r1, ws.getRange2("B101").bbox.c1),
+				C101Index = AscCommonExcel.getCellIndex(ws.getRange2("C101").bbox.r1, ws.getRange2("C101").bbox.c1);
+			
+			// check A1 -> B101
+			assert.strictEqual(traceManager._getDependents(A1Index, B101Index), 1);
+
+			// check B101 -> C101
+			assert.strictEqual(traceManager._getDependents(B101Index, C101Index), 1);
 
 		});
 	}
