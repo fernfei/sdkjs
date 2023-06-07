@@ -5289,25 +5289,50 @@
 			this.model.handlers.trigger("asc_onStartUpdateExternalReference", true);
 
 			let doPromise = function (data) {
-				//создаём запросы
-				var arrAfterPromise = [];
+				let doPromiseUpdateData = function () {
+					//создаём запросы
+					var arrAfterPromise = [];
+					var aRequests = [];
+					t._getPromiseRequestsArr(data, aRequests, externalReferences, function (_stream, externalReferenceId, oData) {
+						arrAfterPromise.push({stream: _stream, externalReferenceId: externalReferenceId, data: oData});
+						if (aRequests.length === arrAfterPromise.length) {
+							doUpdateData(arrAfterPromise);
+						}
+					});
 
-				var aRequests = [];
-				t._getPromiseRequestsArr(data, aRequests, externalReferences, function (_stream, externalReferenceId, oData) {
-					arrAfterPromise.push({stream: _stream, externalReferenceId: externalReferenceId, data: oData});
-					if (aRequests.length === arrAfterPromise.length) {
-						doUpdateData(arrAfterPromise);
+					if (!aRequests.length) {
+						t.model.handlers.trigger("asc_onStartUpdateExternalReference", false);
+						return;
 					}
-				});
 
-				if (!aRequests.length) {
-					t.model.handlers.trigger("asc_onStartUpdateExternalReference", false);
-					return;
-				}
+					var _promise = Promise.resolve();
+					for (let i in aRequests) {
+						_promise = _promise.then(aRequests[i]);
+					}
+				};
 
-				var _promise = Promise.resolve();
-				for (let i in aRequests) {
-					_promise = _promise.then(aRequests[i]);
+				//try to force save document
+				if (!isLocalDesktop) {
+					let countResolvedRequests = 0;
+					let aForceSaveRequests = [];
+					t._getPromiseRequestsForceSave(data, aForceSaveRequests, externalReferences, function () {
+						countResolvedRequests++;
+						if (aForceSaveRequests.length === countResolvedRequests) {
+							doPromiseUpdateData();
+						}
+					});
+
+					if (!aForceSaveRequests.length) {
+						t.model.handlers.trigger("asc_onStartUpdateExternalReference", false);
+						return;
+					}
+
+					var _promise = Promise.resolve();
+					for (let i in aForceSaveRequests) {
+						_promise = _promise.then(aForceSaveRequests[i]);
+					}
+				} else {
+					doPromiseUpdateData();
 				}
 			};
 
@@ -5432,6 +5457,31 @@
 			if (isLocalDesktop || (_oData && _eR && (_eR.isExternalLink() || !_oData["error"]))) {
 				requests.push(getPromise(_oData, _eR, resolveFunc));
 			}
+		}
+	};
+
+	WorkbookView.prototype._getPromiseRequestsForceSave = function (data, requests, externalReferences, resolveFunc) {
+		if (!requests) {
+			return;
+		}
+		let timeout = 1000;
+		let t = this;
+		let getPromise = function (oData, eR, _resolve) {
+			return function () {
+				return new Promise(function (resolve) {
+					t.Api.saveRelativeFromChanges(oData.key, oData.token, timeout, function (_timeout, oSuccess) {
+						resolve(_resolve(oData, eR))
+					});
+				});
+			}
+		};
+
+		let _length = data ? data.length : externalReferences.length;
+		for (let i = 0; i < _length; i++) {
+			let _oData = data && data[i];
+			let _eR = externalReferences[i];
+
+			requests.push(getPromise(_oData, _eR, resolveFunc));
 		}
 	};
 
