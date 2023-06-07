@@ -59,27 +59,46 @@
 
 	CExternalDataLoader.prototype.resolveUpdateData = function (arrData)
 	{
+		const oThis = this;
 		arrData = arrData || [];
-		const nLength = Math.max(arrData.length, this.externalReferences.length);
-		const arrPromise = [];
-		for (let i = 0; i < nLength; i += 1)
+		let nLength = Math.max(arrData.length, this.externalReferences.length);
+		let nCounter = 0;
+		const arrValues = [];
+
+		function getNext(oValue)
 		{
-			if (this.isLocalDesktop || (arrData[i] && (!arrData[i]["error"] || this.externalReferences[i].isExternalLink())))
+			arrValues.push(oValue);
+			nCounter += 1;
+
+			if (nCounter < nLength)
 			{
-				const oPromiseGetter = new CExternalDataPromiseGetter(this.api, this.getExternalReference(i), arrData[i]);
-				arrPromise.push(oPromiseGetter.getPromise());
+				resolvePromise();
+			}
+			else
+			{
+				oThis.fCallback(arrValues);
 			}
 		}
-		this.doUpdate(arrPromise);
-	};
-	CExternalDataLoader.prototype.doUpdate = function (arrPromise)
-	{
-		const oThis = this;
-		Promise.all(arrPromise).then(function (arrValues)
+
+		function resolvePromise()
 		{
-			oThis.fCallback(arrValues);
-		});
-	}
+			if (oThis.isLocalDesktop || (arrData[nCounter] && (!arrData[nCounter]["error"] || oThis.externalReferences[nCounter].isExternalLink())))
+			{
+				const oPromiseGetter = new CExternalDataPromiseGetter(oThis.api, oThis.getExternalReference(nCounter), arrData[nCounter]);
+				const oPromise = oPromiseGetter.getPromise();
+				oPromise.then(getNext);
+			}
+		}
+
+		if (nCounter < nLength)
+		{
+			resolvePromise();
+		}
+		else
+		{
+			this.fCallback(arrValues);
+		}
+	};
 	CExternalDataLoader.prototype.getExternalReference = function (nId)
 	{
 		if (this.externalReferences[nId])
