@@ -112,6 +112,7 @@
 			"common/Drawings/DrawingObjectsHandlers.js",
 			"common/Drawings/TextDrawer.js",
 
+			"common/PromiseIterators.js",
 			"common/ExternalDataLoader.js",
 
 			"common/Drawings/Externals.js",

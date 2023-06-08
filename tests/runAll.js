@@ -55,6 +55,8 @@ const allTests = [
 	'slide/shortcuts/shortcuts.html',
 	'word/shortcuts/shortcuts.html',
 
+	'common/promise-iterators/promiseIterator.html',
+
 	'oform/xml/oformXml.html'
 ];
 

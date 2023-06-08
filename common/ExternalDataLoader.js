@@ -83,45 +83,27 @@
 	};
 	CExternalDataLoader.prototype.resolveUpdateData = function (arrData)
 	{
-		const oThis = this;
 		arrData = arrData || [];
-		let nLength = Math.max(arrData.length, this.externalReferences.length);
-		let nCounter = 0;
-		const arrValues = [];
-
-		function getNext(oValue)
+		const nLength = Math.max(arrData.length, this.externalReferences.length);
+		const arrFPromiseGetters = [];
+		for (let i = 0; i < nLength; i += 1)
 		{
-			arrValues.push(oValue);
-			nCounter += 1;
-
-			if (nCounter < nLength)
+			if (this.isLocalDesktop || (arrData[i] && (!arrData[i]["error"] || this.externalReferences[i].isExternalLink())))
 			{
-				resolvePromise();
-			}
-			else
-			{
-				oThis.fCallback(arrValues);
+				const oPromiseGetter = new CExternalDataPromiseGetter(this.api, this.getExternalReference(i), arrData[i]);
+				arrFPromiseGetters.push(oPromiseGetter.getPromise.bind(oPromiseGetter));
 			}
 		}
-
-		function resolvePromise()
+		this.doUpdate(arrFPromiseGetters);
+	};
+	CExternalDataLoader.prototype.doUpdate = function (arrFPromiseGetters)
+	{
+		const oThis = this;
+		const oPromiseGetterIterator = new AscCommon.CPromiseGetterIterator(arrFPromiseGetters);
+		oPromiseGetterIterator.forAllSuccessValues(function (arrValues)
 		{
-			if (oThis.isLocalDesktop || (arrData[nCounter] && (!arrData[nCounter]["error"] || oThis.externalReferences[nCounter].isExternalLink())))
-			{
-				const oPromiseGetter = new CExternalDataPromiseGetter(oThis.api, oThis.getExternalReference(nCounter), arrData[nCounter]);
-				const oPromise = oPromiseGetter.getPromise();
-				oPromise.then(getNext);
-			}
-		}
-
-		if (nCounter < nLength)
-		{
-			resolvePromise();
-		}
-		else
-		{
-			this.fCallback(arrValues);
-		}
+			oThis.fCallback(arrValues);
+		});
 	};
 	CExternalDataLoader.prototype.getExternalReference = function (nId)
 	{
