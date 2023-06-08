@@ -52,11 +52,35 @@
 			}
 			else
 			{
-				this.api.sendEvent("asc_onUpdateExternalReference", this.externalReferences, this.resolveUpdateData.bind(this));
+				this.api.sendEvent("asc_onUpdateExternalReference", this.externalReferences, this.tryForceSave.bind(this));
 			}
 		}
 	};
-
+	CExternalDataLoader.prototype.tryForceSave = function (arrData)
+	{
+		arrData = arrData || [];
+		const oThis = this;
+		const nTimeout = 1000;
+		const arrPromises = [];
+		for (let i = 0; i < arrData.length; i++)
+		{
+			const oData = arrData[i];
+			const sKey = oData['key'];
+			const sToken = oData['token'];
+			const oForceUpdatePromise = new Promise(function (fResolve)
+			{
+				oThis.api.saveRelativeFromChanges(sKey, sToken, nTimeout, function ()
+				{
+					fResolve();
+				});
+			});
+			arrPromises.push(oForceUpdatePromise);
+		}
+		Promise.all(arrPromises).then(function ()
+		{
+			oThis.resolveUpdateData(arrData);
+		});
+	};
 	CExternalDataLoader.prototype.resolveUpdateData = function (arrData)
 	{
 		const oThis = this;
