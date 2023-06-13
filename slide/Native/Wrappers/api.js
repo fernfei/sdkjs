@@ -30,7 +30,7 @@
  *
  */
 
-var global_memory_stream_menu = CreateNativeMemoryStream();
+var global_memory_stream_menu = CreateEmbedObject("CMemoryStreamEmbed");
 
 var _api = null;
 

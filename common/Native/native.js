@@ -269,15 +269,6 @@ document.documentElement = _null_object;
 document.body = _null_object;
 
 // NATIVE OBJECT
-var native = (typeof native === undefined) ? undefined : native;
-if (!native)
-{
-	if (typeof NativeEngine === "undefined")
-		native = CreateNativeEngine();
-	else
-		native = NativeEngine;
-}
-
 window.native = native;
 function GetNativeEngine() { return window.native; }
 
@@ -346,7 +337,7 @@ var performance = window.performance = (function(){
 	function ZLib()
 	{
 		/** @suppress {checkVars} */
-		this.engine = CreateNativeZip();
+		this.engine = CreateEmbedObject("CZipEmbed");
 		this.files = {};
 	}
 	ZLib.prototype.isModuleInit = true;

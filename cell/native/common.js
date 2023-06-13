@@ -113,6 +113,6 @@ window["NativeCorrectImageUrlOnCopy"] = function(url) {
     return window["native"]["CorrectImageUrlOnCopy"](url);
 };
 
-var global_memory_stream_menu = CreateNativeMemoryStream();
+var global_memory_stream_menu = CreateEmbedObject("CMemoryStreamEmbed");
 
 window['SockJS'] = createSockJS();
