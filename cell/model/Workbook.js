@@ -15647,6 +15647,9 @@
 						  });
 	};
 	Range.prototype.setIndent = function (val) {
+		if (val < 0) {
+			return;
+		}
 		History.Create_NewPoint();
 		this.createCellOnRowColCross();
 		var fSetProperty = this._setProperty;

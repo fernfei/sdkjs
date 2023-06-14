@@ -14612,8 +14612,8 @@ QueryTableField.prototype.clone = function() {
 			this.setId(obj["path"]);
 		}
 
-		if (this.referenceData["instanceId"] !== obj["referenceData"]["instanceId"] ||
-			this.referenceData["instanceId"] !== obj["referenceData"]["fileKey"]) {
+		if (obj["referenceData"] && (!this.referenceData || this.referenceData["instanceId"] !== obj["referenceData"]["instanceId"] ||
+			this.referenceData["instanceId"] !== obj["referenceData"]["fileKey"])) {
 			this.setReferenceData(obj["referenceData"]["fileKey"], obj["referenceData"]["instanceId"]);
 		}
 	};
