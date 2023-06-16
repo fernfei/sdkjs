@@ -4916,6 +4916,7 @@
 			let x1 = t._getColLeft(from.col) - offsetX + t._getColumnWidth(from.col) / 4;
 			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
 			let arrowSize = 7 * zoom * customScale;
+			let isEven = 0 !== ctx.ctx.lineWidth % 2 ? 0.5 : 0;
 
 			let x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop;
 			if (external) {
@@ -4970,7 +4971,7 @@
 				let newX2 = x2 - dx * (arrowSize / 2);
 				let newY2 = y2 - dy * (arrowSize / 2);
 				
-				arrowSize = zoom <= 0.8 ? arrowSize / zoom : arrowSize;
+				arrowSize = zoom <= 0.5 ? arrowSize * 1.25 : arrowSize;
 
 				if (external) {
 					// draw dotted line 

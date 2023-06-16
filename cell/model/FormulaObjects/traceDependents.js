@@ -153,20 +153,57 @@ function (window, undefined) {
 		const cellListeners = findCellListeners();
 		if (cellListeners) {
 			if (!this.dependents[cellIndex]) {
+				// if dependents by cellIndex didn't exist, create it
 				this.dependents[cellIndex] = {};
+				let isLastInSharedArea = true;
 				for (let i in cellListeners) {
 					if (cellListeners.hasOwnProperty(i)) {
 						let parent = cellListeners[i].parent;
 						let parentCellIndex = getParentIndex(parent);
 						let formula = cellListeners[i].Formula;
+
 						if (parentCellIndex === null) {
 							continue;
 						}
+						// check for shared formula
+						if (cellListeners[i].shared !== null) {
+							let shared = cellListeners[i].getShared();
+							let base = shared.base;
+							let isRowMode = (shared.ref.r2 - shared.ref.r1) !== 0 ? false : true,
+								isColumnMode = (shared.ref.c2 - shared.ref.c1) !== 0 ? false : true;
+
+							// check if row or column mode
+							let newCol, newRow;
+							if (isRowMode) {
+								if (cellAddress.col - shared.ref.c2 === 0) {
+									// last element in shared area(row mode)
+									// go to next listener
+									continue;
+								}
+								newCol = cellAddress.col + 1;
+								newRow = base.nRow;
+							} else {
+								if (cellAddress.row - shared.ref.r2 === 0) {
+									// last element in shared area(col mode)
+									// go to next listener
+									continue;
+								}
+								newCol = base.nCol;
+								newRow = cellAddress.row + 1;
+							}
+		
+							let elemCellIndex = AscCommonExcel.getCellIndex(newRow, newCol);
+							
+							this._setDependents(cellIndex, elemCellIndex);
+							isLastInSharedArea = false;
+							continue;
+						}
+
 						// TODO in one formula there can be both references to the external and internal area
 						if (formula.includes(":") && !cellListeners[i].is3D) {
 							let areaIndexes;
 							// call splitAreaListeners which return cellIndexes of each element(this will be parentCellIndex)
-							// go through the values and _setDependents/Precedents for each
+							// go through the values and set dependents for each
 							areaIndexes = getAllAreaIndexes(cellListeners[i]);
 							if (areaIndexes) {
 								for (let index of areaIndexes) {
@@ -175,44 +212,36 @@ function (window, undefined) {
 								}
 								continue;
 							}
-						}
+						} 
 						this._setDependents(cellIndex, parentCellIndex);
-						// this._setPrecedents(parentCellIndex, cellIndex);
 					}
 				}
 			} else {
-				//if change formulas and add new sheetListeners
-				//check current tree
+				// if dependents by cellIndex aldready exist, check current tree
+				let currentIndex = Object.keys(this.dependents[cellIndex])[0];
 				let isUpdated = false;
 				for (let i in cellListeners) {
 					if (cellListeners.hasOwnProperty(i)) {
 						let parent = cellListeners[i].parent;
-						let parentCellIndex = getParentIndex(parent);
+						let elemCellIndex = cellListeners[i].shared !== null ? currentIndex : getParentIndex(parent);
 						let formula = cellListeners[i].Formula;
-						if (parentCellIndex === null) {
-							continue;
-						} else if (parentCellIndex == cellIndex) {
-							// TODO bug the cell refers to itself and the call stack overflows
-							// temporary exception
-							isUpdated = true;
-							break;
-						}
+
 						// TODO in one formula there can be both references to the external and internal area
 						if (formula.includes(":") && !cellListeners[i].is3D) {
 							// call getAllAreaIndexes which return cellIndexes of each element(this will be parentCellIndex)
 							let areaIndexes = getAllAreaIndexes(cellListeners[i]);
 							if (areaIndexes) {
-								// go through the values and _setDependents/Precedents for each
+								// go through the values and set dependents for each
 								for (let index of areaIndexes) {
 									this._setDependents(cellIndex, index);
-									// this._setPrecedents(index, cellIndex);
 								}
 								continue;
 							}
 						}
-						if (!this._getDependents(cellIndex, parentCellIndex)) {
-							this._setDependents(cellIndex, parentCellIndex);
-							// this._setPrecedents(parentCellIndex, cellIndex);
+
+						// if the child cell does not yet have a dependency with listeners, create it
+						if (!this._getDependents(cellIndex, elemCellIndex)) {
+							this._setDependents(cellIndex, elemCellIndex);
 							isUpdated = true;
 						}
 					}
@@ -275,19 +304,47 @@ function (window, undefined) {
 		let currentCellIndex = AscCommonExcel.getCellIndex(row, col);
 
 		if (!this.precedents[currentCellIndex]) {
-			if (formulaParsed.outStack) {
+			let isFirstInSharedArea = true;
+			// check if cell exist in shared formula
+			// if exist do the calculation inside
+			if (formulaParsed.shared !== null) {
+				// find the difference between the current cell and refer to the previous one
+				let shared = formulaParsed.getShared();
+				let base = shared.base;
+				let isRowMode = (shared.ref.r2 - shared.ref.r1) !== 0 ? false : true,
+					isColumnMode = (shared.ref.c2 - shared.ref.c1) !== 0 ? false : true;
+				if (isRowMode && isColumnMode) {
+					// first element in shared array, go to the default check
+					isFirstInSharedArea = true;
+				} else {
+					// check if row or column mode
+					let newCol, newRow;
+					if (isRowMode) {
+						newCol = col - 1;
+						newRow = base.nRow;
+					} else {
+						newCol = base.nCol;
+						newRow = row - 1;
+					}
+
+					let elemCellIndex = AscCommonExcel.getCellIndex(newRow, newCol);
+					this._setPrecedents(currentCellIndex, elemCellIndex);
+					this._setDependents(elemCellIndex, currentCellIndex); 
+
+					isFirstInSharedArea = false;
+				}
+			}
+			
+			if (formulaParsed.outStack && isFirstInSharedArea) {
 				let currentWsIndex = formulaParsed.ws.index;
 				// iterate and find all reference
 				for (const elem of formulaParsed.outStack) {
 					let elemType = elem.type ? elem.type : null;
-					// 6 - ref
-					// 5 - cellsRange
-					// 12 - ref3D
-					// 13 - cellsRange3D
-					if (elemType === 6 || elemType === 5 || elemType === 12 || elemType === 13) {
+					if (elemType === AscCommonExcel.cElementType.cell || elemType === AscCommonExcel.cElementType.cellsRange || 
+						elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D) {
 						const areaRange = {};
-						let is3D = elemType === 12 || elemType === 13;
-						let isArea = elemType === 5;
+						let is3D = elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D;
+						let isArea = elemType === AscCommonExcel.cElementType.cellsRange;
 						let elemRange = elem.range.bbox ? elem.range.bbox : elem.bbox;
 						let elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
 
@@ -322,7 +379,7 @@ function (window, undefined) {
 				}
 			}
 		} else if (!this.getPrecedentsLoop()) {
-			const currentPrecedent = {...this.precedents};
+			const currentPrecedent = Object.assign({}, this.precedents);
 			this.setPrecedentsLoop(true);
 
 			for (let i in currentPrecedent) {
