@@ -69,8 +69,9 @@
 			const sToken = oData['token'];
 			const oForceUpdatePromise = new Promise(function (fResolve)
 			{
-				oThis.api.saveRelativeFromChanges(sKey, sToken, nTimeout, function ()
+				oThis.api.saveRelativeFromChanges(sKey, sToken, nTimeout, function (bTimeout, oResult)
 				{
+					console.log(oResult.code)
 					fResolve();
 				});
 			});
