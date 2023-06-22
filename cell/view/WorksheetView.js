@@ -4903,7 +4903,7 @@
 		const doDrawArrow = function (_from, _to, external, isPrecedent) {
 			ctx.beginPath();
 			ctx.setStrokeStyle(!external ? lineColor : externalLineColor);
-			external ? ctx.setLineDash([8, 10]) : ctx.setLineDash([]);
+			ctx.setLineDash([]);
 
 			if (isPrecedent && external) {
 				drawExternalPrecedentLine(_from);
@@ -4974,19 +4974,16 @@
 				arrowSize = zoom <= 0.5 ? arrowSize * 1.25 : arrowSize;
 
 				if (external) {
-					// draw dotted line 
 					drawDottedLine(x1, y1, newX2, newY2);
+					drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
+					drawDot(x1, y1, externalLineColor);
+					drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop);
 				} else {
 					ctx.lineDiag(x1, y1, newX2, newY2);
-					ctx.closePath().stroke();
+					ctx.closePath().stroke(); 	// draw regular line
+					drawArrowHead(x2, y2, arrowSize, angle, lineColor);
+					drawDot(x1, y1, lineColor);
 				}
-
-				// draw arrowhead
-				!external ? drawArrowHead(x2, y2, arrowSize, angle, lineColor) : drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
-				// draw dot
-				!external ? drawDot(x1, y1, lineColor) : drawDot(x1, y1, externalLineColor);
-				// draw mini table
-				!external ? null : drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop);
 			}
 		};
 		const drawExternalPrecedentLine = function (from) {
@@ -5063,7 +5060,6 @@
 			const yStep = dy / (dashCount);
 
 			ctx.beginPath();
-			ctx.setLineDash([]);
 			ctx.setStrokeStyle(externalLineColor);
 			ctx.lineDiag(x1, y1, x2, y2);
 			ctx.stroke();
@@ -5123,17 +5119,24 @@
 			ctx.setStrokeStyle(cellStrokesColor);
 
 			// Draw a rounded stroke
+			// ctx.beginPath();
+			// TODO rounded corners do not fit into the pixel grid
+			// ctx.arc(x1 + cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI, Math.PI + Math.PI / 2, false);
+			// ctx.lineHor(x1 + cornerRadius, y1 - lineWidth, x1 + tableWidth - cornerRadius);
+			// ctx.arc(x1 + tableWidth - cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI + Math.PI / 2, Math.PI * 2, false);
+			// ctx.lineVer(x1 + tableWidth, y1 - lineWidth, y1 + tableHeight - cornerRadius);
+			// ctx.arc(x1 + tableWidth - cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI * 2, Math.PI / 2, false);
+			// ctx.lineHor(x1 + cornerRadius, y1 + tableHeight, x1 + tableWidth - cornerRadius);
+			// ctx.arc(x1 + cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI / 2, Math.PI, false);
+			// ctx.lineVer(x1, y1 + tableHeight - cornerRadius, y1 - lineWidth);
+			// // ctx.closePath();
+			// ctx.stroke();
+
 			ctx.beginPath();
-			ctx.setLineDash([]);
-			ctx.arc(x1 + cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI, Math.PI + Math.PI / 2, false);
-			ctx.lineHor(x1 + cornerRadius, y1 - lineWidth, x1 + tableWidth - cornerRadius);
-			ctx.arc(x1 + tableWidth - cornerRadius, y1 + cornerRadius - lineWidth, cornerRadius, Math.PI + Math.PI / 2, Math.PI * 2, false);
-			ctx.lineVer(x1 + tableWidth, y1 - lineWidth, y1 + tableHeight - cornerRadius);
-			ctx.arc(x1 + tableWidth - cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI * 2, Math.PI / 2, false);
-			ctx.lineHor(x1 + cornerRadius, y1 + tableHeight, x1 + tableWidth - cornerRadius);
-			ctx.arc(x1 + cornerRadius, y1 + tableHeight - cornerRadius, cornerRadius, Math.PI / 2, Math.PI, false);
-			ctx.lineVer(x1, y1 + tableHeight - cornerRadius, y1 - lineWidth);
-			// ctx.closePath();
+			ctx.lineHor(x1, y1 - lineWidth, x1 + tableWidth);
+			ctx.lineVer(x1 + tableWidth, y1 - lineWidth, y1 + tableHeight);
+			ctx.lineHor(x1, y1 + tableHeight, x1 + tableWidth);
+			ctx.lineVer(x1, y1 - lineWidth, y1 + tableHeight);
 			ctx.stroke();
 
 			// Draw additional rectangle
@@ -5160,12 +5163,12 @@
 
 		// draw stroke for precedent cArea
 		const drawAreaStroke = function (areas) {
-			ctx.setLineDash([]);
 			for (const area in areas) {
-				let x1, y1, x2, y2, x3, y3, x4, y4;
+				let x1, y1, x2, y2;
 				for (const cellIndex in areas[area]) {
 					const coords = AscCommonExcel.getFromCellIndex(areas[area][cellIndex], true);
 					
+					// TODO maybe should change switch
 					switch (cellIndex) {
 						// if top left
 						case "topLeftIndex": {
@@ -5173,36 +5176,21 @@
 							y1 = t._getRowTop(coords.row) - offsetY;
 							continue;
 						}
-						// if top right
-						case "topRightIndex": {
-							x2 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
-							y2 = t._getRowTop(coords.row) - offsetY;
-							continue;
-						}
 						// if bot right
 						case "bottomRightIndex": {
-							x3 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
-							y3 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
-							continue;
-						}
-						// if bot left
-						case "bottomLeftIndex": {
-							x4 = t._getColLeft(coords.col) - offsetX;
-							y4 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
+							x2 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
+							y2 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
 							continue;
 						}
 						default: return;
 					}
 				}
-				// do draw
+
+				// draw rectangle
 				ctx.beginPath();
 				ctx.setStrokeStyle(lineColor);
 				ctx.setLineWidth(1);
-				ctx.moveTo(x1, y1);
-				ctx.lineHor(x1, y1, x2);
-				ctx.lineVer(x2, y2, y3);
-				ctx.lineHor(x3, y3, x4);
-				ctx.lineVer(x4, y4, y1);
+				ctx.strokeRect(x1, y1, Math.abs(x2 - x1), Math.abs(y2 - y1));
 				ctx.closePath().stroke();
 				// then go to the next area
 			}
@@ -5230,7 +5218,7 @@
 		traceManager.forEachPrecedents(function (from) {
 			if (from) {
 				let cellFrom = AscCommonExcel.getFromCellIndex(from, true);
-				// check if cellIndex in exist in precedentExternal array
+				// check if cellIndex exist in precedentExternal array
 				if (traceManager.checkPrecedentExternal(+from)) {
 					doDrawArrow(cellFrom, null, true, true);
 				}

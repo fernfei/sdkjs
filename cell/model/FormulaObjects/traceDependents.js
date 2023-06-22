@@ -91,12 +91,13 @@ function (window, undefined) {
 
 			let sheetListeners = depFormulas.sheetListeners;
 			let curListener = sheetListeners[ws.Id];
+			let allDefNamesListeners = depFormulas.defNameListeners;
 			let cellIndex = AscCommonExcel.getCellIndex(row, col);
-			this._calculateDependents(cellIndex, curListener);
+			this._calculateDependents(cellIndex, curListener, allDefNamesListeners);
 			this.setDependentsCall();
 		}
 	};
-	TraceDependentsManager.prototype._calculateDependents = function (cellIndex, curListener) {
+	TraceDependentsManager.prototype._calculateDependents = function (cellIndex, curListener, allDefNamesListeners) {
 		if (!this.dependents) {
 			this.dependents = {};
 		}
@@ -121,11 +122,36 @@ function (window, undefined) {
 					Object.assign(listeners, curListener.cellMap[cellIndex].listeners);
 				}
 			}
+			// TODO need to find all ranges referring to defName
+			if (curListener && curListener.defName3d) {
+				Object.assign(listeners, curListener.defName3d);
+			}
 			return listeners;
 		};
-
-		const getAllAreaIndexes = function (cell) {
-			const indexes = [], range = cell.ref;
+		const setDefNameIndexes = function (defName) {
+			for (const i in allDefNamesListeners) {
+				if (allDefNamesListeners.hasOwnProperty(i) && i === defName) {
+					for (const listener in allDefNamesListeners[i].listeners) {
+						// TODO возможно стоить добавить все слушатели сразу в curListener
+						let isArea = allDefNamesListeners[i].listeners[listener].ref ? !allDefNamesListeners[i].listeners[listener].ref.isOneCell() : false;
+						if (isArea) {
+							// decompose all elements into dependencies
+							let areaIndexes = getAllAreaIndexes(allDefNamesListeners[i].listeners[listener]);
+							if (areaIndexes) {
+								for (let index of areaIndexes) {
+									t._setDependents(cellIndex, index);
+								}
+								continue;
+							}
+						}
+						let parentCellIndex = getParentIndex(allDefNamesListeners[i].listeners[listener].parent);
+						t._setDependents(cellIndex, parentCellIndex);
+					}
+				}
+			}
+		};
+		const getAllAreaIndexes = function (parserFormula) {
+			const indexes = [], range = parserFormula.ref;
 			if (!range) {
 				return;
 			}
@@ -139,8 +165,29 @@ function (window, undefined) {
 			return indexes;
 		};
 
-		const getParentIndex = function (_parent) {
+		const getParentIndex = function (_parent, shared) {
 			let _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol);
+			
+			if (shared) {
+				// ? temporary solution
+				let base = shared.base;
+				let isRowMode = (shared.ref.r2 - shared.ref.r1) !== 0 ? false : true,
+					isColumnMode = (shared.ref.c2 - shared.ref.c1) !== 0 ? false : true;
+
+				// let isBaseElement = (cellAddress.col - (cellAddress.col - base.nCol) === base.nCol) ? true : false;
+				// cellAddress.col - (cellAddress.col - base.nCol - 1)
+				// cellAddress.col - (Math.abs(cellAddress.col - base.nCol - (isBaseElement ? 0 : 1))) 
+				// _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow + (cellAddress.row - base.nRow), _parent.nCol + (cellAddress.col - base.nCol));
+				// _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol + (cellAddress.col + (cellAddress.row === _parent.nRow ? 1 : -1) - base.nCol));
+				// _parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, _parent.nCol + (cellAddress.col + (cellAddress.row === _parent.nRow ? 1 : -1) - base.nCol));
+				if (isRowMode) {
+					let newCol = cellAddress.row === _parent.nRow ? _parent.nCol + (cellAddress.col + 1 - base.nCol) : _parent.nCol;
+					_parentCellIndex = AscCommonExcel.getCellIndex(_parent.nRow, newCol);
+				} else {
+					let newRow = cellAddress.col === _parent.nCol ? _parent.nRow + (cellAddress.row + 1 - base.nRow) : _parent.nRow;
+					_parentCellIndex = AscCommonExcel.getCellIndex(newRow, _parent.nCol);
+				}
+			}
 			//parent -> cell/defname
 			if (_parent.parsedRef/*parent instanceof AscCommonExcel.DefName*/) {
 				_parentCellIndex = null;
@@ -155,52 +202,31 @@ function (window, undefined) {
 			if (!this.dependents[cellIndex]) {
 				// if dependents by cellIndex didn't exist, create it
 				this.dependents[cellIndex] = {};
-				let isLastInSharedArea = true;
 				for (let i in cellListeners) {
 					if (cellListeners.hasOwnProperty(i)) {
 						let parent = cellListeners[i].parent;
-						let parentCellIndex = getParentIndex(parent);
 						let formula = cellListeners[i].Formula;
 
+						let is3D = false;
+						if (parent.name) {
+							is3D = false;
+							setDefNameIndexes(parent.name);
+							continue;
+						} else if (cellListeners[i].is3D) {
+							is3D = true;
+						}
+						let parentCellIndex = getParentIndex(parent);
+						
 						if (parentCellIndex === null) {
 							continue;
 						}
-						// check for shared formula
+
 						if (cellListeners[i].shared !== null) {
 							let shared = cellListeners[i].getShared();
-							let base = shared.base;
-							let isRowMode = (shared.ref.r2 - shared.ref.r1) !== 0 ? false : true,
-								isColumnMode = (shared.ref.c2 - shared.ref.c1) !== 0 ? false : true;
-
-							// check if row or column mode
-							let newCol, newRow;
-							if (isRowMode) {
-								if (cellAddress.col - shared.ref.c2 === 0) {
-									// last element in shared area(row mode)
-									// go to next listener
-									continue;
-								}
-								newCol = cellAddress.col + 1;
-								newRow = base.nRow;
-							} else {
-								if (cellAddress.row - shared.ref.r2 === 0) {
-									// last element in shared area(col mode)
-									// go to next listener
-									continue;
-								}
-								newCol = base.nCol;
-								newRow = cellAddress.row + 1;
-							}
-		
-							let elemCellIndex = AscCommonExcel.getCellIndex(newRow, newCol);
-							
-							this._setDependents(cellIndex, elemCellIndex);
-							isLastInSharedArea = false;
-							continue;
+							parentCellIndex = getParentIndex(parent, shared);
 						}
 
-						// TODO in one formula there can be both references to the external and internal area
-						if (formula.includes(":") && !cellListeners[i].is3D) {
+						if (formula.includes(":") && !is3D) {
 							let areaIndexes;
 							// call splitAreaListeners which return cellIndexes of each element(this will be parentCellIndex)
 							// go through the values and set dependents for each
@@ -226,7 +252,10 @@ function (window, undefined) {
 						let elemCellIndex = cellListeners[i].shared !== null ? currentIndex : getParentIndex(parent);
 						let formula = cellListeners[i].Formula;
 
-						// TODO in one formula there can be both references to the external and internal area
+						if (parent.name) {
+							continue;
+						}
+
 						if (formula.includes(":") && !cellListeners[i].is3D) {
 							// call getAllAreaIndexes which return cellIndexes of each element(this will be parentCellIndex)
 							let areaIndexes = getAllAreaIndexes(cellListeners[i]);
@@ -293,8 +322,10 @@ function (window, undefined) {
 		}
 	};
 	TraceDependentsManager.prototype._calculatePrecedents = function (formulaParsed, row, col) {
+		let isFirstCall;
 		if (!this.precedents) {
 			this.precedents = {};
+			isFirstCall = true;
 		}
 		if (!this.precedentsAreas) {
 			this.precedentsAreas = {};
@@ -302,37 +333,13 @@ function (window, undefined) {
 
 		let t = this;
 		let currentCellIndex = AscCommonExcel.getCellIndex(row, col);
-
 		if (!this.precedents[currentCellIndex]) {
 			let isFirstInSharedArea = true;
-			// check if cell exist in shared formula
-			// if exist do the calculation inside
+			let shared, base;
 			if (formulaParsed.shared !== null) {
-				// find the difference between the current cell and refer to the previous one
-				let shared = formulaParsed.getShared();
-				let base = shared.base;
-				let isRowMode = (shared.ref.r2 - shared.ref.r1) !== 0 ? false : true,
-					isColumnMode = (shared.ref.c2 - shared.ref.c1) !== 0 ? false : true;
-				if (isRowMode && isColumnMode) {
-					// first element in shared array, go to the default check
-					isFirstInSharedArea = true;
-				} else {
-					// check if row or column mode
-					let newCol, newRow;
-					if (isRowMode) {
-						newCol = col - 1;
-						newRow = base.nRow;
-					} else {
-						newCol = base.nCol;
-						newRow = row - 1;
-					}
-
-					let elemCellIndex = AscCommonExcel.getCellIndex(newRow, newCol);
-					this._setPrecedents(currentCellIndex, elemCellIndex);
-					this._setDependents(elemCellIndex, currentCellIndex); 
-
-					isFirstInSharedArea = false;
-				}
+				// base cellIndex + diff between base and current
+				shared = formulaParsed.getShared();
+				base = shared.base;
 			}
 			
 			if (formulaParsed.outStack && isFirstInSharedArea) {
@@ -341,18 +348,45 @@ function (window, undefined) {
 				for (const elem of formulaParsed.outStack) {
 					let elemType = elem.type ? elem.type : null;
 					if (elemType === AscCommonExcel.cElementType.cell || elemType === AscCommonExcel.cElementType.cellsRange || 
-						elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D) {
+						elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D ||
+						elemType === AscCommonExcel.cElementType.name || elemType === AscCommonExcel.cElementType.name3D) {
 						const areaRange = {};
-						let is3D = elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D;
-						let isArea = elemType === AscCommonExcel.cElementType.cellsRange;
-						let elemRange = elem.range.bbox ? elem.range.bbox : elem.bbox;
-						let elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
+						let is3D = elemType === AscCommonExcel.cElementType.cell3D || elemType === AscCommonExcel.cElementType.cellsRange3D || elemType === AscCommonExcel.cElementType.name3D;
+						let isArea = elemType === AscCommonExcel.cElementType.cellsRange || elemType === AscCommonExcel.cElementType.name;
+						let elemRange, elemCellIndex;
+						if (elemType === AscCommonExcel.cElementType.name || elemType === AscCommonExcel.cElementType.name3D) {
+							let elemValue = elem.getValue();
+							elemRange = elemValue.range.bbox ? elemValue.range.bbox : elemValue.bbox;
+							if (elemRange.isOneCell()) {
+								isArea = false;
+							}
+						} else {
+							elemRange = elem.range.bbox ? elem.range.bbox : elem.bbox;
+						}
 
+						if (base) {
+							elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1 + (row - base.nRow), elemRange.c1 + (col - base.nCol));
+						} else {
+							elemCellIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
+						}
+						
 						let elemDependentsIndex = elemCellIndex;
 						let currentDependentsCellIndex = currentCellIndex;
 	
+
+						if (isArea) {
+							// write top left and bottom right cell indexes to draw a rectangle around the range
+							const tempObj = {};
+							const areaName = elem.value;	// areaName - unique key for areaRange
+							tempObj.topLeftIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
+							tempObj.bottomRightIndex = AscCommonExcel.getCellIndex(elemRange.r2, elemRange.c2);
+							areaRange[areaName] = tempObj;
+
+							this._setPrecedentsAreas(areaRange);
+						}
+
 						if (is3D) {
-							elemCellIndex += ";" + (elem.wsTo ? elem.wsTo.index : elem.ws.index);	
+							elemCellIndex += ";" + (elem.wsTo ? elem.wsTo.index : elem.ws.index);
 							currentDependentsCellIndex += ";" + currentWsIndex
 							this._setPrecedents(currentCellIndex, elemCellIndex);
 							this.setPrecedentExternal(currentCellIndex);
@@ -360,20 +394,6 @@ function (window, undefined) {
 							this._setPrecedents(currentCellIndex, elemCellIndex);
 							// change links to another sheet
 							this._setDependents(elemDependentsIndex, currentDependentsCellIndex);
-						}
-
-						if (isArea) {
-							// write 4 index to an object - top left cell, top right cell, bottom right cell, bottom left cell - area stroke coordinates
-							// TODO minify or refactor
-							const tempObj = {};
-							const areaName = elem.value;	// areaName - unique key for areaRange
-							tempObj.topLeftIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c1);
-							tempObj.topRightIndex = AscCommonExcel.getCellIndex(elemRange.r1, elemRange.c2);
-							tempObj.bottomRightIndex = AscCommonExcel.getCellIndex(elemRange.r2, elemRange.c2);
-							tempObj.bottomLeftIndex = AscCommonExcel.getCellIndex(elemRange.r2, elemRange.c1);
-							areaRange[areaName] = tempObj;
-
-							this._setPrecedentsAreas(areaRange);
 						}
 					}
 				}
