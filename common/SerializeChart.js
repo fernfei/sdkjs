@@ -1293,17 +1293,44 @@ BinaryChartWriter.prototype.WriteCT_extLst = function (oVal) {
         }
     }
 };
-BinaryChartWriter.prototype.WriteCT_ChartSpace = function (oVal) {
-    var oThis = this;
-		if (oVal.externalReference && oVal.externalReference.Id) {
-			oThis.memory.WriteByte(c_oserct_chartspaceXLSXEXTERNAL);
-			oThis.memory.WriteString2(AscCommonExcel.encodeXmlPath(oVal.externalReference.Id));
+BinaryChartWriter.prototype.WriteCT_ChartSpace = function (oVal, oCopyPaste) {
+    const oThis = this;
+		if (oCopyPaste && oCopyPaste.isExcel)
+		{
+				let isLocalDesktop = window["AscDesktopEditor"] && window["AscDesktopEditor"]["IsLocalFile"]();
+				if (isLocalDesktop && window["AscDesktopEditor"]["LocalFileGetSaved"]())
+				{
+					const sPath = window["AscDesktopEditor"]["LocalFileGetSourcePath"]();
+					oThis.memory.WriteByte(c_oserct_chartspaceXLSXEXTERNAL);
+					oThis.memory.WriteString2(AscCommonExcel.encodeXmlPath(sPath));
+				}
+				// else if (wb.oApi && wb.oApi.DocInfo)
+				// {
+					// todo: add read/write additional data
+					// wb.Core.contentStatus = wb.oApi.DocInfo.ReferenceData ? wb.oApi.DocInfo.ReferenceData["fileKey"] : null;
+					// wb.Core.category = wb.oApi.DocInfo.ReferenceData ? wb.oApi.DocInfo.ReferenceData["instanceId"] : null;
+				// }
+				const arrXLSX = oCopyPaste.getCachedWorkbookBinaryData();
+				if (arrXLSX && arrXLSX.length)
+				{
+					this.bs.WriteItem(c_oserct_chartspaceXLSX, function () {
+						oThis.memory.WriteBuffer(arrXLSX, 0, arrXLSX.length);
+					});
+				}
 		}
-		if (oVal.XLSX && oVal.XLSX.length) {
-			this.bs.WriteItem(c_oserct_chartspaceXLSX, function () {
-				oThis.memory.WriteBuffer(oVal.XLSX, 0, oVal.XLSX.length);
-			});
+		else
+		{
+			if (oVal.externalReference && oVal.externalReference.Id) {
+				oThis.memory.WriteByte(c_oserct_chartspaceXLSXEXTERNAL);
+				oThis.memory.WriteString2(AscCommonExcel.encodeXmlPath(oVal.externalReference.Id));
+			}
+			if (oVal.XLSX && oVal.XLSX.length) {
+				this.bs.WriteItem(c_oserct_chartspaceXLSX, function () {
+					oThis.memory.WriteBuffer(oVal.XLSX, 0, oVal.XLSX.length);
+				});
+			}
 		}
+
     if (null != oVal.date1904) {
         this.bs.WriteItem(c_oserct_chartspaceDATE1904, function () {
             oThis.WriteCT_Boolean(oVal.date1904);

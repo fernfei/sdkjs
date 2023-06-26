@@ -2770,6 +2770,8 @@ PasteProcessor.prototype =
 					oSelectedContent.SetInsertOptionForTable(specialPasteHelper.specialPasteProps);
 				}
 			}
+			let bCheckOnlyOneChart = true;
+			this.onlyOneChart = null;
 			for (var i = 0; i < aNewContent.length; ++i) {
 				if(bIsSpecialPaste && !tableSpecialPaste)
 				{
@@ -2801,6 +2803,35 @@ PasteProcessor.prototype =
 				else if(type !== this.pasteTypeContent)
 				{
 					this.pasteTypeContent = null;
+					bCheckOnlyOneChart = false;
+				}
+
+				const arrDrawings = [];
+				aNewContent[i].GetAllDrawingObjects(arrDrawings);
+				for (let nDrawingIndex = 0; nDrawingIndex < arrDrawings.length; nDrawingIndex += 1)
+				{
+					const oGraphicObj = arrDrawings[nDrawingIndex].GraphicObj;
+					if (oGraphicObj)
+					{
+						if (bCheckOnlyOneChart)
+						{
+							if (this.onlyOneChart)
+							{
+								this.onlyOneChart = null;
+								bCheckOnlyOneChart = false;
+							}
+							if (oGraphicObj.getObjectType() === AscDFH.historyitem_type_ChartSpace)
+							{
+								this.onlyOneChart = oGraphicObj.getSpecialPasteProps();
+							}
+							else
+							{
+								bCheckOnlyOneChart = false;
+								this.onlyOneChart = null;
+							}
+						}
+						oGraphicObj.applySpecialPasteProps && oGraphicObj.applySpecialPasteProps();
+					}
 				}
 
 				if (i === aNewContent.length - 1 && true != this.bInBlock && type_Paragraph === oSelectedElement.Element.GetType())
@@ -2947,7 +2978,7 @@ PasteProcessor.prototype =
 
 
 		//если вставляются только изображения, пока не показываем параметры специальной
-		if(para_Drawing === this.pasteTypeContent)
+		if(para_Drawing === this.pasteTypeContent && !(this.aContent.length === 1 && this.onlyOneChart))
 		{
 			window['AscCommon'].g_specialPasteHelper.SpecialPasteButton_Hide();
 			if(window['AscCommon'].g_specialPasteHelper.buttonInfo)
@@ -2985,6 +3016,9 @@ PasteProcessor.prototype =
 				this.pasteIntoElem.Parent && this.pasteIntoElem.Parent.IsInTable())
 			{
 				props = [sProps.overwriteCells, sProps.insertAsNestedTable, sProps.keepTextOnly];
+			} else if (1 === aContent.length && this.onlyOneChart)
+			{
+				props = this.onlyOneChart;
 			}
 			else
 			{
@@ -3407,8 +3441,8 @@ PasteProcessor.prototype =
 			oSelectedElement.Element = aNewContent[i];
 			presentationSelectedContent.DocContent.Elements[i] = oSelectedElement;
 		}
-
-		if(presentation.InsertContent(presentationSelectedContent)) {
+		const oPaste = presentation.InsertContent(presentationSelectedContent);
+		if(oPaste.insert) {
 			presentation.Recalculate();
             editor.checkChangesSize();
 			presentation.Document_UpdateInterfaceState();
@@ -3999,12 +4033,13 @@ PasteProcessor.prototype =
 
 					var presentationSelectedContent = new PresentationSelectedContent();
 					presentationSelectedContent.Drawings = arr_shapes;
-
-
-					if (presentation.InsertContent(presentationSelectedContent)) {
+					const oInsertResult = presentation.InsertContent(presentationSelectedContent);
+					if (oInsertResult.insert) {
+						const arrProps = oInsertResult.specialPasteProps || [];
 						presentation.Recalculate();
                         editor.checkChangesSize();
 						presentation.Document_UpdateInterfaceState();
+						oThis._setSpecialPasteShowOptionsPresentation(arrProps);
 					} else {
 						window['AscCommon'].g_specialPasteHelper.CleanButtonInfo();
 					}
@@ -4096,8 +4131,8 @@ PasteProcessor.prototype =
 			//вставка
 			var paste_callback_presentation = function () {
 				if (false == oThis.bNested) {
-
-					if (presentation.InsertContent(presentationSelectedContent)) {
+					const oPaste = presentation.InsertContent(presentationSelectedContent);
+					if (oPaste.insert) {
 						presentation.Recalculate();
                         editor.checkChangesSize();
 						presentation.Document_UpdateInterfaceState();
@@ -4335,8 +4370,8 @@ PasteProcessor.prototype =
 
 					}
 				}
-
-				if (presentation.InsertContent(presentationSelectedContent)) {
+				const oPaste = presentation.InsertContent(presentationSelectedContent)
+				if (oPaste.insert) {
 					presentation.Recalculate();
                     editor.checkChangesSize();
 					presentation.Document_UpdateInterfaceState();
@@ -4609,15 +4644,18 @@ PasteProcessor.prototype =
 
 			var paste_callback = function () {
 				if (false === oThis.bNested) {
-					var bPaste = presentation.InsertContent2(aContents, nIndex);
-
+					var oPaste = presentation.InsertContent2(aContents, nIndex);
+					if (oPaste.specialPasteProps)
+					{
+						specialOptionsArr = oPaste.specialPasteProps;
+					}
 					presentation.Recalculate();
                     editor.checkChangesSize();
 					presentation.Document_UpdateInterfaceState();
 
 					//пока не показываю значок специальной вставки после copy/paste слайдов
 					var bSlideObjects = aContents[nIndex] && aContents[nIndex].SlideObjects && aContents[nIndex].SlideObjects.length > 0;
-					if (specialOptionsArr.length >= 1 /*&& !bSlideObjects*/ && bPaste) {
+					if (specialOptionsArr.length >= 1 /*&& !bSlideObjects*/ && oPaste.insert) {
 						if (presentationSelectedContent && presentationSelectedContent.DocContent) {
 							specialOptionsArr.push(Asc.c_oSpecialPasteProps.keepTextOnly);
 						}
@@ -5158,7 +5196,7 @@ PasteProcessor.prototype =
 				} else {
 					let oSelectedContent = new PresentationSelectedContent();
 					oSelectedContent.Drawings = aCopyObjects;
-					let bPaste = oPresentation.InsertContent(oSelectedContent);
+					let oPaste = oPresentation.InsertContent(oSelectedContent);
 					oPresentation.Recalculate();
 					oPresentation.UpdateInterface();
 					oAPI.checkChangesSize();
@@ -5177,7 +5215,7 @@ PasteProcessor.prototype =
 						}
 					}
 					let oPasteHelper = window['AscCommon'].g_specialPasteHelper;
-					if (bOnlyImg || !bPaste) {
+					if (bOnlyImg || !oPaste.insert) {
 						oPasteHelper.SpecialPasteButton_Hide();
 						if (oPasteHelper.buttonInfo) {
 							oPasteHelper.showButtonIdParagraph = null;

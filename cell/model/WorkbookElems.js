@@ -14190,13 +14190,26 @@ QueryTableField.prototype.clone = function() {
 		}
 		return oCopy;
 	}
-
+	ExternalReferenceBase.prototype.convertToExternalReference = function ()
+	{
+		const oExternalReference = new ExternalReference();
+		if (this.referenceData)
+		{
+			oExternalReference.setReferenceData(this.referenceData["fileKey"], this.referenceData["instanceId"]);
+		}
+		oExternalReference.Id = this.Id;
+		oExternalReference.Type = this.Type;
+	}
 	ExternalReferenceBase.prototype.isExternalLink = function() {
+		if (!this.Id)
+			return false;
 		var p = /^(?:http:\/\/|https:\/\/)/;
 		return this.Id.match(p);
 	};
 
 	ExternalReferenceBase.prototype.isXlsx = function() {
+		if (!this.Id)
+			return false;
 		var p = /^.*\.(xlsx)$/i;
 		return this.Id.match(p);
 	};

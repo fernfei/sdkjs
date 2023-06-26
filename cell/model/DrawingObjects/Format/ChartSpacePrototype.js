@@ -435,4 +435,62 @@ CChartSpace.prototype.Get_ColorMap = CShape.prototype.Get_ColorMap;
             this.worksheet.contentChanges.Refresh();
         }
     };
+
+	CChartSpace.prototype.addExternalReferenceToEditor = function ()
+	{
+		const oExternalReference = this.externalReference;
+		const oApi = Asc.editor;
+		if (oExternalReference)
+		{
+			const oConvertedExternalReference = new AscCommon.ExternalReference();
+
+
+			const oWorksheet = new AscCommonExcel.Worksheet();
+			const oRange = this.fillWorksheetFromCache(oWorksheet);
+			oConvertedExternalReference.addSheet(oWorksheet, [oRange]);
+		}
+	}
+	CChartSpace.prototype.applySpecialPasteProps = function ()
+	{
+		if (!(this.XLSX && this.XLSX.length))
+		{
+			this.setXLSX(new Uint8Array(0));
+		}
+		this.addExternalReferenceToEditor();
+	}
+	CChartSpace.prototype.canPasteExternal = function ()
+	{
+		const oExternalReference = this.getExternalReference();
+		if (oExternalReference)
+		{
+			const oReferenceData = oExternalReference.referenceData;
+			if (oReferenceData)
+			{
+				const oApi = Asc.editor || editor;
+				const oDocInfo = oApi.DocInfo;
+				const oDocumentReferenceData = oDocInfo && oDocInfo.ReferenceData;
+				if (oDocumentReferenceData)
+				{
+					return oDocumentReferenceData['fileKey'] === oReferenceData['fileKey'] && oDocumentReferenceData['instanceId'] === oReferenceData['instanceId'];
+				}
+			}
+			return true;
+		}
+		return false;
+
+	};
+	CChartSpace.prototype.getSpecialPasteProps = function ()
+	{
+		const arrProps = [];
+		if (this.canPasteExternal())
+		{
+			arrProps.push(Asc.c_oSpecialPasteProps.link);
+		}
+		if (this.XLSX && this.XLSX.length)
+		{
+			arrProps.push(Asc.c_oSpecialPasteProps.internalFile);
+		}
+		arrProps.push(Asc.c_oSpecialPasteProps.picture);
+		return arrProps;
+	};
 })(window);

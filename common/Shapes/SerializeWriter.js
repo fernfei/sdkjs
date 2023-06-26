@@ -123,6 +123,7 @@ function CBinaryFileWriter()
     this.UseContinueWriter = 0;
 
     this.IsUseFullUrl = false;
+	this.CopyPasteOptions = null;
     this.PresentationThemesOrigin = "";
 
     this.max_shape_id = 3;
@@ -160,6 +161,11 @@ function CBinaryFileWriter()
         this.IsUseFullUrl = true;
     };
 
+	this.Start_CopyPaste = function(oCopyPasteOptions)
+	{
+		this.CopyPasteOptions = oCopyPasteOptions;
+	};
+
     this.Start_UseDocumentOrigin = function(origin)
     {
         this.PresentationThemesOrigin = origin;
@@ -169,6 +175,11 @@ function CBinaryFileWriter()
     {
         this.IsUseFullUrl = false;
     };
+
+	this.End_CopyPaste = function()
+	{
+		this.CopyPasteOptions = null;
+	};
 
     this.Copy = function(oMemory, nPos, nLen)
     {
@@ -3591,7 +3602,7 @@ function CBinaryFileWriter()
         oThis.UseContinueWriter++;
 
         var oBinaryChartWriter = new AscCommon.BinaryChartWriter(_memory);
-        oBinaryChartWriter.WriteCT_ChartSpace(grObj);
+        oBinaryChartWriter.WriteCT_ChartSpace(grObj, oThis.CopyPasteOptions);
 
         oThis.ImData = _memory.ImData;
         oThis.data = _memory.data;
@@ -5054,11 +5065,16 @@ function CBinaryFileWriter()
         this.arrayStackStartsTextBoxContent = [];
 
         this.arrayStackStarts = [];
+				this.isExcelCopyPaste = false;
 
         this.Start_UseFullUrl = function()
         {
             this.BinaryFileWriter.Start_UseFullUrl();
         };
+	    this.Start_CopyPaste = function(oCopyPasteOptions)
+	    {
+		    this.BinaryFileWriter.Start_CopyPaste(oCopyPasteOptions);
+	    };
         this.Start_UseDocumentOrigin = function(origin)
         {
             this.BinaryFileWriter.Start_UseDocumentOrigin(origin);
@@ -5067,6 +5083,10 @@ function CBinaryFileWriter()
         {
             return this.BinaryFileWriter.End_UseFullUrl();
         };
+	    this.End_CopyPaste = function()
+	    {
+		    this.BinaryFileWriter.End_CopyPaste();
+	    };
         this._Start = function()
         {
             this.ShapeTextBoxContent = new AscCommon.CMemory();
