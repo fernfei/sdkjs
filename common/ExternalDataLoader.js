@@ -52,7 +52,8 @@
 			}
 			else
 			{
-				this.api.sendEvent("asc_onUpdateExternalReference", this.externalReferences, this.tryForceSave.bind(this));
+				//asc_onRefreshExternalReference
+				this.api.sendEvent("asc_onRequestRefreshFile", this.externalReferences, this.tryForceSave.bind(this));
 			}
 		}
 	};
