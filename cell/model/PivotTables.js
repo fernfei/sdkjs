@@ -5698,24 +5698,24 @@ CT_pivotTableDefinition.prototype._updateCacheDataUpdatePageDataFieldsIndexes = 
 		var newIndex = pivotFieldsMap.get(oldDataField.fld);
 		if (undefined !== newIndex) {
 			oldDataField.fld = newIndex;
-		}
-		if (oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentOfRunningTotal ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentOfParent ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankDescending ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.Difference ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.Percent ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentDiff ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending ||
-			oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending) {
-				var newBaseField = pivotFieldsMap.get(oldDataField.baseField)
-				if (undefined !== newBaseField) {
-					oldDataField.baseField = newBaseField;
-				} else {
-					oldDataField.setDefaults();
+			if (oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentOfRunningTotal ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentOfParent ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankDescending ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.Difference ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.Percent ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.PercentDiff ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending ||
+				oldDataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending) {
+					var newBaseField = pivotFieldsMap.get(oldDataField.baseField)
+					if (undefined !== newBaseField) {
+						oldDataField.baseField = newBaseField;
+					} else {
+						oldDataField.setDefaults();
+					}
 				}
-			}
-		newFields.push(oldDataField);
+			newFields.push(oldDataField);
+		}
 	}
 };
 CT_pivotTableDefinition.prototype._updateCacheDataUpdateRowColFieldsIndexes = function(oldFields, newCTFields, newCTDataFields, pivotFieldsMap) {
@@ -16876,14 +16876,24 @@ DataRowTraversal.prototype.setRanks = function(rowItem, colItem, rowFieldSubtota
 		}
 		if (elemCache.length > 0) {
 			elemCache.sort(rankAscendingSort);
-			isDescending ? elemCache.reverse() : false;
-			let rank = isDescending ? 'rankDescending' : 'rankAscending';
-			elemCache[0].obj[rank][dataIndex] = 1;
-			for (let i = 1; i < elemCache.length; i += 1) {
-				if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
-					elemCache[i].obj[rank][dataIndex] = elemCache[i - 1].obj[rank][dataIndex];
-				} else {
-					elemCache[i].obj[rank][dataIndex] = elemCache[i - 1].obj[rank][dataIndex] + 1;
+			if (isDescending) {
+				elemCache.reverse()
+				elemCache[0].obj.rankDescending[dataIndex] = 1;
+				for (let i = 1; i < elemCache.length; i += 1) {
+					if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
+						elemCache[i].obj.rankDescending[dataIndex] = elemCache[i - 1].obj.rankDescending[dataIndex];
+					} else {
+						elemCache[i].obj.rankDescending[dataIndex] = elemCache[i - 1].obj.rankDescending[dataIndex] + 1;
+					}
+				}
+			} else {
+				elemCache[0].obj.rankAscending[dataIndex] = 1;
+				for (let i = 1; i < elemCache.length; i += 1) {
+					if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
+						elemCache[i].obj.rankAscending[dataIndex] = elemCache[i - 1].obj.rankAscending[dataIndex];
+					} else {
+						elemCache[i].obj.rankAscending[dataIndex] = elemCache[i - 1].obj.rankAscending[dataIndex] + 1;
+					}
 				}
 			}
 		}
@@ -16911,14 +16921,24 @@ DataRowTraversal.prototype.setRanks = function(rowItem, colItem, rowFieldSubtota
 		}
 		if (elemCache.length > 0) {
 			elemCache.sort(rankAscendingSort);
-			isDescending ? elemCache.reverse() : false;
-			let rank = isDescending ? 'rankDescending' : 'rankAscending';
-			elemCache[0].obj[rank][dataIndex] = 1;
-			for (let i = 1; i < elemCache.length; i += 1) {
-				if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
-					elemCache[i].obj[rank][dataIndex] = elemCache[i - 1].obj[rank][dataIndex];
-				} else {
-					elemCache[i].obj[rank][dataIndex] = elemCache[i - 1].obj[rank][dataIndex] + 1;
+			if (isDescending) {
+				elemCache.reverse()
+				elemCache[0].obj.rankDescending[dataIndex] = 1;
+				for (let i = 1; i < elemCache.length; i += 1) {
+					if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
+						elemCache[i].obj.rankDescending[dataIndex] = elemCache[i - 1].obj.rankDescending[dataIndex];
+					} else {
+						elemCache[i].obj.rankDescending[dataIndex] = elemCache[i - 1].obj.rankDescending[dataIndex] + 1;
+					}
+				}
+			} else {
+				elemCache[0].obj.rankAscending[dataIndex] = 1;
+				for (let i = 1; i < elemCache.length; i += 1) {
+					if (elemCache[i - 1].oCellValue.number === elemCache[i].oCellValue.number) {
+						elemCache[i].obj.rankAscending[dataIndex] = elemCache[i - 1].obj.rankAscending[dataIndex];
+					} else {
+						elemCache[i].obj.rankAscending[dataIndex] = elemCache[i - 1].obj.rankAscending[dataIndex] + 1;
+					}
 				}
 			}
 		}
@@ -17065,7 +17085,7 @@ DataRowTraversal.prototype.checkBaseField = function (dataField) {
 		dataField.showDataAs === Asc.c_oAscShowDataAs.PercentDiff ||
 		dataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending ||
 		dataField.showDataAs === Asc.c_oAscShowDataAs.RankAscending) {
-			if (this.pivotFields[dataField.baseField].axis === null) {
+			if (!this.pivotFields[dataField.baseField] || this.pivotFields[dataField.baseField].axis === null) {
 				return true;
 			}
 		}
@@ -17197,8 +17217,8 @@ DataRowTraversal.prototype.getPercentOfParentCol = function (dataIndex, rowItem,
 	} else {
 		return new AscCommonExcel.CCellValue();
 	}
-	parentTotal = this.colParent.total[dataIndex];
-	_oCellValue = parentTotal.getCellValue(dataField.subtotal, props.rowFieldSubtotal, rowItem.t, colItem.t);
+	parentTotal = this.colParent && this.colParent.total[dataIndex];
+	_oCellValue = parentTotal && parentTotal.getCellValue(dataField.subtotal, props.rowFieldSubtotal, rowItem.t, colItem.t);
 	if (_oCellValue) {
 		if (oCellValue.type === AscCommon.CellValueType.Error && _oCellValue.type !== AscCommon.CellValueType.Error) {
 			oCellValue = this.getErrorCellvalue(AscCommonExcel.cErrorType.wrong_value_type);
@@ -17234,8 +17254,8 @@ DataRowTraversal.prototype.getPercentOfParentRow = function (dataIndex, rowItem,
 	} else {
 		return new AscCommonExcel.CCellValue();
 	}
-	parentTotal = this.rowParent.total[dataIndex];
-	_oCellValue = parentTotal.getCellValue(dataField.subtotal, this.rowParentType, rowItem.t, colItem.t);
+	parentTotal = this.rowParent && this.rowParent.total[dataIndex];
+	_oCellValue = parentTotal && parentTotal.getCellValue(dataField.subtotal, this.rowParentType, rowItem.t, colItem.t);
 	if (_oCellValue) {
 		if (oCellValue.type === AscCommon.CellValueType.Error && _oCellValue.type !== AscCommon.CellValueType.Error) {
 			oCellValue = this.getErrorCellvalue(AscCommonExcel.cErrorType.wrong_value_type);

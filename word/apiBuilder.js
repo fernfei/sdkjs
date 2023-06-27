@@ -353,8 +353,6 @@
 					arrSelectedContent.push(new ApiParagraph(oTempElm));
 				else if (oTempElm instanceof ParaRun)
 					arrSelectedContent.push(new ApiRun(oTempElm));
-				else if (oTempElm instanceof ParaRun)
-					arrSelectedContent.push(new ApiRun(oTempElm));
 			}
 
 			for (nElm = 0; nElm < arrSelectedContent.length; nElm ++)
@@ -555,7 +553,7 @@
 					break;
 			}
 
-			if (nHeadingLvl)
+			if (nHeadingLvl !== -1)
 			{
 				// понижаем уровень заголовка, если указано в конфиге (h1 -> h2)
 				if (oCMarkdownConverter.Config.demoteHeadings && nHeadingLvl === 0)
@@ -655,15 +653,14 @@
 			return sOutputText;
 		}
 
-		if (!oPara.Next && oPara.GetText().trim() === '')
+		if (!oPara.Next && oPara.Paragraph.IsEmpty())
 		{
 			if (HaveSepLine(oPara.Paragraph) && this.Config.convertType === "html")
 				return "<hr>";
 			return '';
 		}
 			
-		if (oPara.Paragraph.IsTableCellContent())
-			this.isTableCellContent = true;
+		this.isTableCellContent = oPara.Paragraph.IsTableCellContent();
 
 		var oDocument  = private_GetLogicDocument();
 		var sNumId     = null;
@@ -736,7 +733,8 @@
 		if (HaveSepLine(oPara.Paragraph) && this.Config.convertType === "html")
 			sOutputText += "\n<hr>"
 
-		return sOutputText + '\n';
+		// Add \n\n for correct parsing
+		return sOutputText + '\n\n';
 	};
 	CMarkdownConverter.prototype.HandleHyperlink = function(oHyperlink, sType)
 	{
@@ -1158,7 +1156,8 @@
 			sOutputText += this.HandleChildElement(oTable.GetRow(nRow), this.Config.convertType);
 		}
 
-		sOutputText += '</table>\n';
+		// Add \n\n for correct parsing
+		sOutputText += '</table>\n\n';
 		return sOutputText;
 	};
 	CMarkdownConverter.prototype.HandleTableRow = function(oTableRow)
@@ -1175,7 +1174,10 @@
 	};
 	CMarkdownConverter.prototype.HandleTableCell = function(oTableCell)
 	{
-		var sOutputText = '   <td>\n';
+		// Add 'th' for the firs row
+		let symbol = (oTableCell.GetRowIndex() === 0) ? 'td' : 'td';
+		// Add \n\n for correct parsing
+		var sOutputText = '   <' + symbol + '>\n\n';
 		var apiCellContent = oTableCell.GetContent();
 
 		for (var nElm = 0, nElmsCount = apiCellContent.GetElementsCount(); nElm < nElmsCount; nElm++)
@@ -1183,7 +1185,7 @@
 			sOutputText += this.HandleChildElement(apiCellContent.GetElement(nElm), this.Config.convertType);
 		}
 
-		sOutputText += '</td>\n';
+		sOutputText += '</' + symbol + '>\n';
 		return sOutputText;
 	};
 	/**
@@ -3110,7 +3112,7 @@
 	{
 		this.Sdt = oSdt;
 	}
-
+	
 	/**
 	 * Class representing a document text field.
 	 * @constructor
@@ -5472,7 +5474,7 @@
 		else if ("table" === sStyleType)
 			return new ApiStyle(oStyles.Get(oStyles.Get_Default_Table()));
 		else if ("run" === sStyleType)
-			return new ApiStyle(oStyles.Get(oStyles.Get_Default_Character()));
+			return new ApiStyle(oStyles.Get(oStyles.GetDefaultCharacter()));
 		else if ("numbering" === sStyleType)
 			return new ApiStyle(oStyles.Get(oStyles.Get_Default_Numbering()));
 
@@ -5517,14 +5519,18 @@
 	 * @typeofeditors ["CDE"]
 	 * @param {ApiParagraph} oParagraph - The paragraph after which a new document section will be inserted.
 	 * Paragraph must be in a document.
-	 * @returns {ApiSection}
+	 * @returns {ApiSection | null}
 	 */
 	ApiDocument.prototype.CreateSection = function(oParagraph)
 	{
-		if (!(oParagraph instanceof ApiParagraph))
-			return new Error('Parameter is invalid.');
-		if (!oParagraph.Paragraph.CanAddSectionPr())
-			return new Error('Paragraph must be in a document.');
+		if (!(oParagraph instanceof ApiParagraph)) {
+			console.error(new Error('Parameter is invalid.'));
+			return null;
+		}
+		if (!oParagraph.Paragraph.CanAddSectionPr()) {
+			console.error(new Error('Paragraph must be in a document.'));
+			return null;
+		}
 
 		var oSectPr = new CSectionPr(this.Document);
 
@@ -7035,7 +7041,7 @@
 		return this.Document.GetPagesCount();
 	};
 	/**
-	 * Returns all styles of current document.
+	 * Returns all styles of the current document.
 	 * @memberof ApiDocument
 	 * @typeofeditors ["CDE"]
 	 * @returns {ApiStyle[]}
@@ -8875,8 +8881,10 @@
 		if (typeof(oSection) != "object" || !(oSection instanceof ApiSection))
 			return false;
 
-		if (!this.Paragraph.CanAddSectionPr())
-			return new Error('Paragraph must be in a document.');
+		if (!this.Paragraph.CanAddSectionPr()) {
+			console.error(new Error('Paragraph must be in a document.'));
+			return false;
+		}
 
 		let oDoc = private_GetLogicDocument();
 		if (!oDoc)
@@ -17508,6 +17516,7 @@
 			return false;
 
 		this.Sdt.SetInnerText(_sText);
+		this.OnChangeValue();
 		return true;
 	};
 
@@ -17709,6 +17718,7 @@
 		if (oImg)
 		{
 			oImg.setBlipFill(AscFormat.CreateBlipFillRasterImageId(sImageSrc));
+			this.OnChangeValue();
 			return true;
 		}
 
@@ -17792,6 +17802,7 @@
 			return false;
 
 		this.Sdt.SelectListItem(sValue);
+		this.OnChangeValue();
 		return true;
 	};
 	/**
@@ -17816,7 +17827,8 @@
 		let oRun = this.Sdt.MakeSingleRunElement();
 		oRun.ClearContent();
 		oRun.AddText(sText);
-
+		
+		this.OnChangeValue();
 		return true;
 	};
 	/**
@@ -17849,6 +17861,7 @@
 			return false;
 
 		this.Sdt.ToggleCheckBox(isChecked);
+		this.OnChangeValue();
 		return true;
 	};
 	/**
@@ -18416,7 +18429,7 @@
 	/**
 	 * Returns the full name of the currently opened file.
 	 * @memberof Api
-	 * @typeofeditors ["CDE, CPE, CSE"]
+	 * @typeofeditors ["CDE", "CPE", "CSE"]
 	 * @returns {string}
 	 */
 	Api.prototype.GetFullName = function () {
@@ -18833,7 +18846,6 @@
 	Api.prototype["MailMerge"]                       = Api.prototype.MailMerge;
 	Api.prototype["ReplaceTextSmart"]				 = Api.prototype.ReplaceTextSmart;
 	Api.prototype["CoAuthoringChatSendMessage"]		 = Api.prototype.CoAuthoringChatSendMessage;
-	Api.prototype["ConvertDocument"]		         = Api.prototype.ConvertDocument;
 	Api.prototype["CreateTextPr"]		             = Api.prototype.CreateTextPr;
 	Api.prototype["CreateWordArt"]		             = Api.prototype.CreateWordArt;
 	Api.prototype["CreateOleObject"]		         = Api.prototype.CreateOleObject;
@@ -20521,7 +20533,16 @@
 		this.Sdt.Apply_TextPr(oApiTextPr.TextPr);
 		oApiTextPr.TextPr = this.Sdt.Pr.TextPr;
 	};
-
+	ApiFormBase.prototype.OnChangeValue = function()
+	{
+		let logicDocument = private_GetLogicDocument();
+		if (!logicDocument || !logicDocument.IsDocumentEditor())
+			return;
+		
+		logicDocument.ClearActionOnChangeForm();
+		logicDocument.GetFormsManager().OnChange(this.Sdt);
+	};
+	
 	ApiComment.prototype.private_OnChange = function()
 	{
 		let oLogicDocument = private_GetLogicDocument();

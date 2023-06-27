@@ -2682,6 +2682,8 @@
 				this.tooltip = obj.tooltip;
 
 				this.color = obj.color;
+
+				this.placeholderType = obj.placeholderType;
 			}
 
 			return this;
@@ -2700,7 +2702,8 @@
 			asc_getSizePx: function () { return this.sizePx; },
 			asc_getFilter: function () { return this.filter; },
 			asc_getTooltip: function () { return this.tooltip; },
-			asc_getColor: function () { return this.color; }
+			asc_getColor: function () { return this.color; },
+			asc_getPlaceholderType: function () { return this.placeholderType; }
 		};
 
 		// Гиперссылка
@@ -2896,6 +2899,7 @@
 			this.zoomScale = 100;
 
 			this.showZeros = null;
+			this.showFormulas = null;
 
 			this.topLeftCell = null;
 			this.view = null;
@@ -2915,6 +2919,7 @@
 				}
 				result.showZeros = this.showZeros;
 				result.topLeftCell = this.topLeftCell;
+				result.showFormulas = this.showFormulas;
 				return result;
 			},
 			isEqual: function (settings) {
@@ -2927,10 +2932,12 @@
 			asc_getZoomScale: function () { return this.zoomScale; },
 			asc_getIsFreezePane: function () { return null !== this.pane && this.pane.isInit(); },
 			asc_getShowZeros: function () { return false !== this.showZeros; },
+			asc_getShowFormulas: function () { return false !== this.showFormulas; },
 			asc_setShowGridLines: function (val) { this.showGridLines = val; },
 			asc_setShowRowColHeaders: function (val) { this.showRowColHeaders = val; },
 			asc_setZoomScale: function (val) { this.zoomScale = val; },
-			asc_setShowZeros: function (val) { this.showZeros = val; }
+			asc_setShowZeros: function (val) { this.showZeros = val; },
+			asc_setShowFormulas: function (val) { this.showFormulas = val; }
 		};
 
 		/** @constructor */
@@ -3560,6 +3567,9 @@
 				return new cDate(dateStr + "Z");
 			}
 		};
+		cDate.prototype.getCurrentDate = function () {
+			return this;
+		}
 
 		function getIconsForLoad() {
 			return AscCommonExcel.getCFIconsForLoad().concat(AscCommonExcel.getSlicerIconsForLoad()).concat(AscCommonExcel.getPivotButtonsForLoad());
@@ -3575,7 +3585,6 @@
 		window['AscCommonExcel'] = window['AscCommonExcel'] || {};
 		window['AscCommonExcel'].g_ActiveCell = null; // Active Cell for calculate (in R1C1 mode for relative cell)
 		window['AscCommonExcel'].g_R1C1Mode = false; // No calculate in R1C1 mode
-		window['AscCommonExcel'].kCurCells = "se-cells";
 		window["AscCommonExcel"].recalcType = recalcType;
 		window["AscCommonExcel"].sizePxinPt = sizePxinPt;
 		window['AscCommonExcel'].c_sPerDay = c_sPerDay;
@@ -3664,6 +3673,7 @@
 		prot["asc_getFilter"] = prot.asc_getFilter;
 		prot["asc_getTooltip"] = prot.asc_getTooltip;
 		prot["asc_getColor"] = prot.asc_getColor;
+		prot["asc_getPlaceholderType"] = prot.asc_getPlaceholderType;
 
 		window["Asc"]["asc_CHyperlink"] = window["Asc"].asc_CHyperlink = asc_CHyperlink;
 		prot = asc_CHyperlink.prototype;
@@ -3712,9 +3722,11 @@
 		prot["asc_getShowRowColHeaders"] = prot.asc_getShowRowColHeaders;
 		prot["asc_getIsFreezePane"] = prot.asc_getIsFreezePane;
 		prot["asc_getShowZeros"] = prot.asc_getShowZeros;
+		prot["asc_getShowFormulas"] = prot.asc_getShowFormulas;
 		prot["asc_setShowGridLines"] = prot.asc_setShowGridLines;
 		prot["asc_setShowRowColHeaders"] = prot.asc_setShowRowColHeaders;
 		prot["asc_setShowZeros"] = prot.asc_setShowZeros;
+		prot["asc_setShowFormulas"] = prot.asc_setShowFormulas;
 
 		window["AscCommonExcel"].asc_CPane = asc_CPane;
 		window["AscCommonExcel"].asc_CSheetPr = asc_CSheetPr;

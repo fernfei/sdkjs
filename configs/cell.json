@@ -224,6 +224,7 @@
 			"word/Editor/Paragraph/ComplexFields/FormText.js",
 			"word/Editor/Paragraph/ComplexFields/MergeField.js",
 			"word/Editor/Paragraph/ComplexField.js",
+			"word/Editor/Paragraph/DisplayStyleCalculator.js",
 			"word/Editor/Paragraph/ParaRevisionMove.js",
 			"word/Editor/Paragraph/GraphemesCounter.js",
 			"word/Editor/Paragraph/TextShaper.js",
@@ -368,6 +369,7 @@
 			"common/Native/Wrappers/ShapeDrawer.js",
 			"cell/native/Overlay.js",
 			"cell/native/Graphics.js",
+			"word/Drawing/cachemanager.js",
 			"cell/native/DrawingDocument.js",
 			"cell/native/native.js"
 		],

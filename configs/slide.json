@@ -177,6 +177,7 @@
 			"word/Drawing/buttons.js",
 
 			"slide/Drawing/Transitions.js",
+			"word/Drawing/cachemanager.js",
 			"slide/Drawing/DrawingDocument.js",
 			"slide/Drawing/HtmlPage.js",
 			"slide/Editor/Format/Presentation.js",
@@ -219,6 +220,7 @@
 			"word/Editor/Paragraph/ComplexFields/FormText.js",
 			"word/Editor/Paragraph/ComplexFields/MergeField.js",
 			"word/Editor/Paragraph/ComplexField.js",
+			"word/Editor/Paragraph/DisplayStyleCalculator.js",
 			"word/Editor/Paragraph/ParaRevisionMove.js",
 			"word/Editor/Paragraph/GraphemesCounter.js",
 			"word/Editor/Paragraph/TextShaper.js",
@@ -359,6 +361,7 @@
 			"common/Overlay.js",
 			"word/Drawing/ShapeDrawer.js",
 			"slide/Drawing/HtmlPage.js",
+			"word/Drawing/cachemanager.js",
 			"slide/Drawing/DrawingDocument.js"
 		]
 	}

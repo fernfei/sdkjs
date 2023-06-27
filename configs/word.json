@@ -185,6 +185,7 @@
 			"word/Editor/Paragraph/ComplexFields/FormText.js",
 			"word/Editor/Paragraph/ComplexFields/MergeField.js",
 			"word/Editor/Paragraph/ComplexField.js",
+			"word/Editor/Paragraph/DisplayStyleCalculator.js",
 			"word/Editor/Paragraph/FormulaParser.js",
 			"word/Editor/Paragraph/ParaRevisionMove.js",
 			"word/Editor/Paragraph/GraphemesCounter.js",
@@ -284,6 +285,8 @@
 			"word/Drawing/ShapeDrawer.js",
 			"word/Drawing/buttons.js",
 
+			"word/Drawing/cachemanager.js",
+			"word/Drawing/stylespainter.js",
 			"word/Drawing/DrawingDocument.js",
 			"word/Drawing/GraphicsEvents.js",
 			"word/Drawing/Rulers.js",
@@ -361,6 +364,8 @@
 			"word/Drawing/mobileTouchManager.js",
 			"word/Drawing/HtmlPage.js",
 			"word/Drawing/ShapeDrawer.js",
+			"word/Drawing/cachemanager.js",
+			"word/Drawing/stylespainter.js",
 			"word/Drawing/DrawingDocument.js"
 		]
 	}

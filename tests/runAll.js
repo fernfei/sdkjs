@@ -36,10 +36,15 @@ const allTests = [
 	'cell/spreadsheet-calculation/FormulaTests.html',
 	'cell/spreadsheet-calculation/PivotTests.html',
 	'cell/spreadsheet-calculation/CopyPasteTests.html',
+	'cell/spreadsheet-calculation/AutoFilterTests.html',
 	'word/unit-tests/paragraphContentPos.html',
+	'word/content-control/block-level/cursorAndSelection.html',
+	'word/content-control/inline-level/cursorAndSelection.html',
+	'word/document-calculation/floating-position/drawing.html',
 	'word/document-calculation/paragraph.html',
 	'word/document-calculation/table/correctBadTable.html',
 	'word/document-calculation/table/flowTablePosition.html',
+	'word/document-calculation/table/pageBreak.html',
 	'word/document-calculation/textShaper/textShaper.html',
 	'word/forms/forms.html',
 	'word/forms/complexForm.html',
@@ -47,7 +52,9 @@ const allTests = [
 	'word/numbering/numberingCalculation.html',
 	'word/api/api.html',
 	'word/api/textInput.html',
+	'word/styles/displayStyle.html',
 	'word/styles/paraPr.html',
+	'word/styles/styleApplicator.html',
 	'word/plugins/pluginsApi.html',
 	'word/merge-documents/mergeDocuments.html',
 
@@ -60,6 +67,8 @@ const allTests = [
 	'oform/xml/oformXml.html'
 ];
 
+const maxTestsAtOnce = require('events').defaultMaxListeners;
+
 const {performance} = require('perf_hooks');
 
 const {
@@ -68,14 +77,22 @@ const {
   printFailedTests
 } = require("node-qunit-puppeteer");
 
-async function Run()
+(async function()
 {
 	let startTime = performance.now();
 	let count  = 0;
 	let failed = [];
+	let promiseTests = [];
+	
+	async function flushTests()
+	{
+		await Promise.all(promiseTests);
+		promiseTests = [];
+	}
+	
 	for (let nIndex = 0, nCount = allTests.length; nIndex < nCount; ++nIndex)
 	{
-		await runQunitPuppeteer({targetUrl : path.join(__dirname, allTests[nIndex])})
+		promiseTests.push(runQunitPuppeteer({targetUrl : path.join(__dirname, allTests[nIndex]), timeout : 60000})
 			.then(result =>
 			{
 				count++;
@@ -92,9 +109,14 @@ async function Run()
 				count++;
 				failed.push(allTests[nIndex]);
 				console.error(ex);
-			});
+			}));
+		
+		if (maxTestsAtOnce === promiseTests.length)
+			await flushTests();
 	}
-
+	
+	await flushTests();
+	
 	console.log("\nOverall Elapsed " + (Math.round(( ((performance.now() - startTime) / 1000) + Number.EPSILON) * 1000) / 1000) + "s");
 	console.log("\n"+ (count - failed.length) + "/" + count + " modules successfully passed the tests");
 
@@ -110,7 +132,7 @@ async function Run()
 	{
 		console.log("\nPASSED".green.bold);
 	}
-}
-
-Run();
+	
+	process.exit();
+})();
 
