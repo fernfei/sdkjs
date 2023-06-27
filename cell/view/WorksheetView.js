@@ -4875,6 +4875,8 @@
 	};
 
 	WorksheetView.prototype.drawTraceArrows = function (visibleRange, offsetX, offsetY) {
+		// ? in order to avoid frozen pane, get visible range from WS
+		visibleRange = this.getVisibleRange();
 		let traceManager = this.traceDependentsManager;
 		let ctx = this.overlayCtx;
 
@@ -4916,7 +4918,6 @@
 			let x1 = t._getColLeft(from.col) - offsetX + t._getColumnWidth(from.col) / 4;
 			let y1 = t._getRowTop(from.row) - offsetY + t._getRowHeight(from.row) / 2;
 			let arrowSize = 7 * zoom * customScale;
-			let isEven = 0 !== ctx.ctx.lineWidth % 2 ? 0.5 : 0;
 
 			let x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop;
 			if (external) {
@@ -4968,8 +4969,8 @@
 			} else {
 				let dx = (x2 - x1) / extLength;
 				let dy = (y2 - y1) / extLength;
-				let newX2 = x2 - dx * (arrowSize / 2);
-				let newY2 = y2 - dy * (arrowSize / 2);
+				let newX2 = x2 - dx * arrowSize;
+				let newY2 = y2 - dy * arrowSize;
 				
 				arrowSize = zoom <= 0.5 ? arrowSize * 1.25 : arrowSize;
 
@@ -4979,9 +4980,11 @@
 					drawDot(x1, y1, externalLineColor);
 					drawMiniTable(x2, y2, miniTableCol, miniTableRow, isTableLeft, isTableTop);
 				} else {
-					ctx.lineDiag(x1, y1, newX2, newY2);
+					// ctx.lineDiag(x1, y1, newX2, newY2);
+					ctx.moveTo(x1, y1);
+					ctx.lineTo(newX2, newY2);
 					ctx.closePath().stroke(); 	// draw regular line
-					drawArrowHead(x2, y2, arrowSize, angle, lineColor);
+					drawArrowHead(newX2, newY2, arrowSize, angle, lineColor);
 					drawDot(x1, y1, lineColor);
 				}
 			}
@@ -5031,17 +5034,18 @@
 
 			// Draw the line and subtract the padding to draw the arrowhead correctly
 			let extLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+			
 			let dx = (x2 - x1) / extLength;
 			let dy = (y2 - y1) / extLength;
-			let newX2 = x2 - dx * (arrowSize / 2);
-			let newY2 = y2 - dy * (arrowSize / 2);
+			let newX2 = x2 - dx * arrowSize;
+			let newY2 = y2 - dy * arrowSize;
 
-			arrowSize = zoom <= 0.8 ? arrowSize / zoom : arrowSize;
+			arrowSize = zoom <= 0.5 ? arrowSize * 1.25 : arrowSize;
 
 			// draw dotted line 
 			drawDottedLine(x1, y1, newX2, newY2);
 			// draw arrowhead
-			drawArrowHead(x2, y2, arrowSize, angle, externalLineColor);
+			drawArrowHead(newX2, newY2, arrowSize, angle, externalLineColor);
 			// draw dot
 			drawDot(x1, y1, externalLineColor);
 			// draw mini table
@@ -5076,13 +5080,36 @@
 			}
 		};
 		const drawArrowHead = function (x2, y2, arrowSize, angle, color) {
+			function checkArrowSize (size) {
+				if (Number.isInteger(size)) {
+					return size % 2 !== 0 ? ++size : size;
+				} else {
+					let intPart = +(size+"").split(".")[0],
+						decimalPart = +(size+"").split(".")[1] ? +(size+"").split(".")[1][0] : null;
+
+					if (decimalPart && intPart % 2 === 0) {
+						return intPart;
+					} else {
+						return Math.ceil(size);
+					}
+				}
+			}
+
+			arrowSize = checkArrowSize(arrowSize);
+
+			ctx.setFillStyle(color);
+
+			let lineDeg = angle * 180 / Math.PI,
+				lineDeg1 = 90 + angle * 180 / Math.PI,
+				lineDeg2 = -90 + angle * 180 / Math.PI;
+
 			ctx.beginPath();
 			ctx.moveTo(x2, y2);
-			// angle at the base of a triangle
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle - Math.PI / 8), y2 - arrowSize * Math.sin(angle - Math.PI / 8));
-			ctx.lineTo(x2 - arrowSize * Math.cos(angle + Math.PI / 8), y2 - arrowSize * Math.sin(angle + Math.PI / 8));
-			ctx.setFillStyle(color);
-			ctx.closePath().fill()
+			ctx.lineTo(x2 + Math.cos(lineDeg1 * Math.PI / 180) * arrowSize / 2, y2 + Math.sin(lineDeg1 * Math.PI / 180) * arrowSize / 2);
+			ctx.lineTo(x2 + Math.cos(lineDeg * Math.PI / 180) * arrowSize, y2 + Math.sin(lineDeg * Math.PI / 180) * arrowSize);
+			ctx.lineTo(x2 + Math.cos(lineDeg2 * Math.PI / 180) * arrowSize / 2, y2 + Math.sin(lineDeg2 * Math.PI / 180) * arrowSize / 2);
+			// ctx.closePath().stroke();
+			ctx.closePath().fill();
 		};
 		const drawDot = function (x, y, color) {
 			const dotRadius = 2.75 * zoom * customScale;
@@ -5164,27 +5191,15 @@
 		// draw stroke for precedent cArea
 		const drawAreaStroke = function (areas) {
 			for (const area in areas) {
-				let x1, y1, x2, y2;
-				for (const cellIndex in areas[area]) {
-					const coords = AscCommonExcel.getFromCellIndex(areas[area][cellIndex], true);
-					
-					// TODO maybe should change switch
-					switch (cellIndex) {
-						// if top left
-						case "topLeftIndex": {
-							x1 = t._getColLeft(coords.col) - offsetX;
-							y1 = t._getRowTop(coords.row) - offsetY;
-							continue;
-						}
-						// if bot right
-						case "bottomRightIndex": {
-							x2 = t._getColLeft(coords.col) + t._getColumnWidth(coords.col) - offsetX;
-							y2 = t._getRowTop(coords.row) + t._getRowHeight(coords.row) - offsetY;
-							continue;
-						}
-						default: return;
-					}
-				}
+				const range = areas[area].range,
+					// write top left and bottom right cell coords to draw a rectangle around the range
+					topLeftCoords = {row: range.r1, col: range.c1},
+					bottomRightCoords = {row: range.r2, col: range.c2};
+
+				let x1 = t._getColLeft(topLeftCoords.col) - offsetX,
+					y1 = t._getRowTop(topLeftCoords.row) - offsetY,
+					x2 = t._getColLeft(bottomRightCoords.col) + t._getColumnWidth(bottomRightCoords.col) - offsetX,
+					y2 = t._getRowTop(bottomRightCoords.row) + t._getRowHeight(bottomRightCoords.row) - offsetY;
 
 				// draw rectangle
 				ctx.beginPath();
