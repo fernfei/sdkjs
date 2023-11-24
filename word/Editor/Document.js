@@ -26553,6 +26553,19 @@ CDocument.prototype.Search = function(oProps, bDraw)
 
 	return this.SearchEngine;
 };
+
+CDocument.prototype.Search2 = function (Paragraph) {
+    var searchSettings = new AscCommon.CSearchSettings();
+    searchSettings.put_Text(Paragraph.GetText().trim());
+    searchSettings.put_MatchCase(false);
+    searchSettings.put_WholeWords(false);
+    if (this.SearchEngine.Compare(searchSettings))
+        return this.SearchEngine;
+    this.SearchEngine.Clear();
+    this.SearchEngine.Set(searchSettings);
+    Paragraph.Search(this.SearchEngine, search_Common);
+    this.SectionsInfo.Search(this.SearchEngine);
+};
 CDocument.prototype.ClearSearch = function()
 {
 	let isPrevSearch = this.SearchEngine.Count > 0;
