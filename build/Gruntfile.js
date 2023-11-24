@@ -167,7 +167,8 @@ module.exports = function(grunt) {
 	}
 
 	const path = require('path');
-	const level = grunt.option('level') || 'WHITESPACE_ONLY';
+	// const level = grunt.option('level') || 'WHITESPACE_ONLY';
+	const level = 'WHITESPACE_ONLY';
 	const formatting = grunt.option('formatting') || '';
 
 	require('google-closure-compiler').grunt(grunt, {
