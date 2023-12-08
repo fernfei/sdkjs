@@ -10759,6 +10759,17 @@ CDocument.prototype.Remove_AllCustomStyles = function()
 		this.FinalizeAction();
 	}
 };
+CDocument.prototype.Remove_AllUnusedStyles = function()
+{
+	if (false === this.Document_Is_SelectionLocked(AscCommon.changestype_Document_Styles))
+	{
+		this.StartAction(AscDFH.historydescription_Document_RemoveStyle);
+        this.Styles.Remove_AllUnusedStylesFromInterface();
+		this.Recalculate();
+		this.UpdateInterface();
+		this.FinalizeAction();
+	}
+};
 /**
  * Проверяем является ли заданный стиль дефолтовым.
  */

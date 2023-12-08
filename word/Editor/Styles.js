@@ -265,7 +265,7 @@ function CStyle(Name, BasedOnId, NextId, type, bNoCreateTablePr)
     this.TablePr     = new CTablePr();
     this.TableRowPr  = new CTableRowPr();
     this.TableCellPr = new CTableCellPr();
-	
+
 	if (true !== bNoCreateTablePr)
 		this.InitConditionalTableStyles();
 
@@ -397,7 +397,7 @@ CStyle.prototype =
 		var Old = this.ParaPr;
 		var New = new CParaPr();
 		New.Set_FromObject(Value);
-		
+
 		if (isHandleNumbering && Value.NumPr instanceof CNumPr && Value.NumPr.IsValid())
 		{
 			var oLogicDocument = private_GetWordLogicDocument();
@@ -418,7 +418,7 @@ CStyle.prototype =
 
 		if (Old.IsEqual(New))
 			return;
-		
+
 		let change = new CChangesStyleParaPr(this, Old, New);
 		AscCommon.History.Add(change);
 		change.Redo();
@@ -6107,7 +6107,7 @@ CStyle.prototype =
         this.TablePr.Write_ToBinary(Writer);
         this.TableRowPr.Write_ToBinary(Writer);
         this.TableCellPr.Write_ToBinary(Writer);
-		
+
 		let conditionalTableStyles = !!this.TableBand1Horz;
 
 		Writer.WriteBool(conditionalTableStyles);
@@ -6274,11 +6274,11 @@ CStyle.prototype =
         this.TablePr.Read_FromBinary(Reader);
         this.TableRowPr.Read_FromBinary(Reader);
         this.TableCellPr.Read_FromBinary(Reader);
-		
+
 		if (Reader.GetBool())
 		{
 			this.InitConditionalTableStyles();
-			
+
 			this.TableBand1Horz.Read_FromBinary(Reader);
 			this.TableBand1Vert.Read_FromBinary(Reader);
 			this.TableBand2Horz.Read_FromBinary(Reader);
@@ -6403,12 +6403,12 @@ CStyle.prototype.SetParaPr = function(oParaPr)
 CStyle.prototype.SetNumPr = function(numId, iLvl)
 {
 	let paraPr = this.GetParaPr().Copy();
-	
+
 	if (null !== numId)
 		paraPr.NumPr = new AscWord.CNumPr(numId, iLvl);
 	else
 		paraPr.NumPr = undefined;
-	
+
 	this.SetParaPr(paraPr);
 };
 /**
@@ -7748,9 +7748,9 @@ CStyle.prototype.GetRelatedParagraphs = function()
 	let logicDocument = this.GetLogicDocument();
 	if (!logicDocument)
 		return [];
-	
+
 	let styleManager = logicDocument.GetStyles();
-	
+
 	let styleId = this.GetId();
 	let paragraphs;
 	if (styleId !== styleManager.GetDefaultParagraph())
@@ -7762,7 +7762,7 @@ CStyle.prototype.GetRelatedParagraphs = function()
 	{
 		paragraphs = logicDocument.GetAllParagraphs();
 	}
-	
+
 	return paragraphs;
 };
 /**
@@ -9661,7 +9661,7 @@ CStyles.prototype.Create_StyleFromInterface = function(oAscStyle, bCheckLink)
 
 		oStyle.Set_TextPr(NewStyleTextPr);
 		oStyle.Set_ParaPr(NewStyleParaPr, true);
-		
+
 		let numPr = oStyle.GetParaPr().NumPr;
 		oStyle.GetRelatedParagraphs().forEach(function(paragraph)
 		{
@@ -9670,7 +9670,7 @@ CStyles.prototype.Create_StyleFromInterface = function(oAscStyle, bCheckLink)
 
 			paragraph.RecalcCompiledPr();
 		});
-		
+
 		return oStyle;
 	}
 	else
@@ -9699,6 +9699,21 @@ CStyles.prototype.Create_StyleFromInterface = function(oAscStyle, bCheckLink)
 
 		this.Add(oStyle);
 		return oStyle;
+	}
+};
+CStyles.prototype.Remove_UnusedStyleFromInterface = function(StyleId)
+{
+	var Style = this.Style[StyleId];
+	// Remove Non-Default Style
+	if (!this.LogicDocument.IsStyleDefaultByName(Style.Name)) {
+		if (this.LogicDocument) {
+			var AllParagraphs = this.LogicDocument.GetAllParagraphsByStyle([StyleId]);
+			var Count = AllParagraphs.length;
+			if (Count <= 0) {
+				this.Remove(StyleId);
+			}
+		}
+		this.Update_Interface(StyleId);
 	}
 };
 CStyles.prototype.Remove_StyleFromInterface = function(StyleId)
@@ -9848,6 +9863,16 @@ CStyles.prototype.Remove_AllCustomStylesFromInterface = function()
 		{
 			this.Remove_StyleFromInterface(StyleId);
 		}
+	}
+};
+CStyles.prototype.Remove_AllUnusedStylesFromInterface = function()
+{
+	for (var StyleId in this.Style)
+	{
+		// var style = this.Style[StyleId];
+		// if (style.IsExpressStyle(DocumentStyles)) {
+			this.Remove_UnusedStyleFromInterface(StyleId);
+		// }
 	}
 };
 CStyles.prototype.IsStyleDefaultByName = function(styleName)
