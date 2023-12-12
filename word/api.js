@@ -7526,11 +7526,7 @@ background-repeat: no-repeat;\
 			this.ImageLoader.LoadDocumentImages(this.saveImageMap);
 			return;
 		}
-		console.log(this.WordControl.m_oLogicDocument.Get_Styles().Style)
-		console.log("第一次加载预设样式")
-		let _time = new Date().getTime();
 		this.asc_RemoveUnusedStyles();
-		console.log("🧹未使用预设样式", new Date().getTime() - _time)
 		// this.GenerateStyles();
 
 		if (null != this.WordControl.m_oLogicDocument)

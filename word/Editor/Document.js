@@ -428,10 +428,10 @@ function Document_Recalculate_Page()
     LogicDocument.Recalculate_Page();
     const oDocument = editor.GetDocument();
     const nCount = oDocument.GetElementsCount();
-    if (lastPageNum !== -1&&lastPageNum !== oDocument.GetElement(nCount - 1).Paragraph.PageNum) {
+    if (lastPageNum !== -1&&lastPageNum !== oDocument.Document.Content[nCount - 1].PageNum) {
         LogicDocument._Calculated = true;
     }
-    lastPageNum = oDocument.GetElement(nCount - 1).Paragraph.PageNum;
+    lastPageNum = oDocument.Document.Content[nCount - 1].PageNum;
 }
 
 function Document_Recalculate_HdrFtrPageCount()
