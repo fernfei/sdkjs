@@ -56,8 +56,7 @@
 	{
 		let oLogicDocument = this.LogicDocument;
 
-		// let nSectionIndex = this.SectionsInfo.Get_Index(oLogicDocument.GetPage(nPageAbs).GetStartPos());
-		let nSectionIndex = 0;
+		let nSectionIndex = this.SectionsInfo.Get_Index(oLogicDocument.GetPage(nPageAbs).GetStartPos());
 		let oSectPr       = this.SectionsInfo.Get_SectPr2(nSectionIndex).SectPr;
 		let startSectPr   = oSectPr;
 

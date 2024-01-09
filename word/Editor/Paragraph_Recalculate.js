@@ -87,8 +87,8 @@ Paragraph.prototype.Recalculate_FastWholeParagraph = function()
         // последнюю строку на pageBreak/columnBreak, а во время пересчета смотрим изменяeтся ли положение
         // flow-объектов, привязанных к данному параграфу, кроме того, если по какой-то причине пересчет возвращает
         // не recalcresult_NextElement, тогда тоже отменяем быстрый пересчет
-		
-		
+
+
 
 		var oEndInfo             = this.GetEndInfo().Copy();
         var OldBounds            = this.Pages[0].Bounds;
@@ -326,7 +326,7 @@ Paragraph.prototype.RecalculateFastRunRange = function(oParaPos)
 	// а для всех строк, не учавствующих в быстром пересчете, мы должны все сохранить как есть
 	this.ShapeText();
 	this.ShapeTextInRange(this.Get_StartRangePos2(Line, Range), this.Get_EndRangePos2(Line, Range));
-	
+
 	this.HyphenateText();
 
 	// Если у нас отрезок, в котором произошли изменения является отрезком с нумерацией, тогда надо запустить
@@ -1263,7 +1263,7 @@ Paragraph.prototype.private_RecalculateLineInfo        = function(CurLine, CurPa
 
 	if (PRS.LongWord)
 		this.Lines[CurLine].Info |= paralineinfo_LongWord;
-	
+
 	if (PRS.LastHyphenItem)
 		this.Lines[CurLine].Info |= paralineinfo_AutoHyphen;
 };
@@ -1318,11 +1318,11 @@ Paragraph.prototype.private_RecalculateLineMetrics     = function(CurLine, CurPa
 			if (lastRun && lastRun instanceof AscWord.CRun)
 			{
 				let metrics = lastRun.getTextMetrics();
-				
+
 				let textDescent = metrics.Descent;
 				let textAscent  = metrics.Ascent + metrics.LineGap;
 				let textAscent2 = metrics.Ascent;
-				
+
 				if (PRS.LineTextAscent < textAscent)
 					PRS.LineTextAscent = textAscent;
 
@@ -2016,7 +2016,7 @@ Paragraph.prototype.private_RecalculateLineAlign       = function(CurLine, CurPa
                                 // TODO: Здесь нужно улучшить проверку, т.к. отключено выравнивание по центру для всей
                                 //       последней строки, а нужно отключить для последнего отрезка, в котором идет
                                 //       конец параграфа.
-                                
+
                                 // Ничего не делаем (выравниваем текст по левой границе)
                             }
                             else if (CurRange == RangesCount - 1)
@@ -2484,7 +2484,7 @@ Paragraph.prototype.private_CheckNeedBeforeSpacing = function(CurPage, Parent, P
 
 		return (!oPrevElement
 			|| oPrevElement.GetAbsolutePage(oPrevElement.GetPagesCount() - 1) >= PageAbs
-			|| oPrevElement.Get_SectionPr());
+			|| oPrevElement.Get_SectionPr && oPrevElement.Get_SectionPr());
 	}
 
 	if (!this.Check_FirstPage(CurPage))
@@ -2547,7 +2547,7 @@ Paragraph.prototype.HyphenateText = function()
 {
 	if (!this.RecalcInfo.HyphenateText || !this.isAutoHyphenation())
 		return;
-	
+
 	AscWord.TextHyphenator.hyphenate(this);
 };
 
@@ -3185,13 +3185,13 @@ ParagraphStatePool.prototype.getInstance = function(pool, className)
 			break;
 		}
 	}
-	
+
 	if (!instance)
 	{
 		instance = new className();
 		pool.push(instance);
 	}
-	
+
 	instance.lock();
 	return instance;
 };
@@ -3216,7 +3216,7 @@ window['AscWord'].ParagraphStatePool = new ParagraphStatePool();
 function CParagraphRecalculateStateWrap()
 {
 	ParagraphRecalculateStateBase.call(this);
-	
+
     // Общие параметры, которые заполняются 1 раз на пересчет всей страницы
     this.Paragraph       = null;
     this.Parent          = null;
@@ -3231,7 +3231,7 @@ function CParagraphRecalculateStateWrap()
 	this.autoHyphenation = false;
 
 	this.Fast            = false; // Быстрый ли пересчет
-	
+
 	this.alignState   = new CParagraphRecalculateStateAlign(this);
 	this.counterState = new CParagraphRecalculateStateCounter(this);
 
@@ -3242,7 +3242,7 @@ function CParagraphRecalculateStateWrap()
 
     this.Ranges          = [];
     this.RangesCount     = 0;
-	
+
 	this.LineY = [];
 
     this.FirstItemOnLine = true;
@@ -3300,15 +3300,15 @@ function CParagraphRecalculateStateWrap()
     this.CurPos       = new AscWord.CParagraphContentPos();
 
     this.NumberingPos = new AscWord.CParagraphContentPos(); // Позиция элемента вместе с которым идет нумерация
-	
+
 	this.MoveToLBP      = false; // Делаем ли разрыв в позиции this.LineBreakPos
 	this.UpdateLBP      = true;  // Флаг для первичного обновления позиции переноса в отрезке
 	this.LineBreakFirst = true;  // Последняя позиция для переноса - это первый элемент в отрезке
-	
+
 	// Последняя позиция в которой можно будет добавить разрыв отрезка или строки, если что-то не умещается (например,
 	// если у нас не убирается слово, то разрыв ставим перед ним)
 	this.LineBreakPos   = new AscWord.CParagraphContentPos();
-	
+
 	this.LastItem        = null; // Последний непробельный элемент
 	this.LastItemRun     = null; // Run, в котором лежит последний элемент LastItem
 	this.LastHyphenItem  = null;
@@ -3322,13 +3322,13 @@ function CParagraphRecalculateStateWrap()
     this.BaseLineOffset = 0;
 
     this.RecalcResult = 0x00;//recalcresult_NextElement;
-	
+
 	// Управляющий объект для пересчета неинлайновой формулы
 	this.MathRecalcInfo = {
 		Line : 0,    // Номер строки, с которой начинается формула на текущей странице
 		Math : null  // Сам объект формулы
 	};
-	
+
     this.Footnotes                  = [];
 	this.FootnotesRecalculateObject = null;
 
@@ -3383,22 +3383,22 @@ CParagraphRecalculateStateWrap.prototype.Reset_Page = function(Paragraph, CurPag
 	this.ColumnAbs   = Paragraph.Get_AbsoluteColumn(CurPage);
 	this.InTable     = Paragraph.Parent.IsTableCellContent();
 	this.SectPr      = null;
-	
+
 	this.CondensedSpaces = Paragraph.IsCondensedSpaces();
 	this.BalanceSBDB     = Paragraph.IsBalanceSingleByteDoubleByteWidth();
-	
+
 	let settings = this.getDocumentSettings();
 	this.autoHyphenation = settings.isAutoHyphenation();
 	this.autoHyphenLimit = settings.getConsecutiveHyphenLimit();
 	this.hyphenationZone = AscCommon.TwipsToMM(settings.getHyphenationZone());
-	
+
 	if (settings.getCompatibilityMode() >= AscCommon.document_compatibility_mode_Word15)
 		this.hyphenationZone = AscCommon.TwipsToMM(AscWord.DEFAULT_HYPHENATION_ZONE);
-	
+
 	this.Page               = CurPage;
 	this.RunRecalcInfoLast  = (0 === CurPage ? null : Paragraph.Pages[CurPage - 1].EndInfo.RunRecalcInfo);
 	this.RunRecalcInfoBreak = this.RunRecalcInfoLast;
-	
+
 	this.ComplexFields.ResetPage(Paragraph, CurPage);
 	this.alignState.ComplexFields.ResetPage(Paragraph, CurPage);
 	this.counterState.ComplexFields.ResetPage(Paragraph, CurPage);
@@ -3406,7 +3406,7 @@ CParagraphRecalculateStateWrap.prototype.Reset_Page = function(Paragraph, CurPag
 CParagraphRecalculateStateWrap.prototype.Reset_Line = function()
 {
 	this.RecalcResult = recalcresult_NextLine;
-	
+
 	this.EmptyLine         = true;
 	this.BreakPageLine     = false;
 	this.BreakLine         = false;
@@ -3416,24 +3416,24 @@ CParagraphRecalculateStateWrap.prototype.Reset_Line = function()
 	this.BreakRealPageLine = false;
 	this.BadLeftTab        = false
 	this.TextOnLine        = false;
-	
+
 	this.LineTextAscent  = 0;
 	this.LineTextAscent2 = 0;
 	this.LineTextDescent = 0;
 	this.LineAscent      = 0;
 	this.LineDescent     = 0;
-	
+
 	this.NewPage      = false;
 	this.ForceNewPage = false;
 	this.ForceNewLine = false;
-	
+
 	this.bMath_OneLine    = false;
 	this.bMathWordLarge   = false;
 	this.bEndRunToContent = false;
 	this.PosEndRun        = new AscWord.CParagraphContentPos();
 	this.Footnotes        = [];
 	this.Endnotes         = [];
-	
+
 	this.OperGapRight        = 0;
 	this.OperGapLeft         = 0;
 	this.WrapIndent          = 0;
@@ -3446,9 +3446,9 @@ CParagraphRecalculateStateWrap.prototype.Reset_Line = function()
 	this.bFastRecalculate    = false;
 	this.bForcedBreak        = false;
 	this.bBreakPosInLWord    = true;
-	
+
 	this.MathNotInline = null;
-	
+
 	this.LineY.length = this.Line + 1;
 	if (this.Line >= 0)
 		this.LineY[this.Line] = this.Y;
@@ -3456,7 +3456,7 @@ CParagraphRecalculateStateWrap.prototype.Reset_Line = function()
 CParagraphRecalculateStateWrap.prototype.Reset_Range = function(X, XEnd)
 {
 	this.LastTab.Reset();
-	
+
 	this.BreakLine       = false;
 	this.SpaceLen        = 0;
 	this.WordLen         = 0;
@@ -3469,7 +3469,7 @@ CParagraphRecalculateStateWrap.prototype.Reset_Range = function(X, XEnd)
 	this.XEnd            = XEnd;
 	this.XRange          = X;
 	this.RangeSpaces     = [];
-	
+
 	this.MoveToLBP      = false;
 	this.LineBreakPos   = new AscWord.CParagraphContentPos();
 	this.LineBreakFirst = true;
@@ -3478,13 +3478,13 @@ CParagraphRecalculateStateWrap.prototype.Reset_Range = function(X, XEnd)
 	this.UpdateLBP      = true;
 	this.LastHyphenItem = null;
 	this.lastAutoHyphen = null;
-	
+
 	// for ParaMath
 	this.bMath_OneLine    = false;
 	this.bMathWordLarge   = false;
 	this.bEndRunToContent = false;
 	this.PosEndRun        = new AscWord.CParagraphContentPos();
-	
+
 	this.OperGapRight        = 0;
 	this.OperGapLeft         = 0;
 	this.WrapIndent          = 0;
@@ -3509,7 +3509,7 @@ CParagraphRecalculateStateWrap.prototype.getDocumentSettings = function()
 	let logicDocument = this.Paragraph.GetLogicDocument();
 	if (logicDocument && logicDocument.IsDocumentEditor())
 		return logicDocument.getDocumentSettings();
-	
+
 	return AscWord.DEFAULT_DOCUMENT_SETTINGS;
 };
 CParagraphRecalculateStateWrap.prototype.getCompatibilityMode = function()
@@ -3526,7 +3526,7 @@ CParagraphRecalculateStateWrap.prototype.ResetLastAutoHyphen = function()
 {
 	if (!this.LastHyphenItem)
 		return;
-	
+
 	this.LastHyphenItem.SetTemporaryHyphenAfter(false);
 	this.LastHyphenItem = null;
 };
@@ -3534,15 +3534,15 @@ CParagraphRecalculateStateWrap.prototype.checkLastAutoHyphen = function()
 {
 	if (!this.isAutoHyphenation())
 		return;
-	
+
 	this.ResetLastAutoHyphen();
 	let lastItem = this.LastItem;
 	if (!lastItem || lastItem !== this.lastAutoHyphen)
 		return;
-	
+
 	if (this.isExceedConsecutiveAutoHyphenLimit())
 		return;
-	
+
 	this.LastHyphenItem = lastItem;
 	lastItem.SetTemporaryHyphenAfter(true);
 };
@@ -3550,7 +3550,7 @@ CParagraphRecalculateStateWrap.prototype.Set_NumberingPos = function(PosObj, Ite
 {
 	this.NumberingPos.Set(this.CurPos);
 	this.NumberingPos.Add(PosObj);
-	
+
 	this.Paragraph.Numbering.Pos  = this.NumberingPos;
 	this.Paragraph.Numbering.Item = Item;
 };
@@ -3580,33 +3580,33 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 	var CurPage = this.Page, CurLine = this.Line, CurRange = this.Range;
 	var Para    = this.Paragraph;
 	var X       = _X, LineAscent = this.LineAscent;
-	
+
 	// Если нужно добавить нумерацию и на текущем элементе ее можно добавить, тогда добавляем её
 	var NumberingItem = Para.Numbering;
 	var NumberingType = Para.Numbering.Type;
-	
+
 	if (para_Numbering === NumberingType)
 	{
 		var oReviewInfo = this.Paragraph.GetReviewInfo();
 		var nReviewType = this.Paragraph.GetReviewType();
-		
+
 		var isHavePrChange = this.Paragraph.HavePrChange();
 		var oPrevNumPr     = this.Paragraph.GetPrChangeNumPr();
-		
+
 		var NumPr = ParaPr.NumPr;
-		
+
 		if (NumPr && (undefined === NumPr.NumId || 0 === NumPr.NumId || "0" === NumPr.NumId))
 			NumPr = undefined;
-		
+
 		if (oPrevNumPr && (undefined === oPrevNumPr.NumId || 0 === oPrevNumPr.NumId || "0" === oPrevNumPr.NumId || undefined === oPrevNumPr.Lvl))
 			oPrevNumPr = undefined;
-		
+
 		var isHaveNumbering = false;
 		if ((undefined === Para.Get_SectionPr() || true !== Para.IsEmpty()) && (NumPr || oPrevNumPr))
 		{
 			isHaveNumbering = true;
 		}
-		
+
 		if (!isHaveNumbering || (!NumPr && !oPrevNumPr) || (!NumPr && reviewtype_Add === nReviewType))
 		{
 			// Так мы обнуляем все рассчитанные ширины данного элемента
@@ -3617,26 +3617,26 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 			var oSavedNumberingValues = this.Paragraph.GetSavedNumberingValues();
 			var arrSavedNumInfo       = oSavedNumberingValues ? oSavedNumberingValues.NumInfo : null;
 			var arrSavedPrevNumInfo   = oSavedNumberingValues ? oSavedNumberingValues.PrevNumInfo : null;
-			
+
 			var oNumbering = Para.Parent.GetNumbering();
-			
+
 			var oNumLvl = null;
-			
+
 			if (NumPr)
 				oNumLvl = oNumbering.GetNum(NumPr.NumId).GetLvl(NumPr.Lvl);
 			else if (oPrevNumPr)
 				oNumLvl = oNumbering.GetNum(oPrevNumPr.NumId).GetLvl(oPrevNumPr.Lvl);
-			
+
 			var oNumTextPr = Para.GetNumberingTextPr();
 			var nNumSuff   = oNumLvl.GetSuff();
 			var nNumJc     = oNumLvl.GetJc();
-			
+
 			// Здесь измеряется только ширина символов нумерации, без суффикса
 			if ((!isHavePrChange && NumPr) || (oPrevNumPr && NumPr && oPrevNumPr.NumId === NumPr.NumId && oPrevNumPr.Lvl === NumPr.Lvl))
 			{
 				var arrNumInfo = arrSavedNumInfo ? arrSavedNumInfo : Para.Parent.CalculateNumberingValues(Para, NumPr, true);
 				var nLvl       = NumPr.Lvl;
-				
+
 				var arrRelatedLvls = oNumLvl.GetRelatedLvlList();
 				var isEqual        = true;
 				for (var nLvlIndex = 0, nLvlsCount = arrRelatedLvls.length; nLvlIndex < nLvlsCount; ++nLvlIndex)
@@ -3648,7 +3648,7 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 						break;
 					}
 				}
-				
+
 				if (!isEqual)
 				{
 					if (reviewtype_Common === nReviewType)
@@ -3700,13 +3700,13 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 			{
 				var arrNumInfo  = arrSavedNumInfo ? arrSavedNumInfo : Para.Parent.CalculateNumberingValues(Para, NumPr, true);
 				var arrNumInfo2 = arrSavedPrevNumInfo ? arrSavedPrevNumInfo : Para.Parent.CalculateNumberingValues(Para, oPrevNumPr, true);
-				
+
 				var isEqual = false;
 				if (arrNumInfo[0][NumPr.Lvl] === arrNumInfo[1][oPrevNumPr.Lvl])
 				{
 					var oSourceNumLvl = oNumbering.GetNum(oPrevNumPr.NumId).GetLvl(oPrevNumPr.Lvl);
 					var oFinalNumLvl  = oNumbering.GetNum(NumPr.NumId).GetLvl(NumPr.Lvl);
-					
+
 					isEqual = oSourceNumLvl.IsSimilar(oFinalNumLvl);
 					if (isEqual)
 					{
@@ -3722,7 +3722,7 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 						}
 					}
 				}
-				
+
 				if (isEqual)
 				{
 					NumberingItem.Measure(g_oTextMeasurer, oNumbering, oNumTextPr, Para.Get_Theme(), arrNumInfo[0], NumPr);
@@ -3741,13 +3741,13 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 			{
 				// Такого быть не должно
 			}
-			
+
 			// При рассчете высоты строки, если у нас параграф со списком, то размер символа
 			// в списке влияет только на высоту строки над Baseline, но не влияет на высоту строки
 			// ниже baseline.
 			if (LineAscent < NumberingItem.Height)
 				LineAscent = NumberingItem.Height;
-			
+
 			switch (nNumJc)
 			{
 				case AscCommon.align_Right:
@@ -3767,15 +3767,15 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 					break;
 				}
 			}
-			
+
 			X += NumberingItem.WidthVisible;
-			
+
 			if (oNumLvl.IsLegacy())
 			{
 				var nLegacySpace  = AscCommon.TwipsToMM(oNumLvl.GetLegacySpace());
 				var nLegacyIndent = AscCommon.TwipsToMM(oNumLvl.GetLegacyIndent());
 				var nNumWidth     = NumberingItem.WidthNum;
-				
+
 				NumberingItem.WidthSuff = Math.max(nNumWidth, nLegacyIndent, nNumWidth + nLegacySpace) - nNumWidth;
 			}
 			else
@@ -3790,8 +3790,8 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 					case Asc.c_oAscNumberingSuff.Space:
 					{
 						var OldTextPr = g_oTextMeasurer.GetTextPr();
-						
-						
+
+
 						var Theme = Para.Get_Theme();
 						g_oTextMeasurer.SetTextPr(oNumTextPr, Theme);
 						g_oTextMeasurer.SetFontSlot(AscWord.fontslot_ASCII);
@@ -3802,17 +3802,17 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 					case Asc.c_oAscNumberingSuff.Tab:
 					{
 						var NewX = Para.private_RecalculateGetTabPos(this, X, ParaPr, CurPage, true).NewX;
-						
+
 						NumberingItem.WidthSuff = NewX - X;
-						
+
 						break;
 					}
 				}
 			}
-			
+
 			NumberingItem.Width = NumberingItem.WidthNum;
 			NumberingItem.WidthVisible += NumberingItem.WidthSuff;
-			
+
 			X += NumberingItem.WidthSuff;
 		}
 	}
@@ -3820,7 +3820,7 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 	{
 		var Level  = Para.PresentationPr.Level;
 		var Bullet = Para.PresentationPr.Bullet;
-		
+
 		var BulletNum = Para.GetBulletNum();
 		if (BulletNum === null)
 		{
@@ -3828,8 +3828,8 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 		}
 		// Найдем настройки для первого текстового элемента
 		var FirstTextPr = Para.Get_FirstTextPr2();
-		
-		
+
+
 		if (Bullet.IsAlpha())
 		{
 			if (BulletNum > 780)
@@ -3841,13 +3841,13 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 		{
 			BulletNum = (BulletNum % 32767);
 		}
-		
-		
+
+
 		NumberingItem.Bullet    = Bullet;
 		NumberingItem.BulletNum = BulletNum;
 		NumberingItem.Measure(g_oTextMeasurer, FirstTextPr, Para.Get_Theme(), Para.Get_ColorMap());
-		
-		
+
+
 		if (!Bullet.IsNone())
 		{
 			if (ParaPr.Ind.FirstLine < 0)
@@ -3855,10 +3855,10 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 			else
 				NumberingItem.WidthVisible = Math.max(Para.Pages[CurPage].X + ParaPr.Ind.Left + NumberingItem.Width - X, Para.Pages[CurPage].X + ParaPr.Ind.Left + ParaPr.Ind.FirstLine - X, Para.Pages[CurPage].X + ParaPr.Ind.Left - X);
 		}
-		
+
 		X += NumberingItem.WidthVisible;
 	}
-	
+
 	// Заполним обратные данные в элементе нумерации
 	NumberingItem.Item       = Item;
 	NumberingItem.Run        = Run;
@@ -3866,7 +3866,7 @@ CParagraphRecalculateStateWrap.prototype.Recalculate_Numbering = function(Item, 
 	NumberingItem.Range      = CurRange;
 	NumberingItem.LineAscent = LineAscent;
 	NumberingItem.Page       = CurPage;
-	
+
 	return X;
 };
 CParagraphRecalculateStateWrap.prototype.IsFast = function()
@@ -4077,7 +4077,7 @@ CParagraphRecalculateStateWrap.prototype.isFitOnLine = function(x, width)
 	let xLimit = this.getXLimit();
 	if (x + width <= xLimit)
 		return true;
-	
+
 	return this.tryCondenseSpaces(x, xLimit, width);
 };
 /**
@@ -4091,7 +4091,7 @@ CParagraphRecalculateStateWrap.prototype.tryCondenseSpaces = function(x, xLimit,
 {
 	if (!this.CondensedSpaces)
 		return false;
-	
+
 	var nKoef = 1 - 0.25 * (Math.min(12.5, width) / 12.5);
 
 	var nSumSpaces = 0;
@@ -4190,7 +4190,7 @@ CParagraphRecalculateStateWrap.prototype.getAutoHyphenWidth = function(item, run
 {
 	if (!this.isAutoHyphenation() || !item || !item.IsText() || !item.isHyphenAfter())
 		return 0;
-	
+
 	let textPr = run.Get_CompiledPr(false);
 	let fontInfo = textPr.GetFontInfo(AscWord.fontslot_ASCII);
 	return AscFonts.GetGraphemeWidth(AscCommon.g_oTextMeasurer.GetGraphemeByUnicode(0x002D, fontInfo.Name, fontInfo.Style)) * textPr.FontSize;
@@ -4211,15 +4211,15 @@ CParagraphRecalculateStateWrap.prototype.isExceedConsecutiveAutoHyphenLimit = fu
 	let limit = this.getAutoHyphenLimit();
 	if (!limit)
 		return false;
-	
+
 	let lines   = this.Paragraph.Lines;
 	let curLine = this.Line - 1;
-	
+
 	while (curLine >= 0 && lines[curLine].Info & paralineinfo_AutoHyphen)
 		--curLine;
-	
+
 	++curLine;
-	
+
 	return this.Line - curLine >= limit;
 };
 CParagraphRecalculateStateWrap.prototype.canPlaceAutoHyphenAfter = function(runItem)
@@ -4237,13 +4237,13 @@ CParagraphRecalculateStateWrap.prototype.checkHyphenationZone = function(x)
 	// Схема немного странная, т.к. мы считаем расстояние от левой границы параграфа, а добавляем его к левому полю,
 	// поэтому при смещении параграфа целиком влево или вправо (одинаковом изменении левого и правого отступов)
 	// разбиение может происходить по-разному, хотя ширина параграфа не меняется
-	
+
 	let paraPr = this.Paragraph.Get_CompiledPr2(false).ParaPr;
-	
+
 	let shift = paraPr.Ind.Left;
 	if (this.UseFirstLine)
 		shift += paraPr.Ind.FirstLine;
-	
+
 	return x - shift < this.XLimit - this.getHyphenationZone();
 };
 AscWord.ParagraphRecalculationWrapState = CParagraphRecalculateStateWrap;
@@ -4492,7 +4492,7 @@ const g_PRSI = new CParagraphRecalculateStateInfo();
 function ParagraphDrawState()
 {
 	ParagraphRecalculateStateBase.call(this);
-	
+
 	this.highlightState  = new CParagraphDrawStateHighlights();
 	this.runElementState = new CParagraphDrawStateElements();
 	this.lineState       = new CParagraphDrawStateLines();
