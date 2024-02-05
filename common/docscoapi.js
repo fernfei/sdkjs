@@ -349,7 +349,7 @@
     }
     return "";
   };
-  
+
   CDocsCoApi.prototype.get_serverChangesSize = function() {
     if (this._CoAuthoringApi && this._onlineWork) {
       return this._CoAuthoringApi.get_serverChangesSize();
@@ -370,7 +370,7 @@
     }
     return null;
   };
-  
+
   CDocsCoApi.prototype.get_jwt = function() {
     if (this._CoAuthoringApi && this._onlineWork) {
       return this._CoAuthoringApi.get_jwt();
@@ -468,7 +468,7 @@
       this.onExpiredToken(e);
     }
   };
-  
+
   CDocsCoApi.prototype.callback_OnForceSave = function(e) {
     if (this.onForceSave) {
       this.onForceSave(e);
@@ -1356,7 +1356,7 @@
     if (-1 !== data['index']) {
       this.changesIndex = data['index'];
     }
-	
+
     if (-1 !== data['time']) {
       this.lastOwnSaveTime = data['time'];
     }
@@ -1364,7 +1364,7 @@
     if (undefined !== data['syncChangesIndex'] && -1 !== data['syncChangesIndex']) {
       this.syncChangesIndex = data['syncChangesIndex'];
     }
-	
+
     if (this.onUnSaveLock) {
       this.onUnSaveLock();
     }
@@ -1952,6 +1952,10 @@
 				this._onDrop(dataObject);
 				break;
 			case 'documentOpen'    :
+                // 处理数据
+                if (dataObject.data && dataObject.data.data['Editor.bin']) {
+                  dataObject.data.data['Editor.bin'] = `http://localhost:8848/Editor.bin?url=${dataObject.data.data['Editor.bin']}`;
+                }
 				this._documentOpen(dataObject);
 				break;
 			case 'warning':
