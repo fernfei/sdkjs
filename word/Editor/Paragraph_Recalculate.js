@@ -680,7 +680,7 @@ Paragraph.prototype.private_RecalculatePageInternal = function(PRS, CurPage, bFi
     //-------------------------------------------------------------------------------------------------------------
     // Обрабатываем настройку "не отрывать от следующего"
     //-------------------------------------------------------------------------------------------------------------
-    if (false === this.private_RecalculatePageKeepNext(CurLine, CurPage, PRS, ParaPr))
+    if (false === this.private_RecalculatePageKeepNext(CurPage, PRS, ParaPr))
         return PRS.RecalcResult;
 
     //-------------------------------------------------------------------------------------------------------------
@@ -777,58 +777,19 @@ Paragraph.prototype.private_RecalculatePageInternal = function(PRS, CurPage, bFi
     return RecalcResult;
 };
 
-Paragraph.prototype.private_RecalculatePageKeepNext    = function(CurLine, CurPage, PRS, ParaPr)
+Paragraph.prototype.private_RecalculatePageKeepNext = function(CurPage, PRS, paraPr)
 {
-    // Такая настройка срабатывает в единственном случае:
-    // У предыдущего параграфа выставлена данная настройка, а текущий параграф сразу начинается с новой страницы
-    // ( при этом у него не выставлен флаг "начать с новой страницы", иначе будет зацикливание здесь ).
-    if (1 === CurPage && true === this.Check_EmptyPages(0) && this.Parent instanceof CDocument && false === ParaPr.PageBreakBefore)
-    {
-        // Если у предыдущего параграфа стоит настройка "не отрывать от следующего".
-        // И сам параграф не разбит на несколько страниц и не начинается с новой страницы,
-        // тогда мы должны пересчитать предыдущую страницу, с учетом того, что предыдущий параграф
-        // надо начать с новой страницы.
-        var Curr = this.Get_DocumentPrev();
-        while (null != Curr && type_Paragraph === Curr.GetType() && undefined === Curr.Get_SectionPr())
-        {
-            var CurrKeepNext = Curr.Get_CompiledPr2(false).ParaPr.KeepNext;
-            if ((true === CurrKeepNext && Curr.Pages.length > 1) || false === CurrKeepNext || true !== Curr.Is_Inline() || true === Curr.Check_PageBreak())
-            {
-                break;
-            }
-            else
-            {
-                var Prev = Curr.Get_DocumentPrev();
-                if (null === Prev || (type_Paragraph === Prev.GetType() && undefined !== Prev.Get_SectionPr()))
-                    break;
+	if (paraPr.PageBreakBefore)
+		return true;
 
-                if (type_Paragraph != Prev.GetType() || false === Prev.Get_CompiledPr2(false).ParaPr.KeepNext)
-                {
-                    if (true === this.Parent.RecalcInfo.Can_RecalcObject())
-                    {
-                        this.Parent.RecalcInfo.Set_KeepNext(Curr, this);
-                        PRS.RecalcResult = recalcresult_PrevPage | recalcresultflags_Column;
-                        return false;
-                    }
-                    else
-                        break;
-                }
-                else
-                {
-                    Curr = Prev;
-                }
-            }
-        }
-    }
+	let recalcResult = this.RecalculateKeepNext(CurPage);
+	if (recalcresult_NextElement !== recalcResult)
+	{
+		PRS.RecalcResult = recalcResult;
+		return false;
+	}
 
-    if (true === this.Parent.RecalcInfo.Check_KeepNextEnd(this))
-    {
-        // Дошли до сюда, значит уже пересчитали данную ситуацию.
-        // Делаем Reset здесь, потому что Reset надо делать в том же месте, гды мы запросили пересчет заново.
-        this.Parent.RecalcInfo.Reset();
-    }
-
-    return true;
+	return true;
 };
 
 Paragraph.prototype.private_RecalculatePageXY          = function(CurLine, CurPage, PRS, ParaPr)
@@ -1936,7 +1897,7 @@ Paragraph.prototype.private_RecalculateLineAlign       = function(CurLine, CurPa
 		PRSC.Range.W      = 0;
 		PRSC.Range.WEnd   = 0;
 		PRSC.Range.WBreak = 0;
-        if ( true === this.Numbering.Check_Range(CurRange, CurLine) )
+        if ( true === this.Numbering.checkRange(CurRange, CurLine) )
             PRSC.Range.W += this.Numbering.WidthVisible;
 
         for ( var Pos = StartPos; Pos <= EndPos; Pos++ )
@@ -2080,7 +2041,7 @@ Paragraph.prototype.private_RecalculateLineAlign       = function(CurLine, CurPa
         if ( 0 === CurRange )
             this.Lines[CurLine].X = X - PRSW.XStart;
 
-        if ( true === this.Numbering.Check_Range(CurRange, CurLine) )
+        if ( true === this.Numbering.checkRange(CurRange, CurLine) )
             PRSA.X += this.Numbering.WidthVisible;
 
         for ( var Pos = StartPos; Pos <= EndPos; Pos++ )
@@ -3167,6 +3128,7 @@ ParagraphRecalculateStateBase.prototype.unlock = function()
 {
 	this.locked = false;
 };
+window['AscWord'].ParagraphRecalculateStateBase = ParagraphRecalculateStateBase;
 
 function ParagraphStatePool()
 {
@@ -3209,7 +3171,7 @@ ParagraphStatePool.prototype.getEndInfoState = function()
 };
 ParagraphStatePool.prototype.getDrawState = function()
 {
-	return this.getInstance(this.draw, ParagraphDrawState);
+	return this.getInstance(this.draw, AscWord.ParagraphDrawState);
 };
 window['AscWord'].ParagraphStatePool = new ParagraphStatePool();
 
@@ -3383,6 +3345,7 @@ CParagraphRecalculateStateWrap.prototype.Reset_Page = function(Paragraph, CurPag
 	this.ColumnAbs   = Paragraph.Get_AbsoluteColumn(CurPage);
 	this.InTable     = Paragraph.Parent.IsTableCellContent();
 	this.SectPr      = null;
+	this.TopIndex    = -1;
 
 	this.CondensedSpaces = Paragraph.IsCondensedSpaces();
 	this.BalanceSBDB     = Paragraph.IsBalanceSingleByteDoubleByteWidth();
@@ -4488,37 +4451,6 @@ CParagraphRecalculateStateInfo.prototype.ProcessInstruction = function(oInstruct
 };
 
 const g_PRSI = new CParagraphRecalculateStateInfo();
-
-function ParagraphDrawState()
-{
-	ParagraphRecalculateStateBase.call(this);
-
-	this.highlightState  = new CParagraphDrawStateHighlights();
-	this.runElementState = new CParagraphDrawStateElements();
-	this.lineState       = new CParagraphDrawStateLines();
-}
-
-ParagraphDrawState.prototype = Object.create(ParagraphRecalculateStateBase.prototype);
-ParagraphDrawState.prototype.constructor = ParagraphDrawState;
-
-ParagraphDrawState.prototype.init = function(paragraph, graphics)
-{
-	this.highlightState.init(paragraph, graphics);
-	this.runElementState.init(paragraph, graphics);
-	this.lineState.init(paragraph, graphics);
-};
-ParagraphDrawState.prototype.getHighlightState = function()
-{
-	return this.highlightState;
-};
-ParagraphDrawState.prototype.getRunElementState = function()
-{
-	return this.runElementState;
-};
-ParagraphDrawState.prototype.getLineState = function()
-{
-	return this.lineState;
-};
 
 function CParagraphRecalculateObject()
 {

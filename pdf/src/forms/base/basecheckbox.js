@@ -54,6 +54,7 @@
         this._exportValue   = "Yes";
         this._chStyle       = CHECKBOX_STYLES.check;
         this._checked       = false;
+        this._options       = undefined; // используется для храненния export values дочерних полей
 
         // states
         this._pressed = false;
@@ -121,7 +122,8 @@
         oGraphicsPDF.SetLineWidth(1);
         oGraphicsPDF.SetLineDash([]);
 
-        switch (this._chStyle) {
+        let nStyle = this.GetStyle();
+        switch (nStyle) {
             case CHECKBOX_STYLES.circle: {
                 let centerX = X + nWidth / 2;
                 let centerY = Y + nHeight / 2;
@@ -273,35 +275,6 @@
     //     oPara.CompiledPr.NeedRecalc = true;
     // };
 
-    // CBaseCheckBoxField.prototype.ProcessAutoFitContent = function() {
-    //     let oPara   = this.content.GetElement(0);
-    //     let oRun    = oPara.GetElement(0);
-    //     let oTextPr = oRun.Get_CompiledPr(true);
-    //     let oBounds = this.getFormRelRect();
-
-    //     g_oTextMeasurer.SetTextPr(oTextPr, null);
-    //     g_oTextMeasurer.SetFontSlot(AscWord.fontslot_ASCII);
-
-    //     var nTextHeight = g_oTextMeasurer.GetHeight();
-    //     var nMaxWidth   = oPara.RecalculateMinMaxContentWidth(false).Max;
-    //     var nFontSize   = oTextPr.FontSize;
-
-    //     if (nMaxWidth < 0.001 || nTextHeight < 0.001 || oBounds.W < 0.001 || oBounds.H < 0.001)
-    // 	    return nTextHeight;
-
-    //     var nNewFontSize = nFontSize;
-
-    //     nNewFontSize = (oBounds.H / g_dKoef_pt_to_mm) >> 0;
-    //     oRun.SetFontSize(nNewFontSize);
-
-    //     oTextPr.FontSize    = nNewFontSize;
-    //     oTextPr.FontSizeCS  = nNewFontSize;
-
-    //     g_oTextMeasurer.SetTextPr(oTextPr, null);
-    //     g_oTextMeasurer.SetFontSlot(AscWord.fontslot_ASCII);
-
-    //     return g_oTextMeasurer.GetHeight();
-    // };
     /**
      * Returns a canvas with origin view (from appearance stream) of current form.
      * @memberof CBaseCheckBoxField
@@ -384,6 +357,9 @@
             this.AddActionsToQueue(AscPDF.FORMS_TRIGGERS_TYPES.OnFocus);
         oDoc.activeForm = this;
     };
+    CBaseCheckBoxField.prototype.GetFontSizeAP = function() {
+        return 12;
+    };
     CBaseCheckBoxField.prototype.onMouseEnter = function() {
         this.AddActionsToQueue(AscPDF.FORMS_TRIGGERS_TYPES.MouseEnter);
 
@@ -411,8 +387,16 @@
             }
         }
         else {
+            let oParent = this.GetParent();
+            let aOpt    = oParent ? oParent.GetOptions() : undefined;
+            let aKids   = oParent ? oParent.GetKids() : undefined;
             this.SetChecked(true);
-            this.SetApiValue(this.GetExportValue());
+            if (aOpt && aKids) {
+                this.SetApiValue(String(aKids.indexOf(this)));
+            }
+            else {
+                this.SetApiValue(this.GetExportValue());
+            }
         }
         
         this.DrawUnpressed();
@@ -430,9 +414,11 @@
         oOverlay.ClearAll   = true;
 
         editor.getDocumentRenderer().onUpdateOverlay();
+        this.AddActionsToQueue(AscPDF.FORMS_TRIGGERS_TYPES.MouseUp);
     };
     CBaseCheckBoxField.prototype.SetExportValue = function(sValue) {
         this._exportValue = sValue;
+        this.SetWasChanged(true);
     };
     CBaseCheckBoxField.prototype.GetExportValue = function() {
         return this._exportValue;
@@ -451,20 +437,42 @@
      */
     CBaseCheckBoxField.prototype.SetStyle = function(nType) {
         this._chStyle = nType;
+        this.SetWasChanged(true);
+        this.AddToRedraw(true);
     };
-    CBaseCheckBoxField.prototype.SetValue = function(sValue) {
-        if (this._exportValue == sValue)
+    CBaseCheckBoxField.prototype.GetStyle = function() {
+        return this._chStyle;
+    };
+    CBaseCheckBoxField.prototype.SetValue = function(value) {
+        let oParent     = this.GetParent();
+        let aParentOpt  = oParent ? oParent.GetOptions() : undefined;
+
+        let sExportValue;
+        if (aParentOpt && aParentOpt[value]) {
+            sExportValue = aParentOpt[value];
+        }
+        else {
+            sExportValue = value;
+        }
+
+        if (this.GetExportValue() == sExportValue)
             this.SetChecked(true);
         else
             this.SetChecked(false);
         
         if (editor.getDocumentRenderer().IsOpenFormsInProgress && this.GetParent() == null)
-            this.SetApiValue(sValue);
+            this.SetApiValue(value);
     };
     CBaseCheckBoxField.prototype.GetValue = function() {
-        return this.IsChecked() ? this._exportValue : "Off";
+        return this.IsChecked() ? this.GetExportValue() : "Off";
     };
     CBaseCheckBoxField.prototype.SetDrawFromStream = function() {
+    };
+    CBaseCheckBoxField.prototype.SetOptions = function(aOpt) {
+        this._options = aOpt;
+    };
+    CBaseCheckBoxField.prototype.GetOptions = function() {
+        return this._options;
     };
 
     /**
@@ -476,6 +484,7 @@
         if (bChecked == this.IsChecked())
             return;
 
+        this.SetWasChanged(true);
         this.AddToRedraw();
 
         if (bChecked) {
@@ -487,7 +496,61 @@
             this._checked = false;
         }
     };
+    CBaseCheckBoxField.prototype.WriteToBinary = function(memory) {
+        memory.WriteByte(AscCommon.CommandType.ctAnnotField);
 
+        // длина комманд
+        let nStartPos = memory.GetCurPosition();
+        memory.Skip(4);
+
+        this.WriteToBinaryBase(memory);
+        this.WriteToBinaryBase2(memory);
+
+        // checked
+        let isChecked = this.IsChecked();
+        // не пишем значение, если есть родитель с такими же видджет полями,
+        // т.к. значение будет хранить родитель
+        let oParent = this.GetParent();
+        if (oParent == null || oParent.IsAllKidsWidgets() == false) {
+            memory.fieldDataFlags |= (1 << 9);
+            if (isChecked) {
+                memory.WriteString("Yes");
+            }
+            else
+                memory.WriteString("Off");
+        }
+        
+        // check symbol
+        memory.WriteByte(this.GetStyle());
+
+        let sExportValue = this.GetExportValue();
+        if (sExportValue != null) {
+            memory.fieldDataFlags |= (1 << 14);
+            memory.WriteString(sExportValue);
+        }
+
+        if (this.IsNoToggleToOff()) {
+            memory.widgetFlags |= (1 << 14);
+        }
+
+        if (this.GetType() == AscPDF.FIELD_TYPES.radiobutton) {
+            if (this.IsRadiosInUnison()) {
+                memory.widgetFlags |= (1 << 25);
+            }
+        }
+        let nEndPos = memory.GetCurPosition();
+
+        // запись флагов
+        memory.Seek(memory.posForWidgetFlags);
+        memory.WriteLong(memory.widgetFlags);
+        memory.Seek(memory.posForFieldDataFlags);
+        memory.WriteLong(memory.fieldDataFlags);
+
+        // запись длины комманд
+        memory.Seek(nStartPos);
+        memory.WriteLong(nEndPos - nStartPos);
+        memory.Seek(nEndPos);
+    };
     if (!window["AscPDF"])
 	    window["AscPDF"] = {};
     

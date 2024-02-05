@@ -902,6 +902,9 @@
         return this.state === TIME_NODE_STATE_FINISHED;
     };
     CTimeNodeBase.prototype.isDrawable = function () {
+        if(this.isAtEnd() && this.getRewind()) {
+            return false;
+        }
         return this.isActive() || this.isFrozen() || (this.isTimingContainer() || this.isFinished());
     };
     CTimeNodeBase.prototype.isAtEnd = function () {
@@ -1026,10 +1029,6 @@
         }
     };
     CTimeNodeBase.prototype.getRewind = function () {
-        var oParentTimeNode = this.getParentTimeNode();
-        if (oParentTimeNode) {
-            return oParentTimeNode.getRewind();
-        }
         return false;
     };
     CTimeNodeBase.prototype.getRelativeTime = function (nElapsedTime) {
@@ -1780,7 +1779,7 @@
         }
 
     };
-    CTiming.prototype.createEffect = function (sObjectId, nPresetClass, nPresetId, nPresetSubtype) {
+    CTiming.prototype.createEffect = function (sObjectId, nPresetClass, nPresetId, nPresetSubtype, oColor) {
         var aPresetClass = ANIMATION_PRESET_CLASSES[nPresetClass];
         if (aPresetClass) {
             var aPresetType = aPresetClass[nPresetId];
@@ -1806,13 +1805,14 @@
                     oBinaryReader.stream.cur = stream.cur;
                     var oPar = new CPar();
                     oPar.fromPPTY(oBinaryReader);
-                    var oConnetctedObjects = oBinaryReader.oConnectedObjects;
-                    for (var sKey in oConnetctedObjects) {
-                        var oConnectedObject = oConnetctedObjects[sKey];
+                    var oConnectedObjects = oBinaryReader.oConnectedObjects;
+                    for (var sKey in oConnectedObjects) {
+                        var oConnectedObject = oConnectedObjects[sKey];
                         if (oConnectedObject.spid !== null && oConnectedObject.spid !== undefined) {
                             oConnectedObject.setSpid(sObjectId);
                         }
                     }
+                    oPar.changeColor(oColor);
                     return oPar;
                 }
             }
@@ -2022,15 +2022,15 @@
         aMainSeq.push(oEffect);
         return this.buildTree(aSeqs);
     };
-    CTiming.prototype.addAnimationToSelectedObjects = function (nPresetClass, nPresetId, nPresetSubtype) {
+    CTiming.prototype.addAnimationToSelectedObjects = function (nPresetClass, nPresetId, nPresetSubtype, oColor) {
         let aSelectedObjects = this.parent.graphicObjects.selectedObjects;
         let aObjectsIds = [];
         for (let nObj = 0; nObj < aSelectedObjects.length; ++nObj) {
             aObjectsIds.push(aSelectedObjects[nObj].Id);
         }
-        return this.addEffectToMainSequence(aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, false);
+        return this.addEffectToMainSequence(aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, oColor, false);
     };
-    CTiming.prototype.addAnimation = function (nPresetClass, nPresetId, nPresetSubtype, bReplace) {
+    CTiming.prototype.addAnimation = function (nPresetClass, nPresetId, nPresetSubtype, oColor, bReplace) {
         var aAddedEffects = [];
         if (nPresetId === AscFormat.ANIM_PRESET_NONE) {
             this.removeSelectedEffects();
@@ -2049,8 +2049,16 @@
         var oDrawingsIdMap = {};
         if (bReplace) {
             if (aSelectedEffects.length === 0) {
-                return this.addAnimationToSelectedObjects(nPresetClass, nPresetId, nPresetSubtype);
+                return this.addAnimationToSelectedObjects(nPresetClass, nPresetId, nPresetSubtype, oColor);
             } else {
+
+                if(oColor) {
+                    for(let nEffect = 0; nEffect < aSelectedEffects.length; ++nEffect) {
+                        aSelectedEffects[nEffect].changeColor(oColor);
+                    }
+                    aAddedEffects = aAddedEffects.concat(aSelectedEffects);
+                    return aAddedEffects;
+                }
                 var oMapOfObjects = {};
                 var aSelectedObjects = this.parent.graphicObjects.selectedObjects;
                 var bNeedRemoveExtra = (aSelectedObjects.length > 0);
@@ -2072,7 +2080,7 @@
                                     oMapOfObjects[sObjectId] = true;
                                 }
                             }
-                            oNewEffect = this.createEffect(sObjectId, nPresetClass, nPresetId, nPresetSubtype);
+                            oNewEffect = this.createEffect(sObjectId, nPresetClass, nPresetId, nPresetSubtype, oColor);
                             if (oNewEffect) {
                                 oNewEffect.cTn.setNodeType(oEffect.cTn.nodeType);
                                 oNewEffect.cTn.changeDelay(oEffect.cTn.getDelay(true));
@@ -2101,9 +2109,9 @@
                         }
                     }
                 }
-                aAddedEffects = this.addEffectToMainSequence(aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, false);
+                aAddedEffects = this.addEffectToMainSequence(aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, oColor, false);
             } else {
-                aAddedEffects = this.addAnimationToSelectedObjects(nPresetClass, nPresetId, nPresetSubtype);
+                aAddedEffects = this.addAnimationToSelectedObjects(nPresetClass, nPresetId, nPresetSubtype, oColor);
             }
         }
         return aAddedEffects;
@@ -2130,14 +2138,14 @@
         this.buildTree(aSeqs);
     };
 
-    CTiming.prototype.addEffectToMainSequence = function (aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, bReplace) {
+    CTiming.prototype.addEffectToMainSequence = function (aObjectsIds, nPresetClass, nPresetId, nPresetSubtype, oColor, bReplace) {
         let aEffectsToAdd = [];
         for (let nObj = 0; nObj < aObjectsIds.length; ++nObj) {
             let sObjectId = aObjectsIds[nObj];
             if (bReplace) {
                 this.removeObjectAnimation(sObjectId);
             }
-            let oEffect = this.createEffect(sObjectId, nPresetClass, nPresetId, nPresetSubtype);
+            let oEffect = this.createEffect(sObjectId, nPresetClass, nPresetId, nPresetSubtype, oColor);
             if (!oEffect) {
                 continue;
             }
@@ -3401,8 +3409,7 @@
     };
 
     CBldBase.prototype.assignConnection = function (oObjectsMap) {
-        if (AscCommon.isRealObject(oObjectsMap[this.spid]) &&
-            (oObjectsMap[this.spid].getObjectType && oObjectsMap[this.spid].getObjectType() === AscDFH.historyitem_type_ChartSpace)) {
+        if (AscCommon.isRealObject(oObjectsMap[this.spid]) && oObjectsMap[this.spid].isDrawing) {
             this.setSpid(oObjectsMap[this.spid].Id);
         } else {
             if (this.parent) {
@@ -5444,7 +5451,7 @@
     CCTn.prototype.changeRewind = function (v) {
         this.setFill(v === true ? NODE_FILL_REMOVE : NODE_FILL_HOLD);
     };
-    CCTn.prototype.getObjectId = function (v) {
+    CCTn.prototype.getObjectId = function () {
         var sObjectId = null;
         this.traverse(function (oChild) {
             if (oChild.isTimeNode() && (sObjectId = oChild.getTargetObjectId())) {
@@ -5458,7 +5465,7 @@
         if (AscFormat.isRealNumber(v)) {
             var sObjectId = this.getObjectId();
             if (sObjectId !== null) {
-                var oNewEffect = CTiming.prototype.createEffect(sObjectId, this.presetClass, this.presetID, v);
+                var oNewEffect = CTiming.prototype.createEffect(sObjectId, this.presetClass, this.presetID, v, null);
                 if (oNewEffect) {
                     var oNewCTn = oNewEffect.cTn;
                     if (this.getEffectDuration() !== oNewCTn.getEffectDuration()) {
@@ -6828,7 +6835,7 @@
             }
 
             if (oBrush) {
-                oStartRGBColor = oBrush.getRGBAColor();
+                oStartRGBColor = oBrush.getStartAnimRGBA();
                 oStartUniColor = AscFormat.CreateUniColorRGB(oStartRGBColor.R, oStartRGBColor.G, oStartRGBColor.B);
             } else {
                 oStartUniColor = AscFormat.CreateUniColorRGB(255, 255, 255);
@@ -7029,6 +7036,9 @@
     };
     CAnimEffect.prototype.getChildren = function () {
         return [this.cBhvr, this.progress];
+    };
+    CAnimEffect.prototype.isRemoveAfterFill = function () {
+        return true;
     };
     CAnimEffect.prototype.calculateAttributes = function (nElapsedTime, oAttributes) {
         if (!this.filter) {
@@ -8382,7 +8392,12 @@
     CTimeNodeContainer.prototype.getIndexInSequence = function () {
         var aHierarchy = this.getHierarchy();
         if (aHierarchy[1] && aHierarchy[2]) {
-            return aHierarchy[1].getChildNodeIdx(aHierarchy[2]);
+            let nIdx = aHierarchy[1].getChildNodeIdx(aHierarchy[2]);
+            let aAllEffects = aHierarchy[1].getAllAnimEffects();
+            if(aAllEffects[0] && !aAllEffects[0].isClickEffect()) {
+                nIdx -= 1;
+            }
+            return nIdx;
         }
         return -1;
     };
@@ -8951,7 +8966,57 @@
     CTimeNodeContainer.prototype.deselect = function () {
         this.selected = false;
     };
+    CTimeNodeContainer.prototype.asc_getColor = function() {
+        let aEffects = this.merged;
+        if(!Array.isArray(aEffects) || aEffects.length !== 1) {
+            return null;
+        }
+        let oEffect = aEffects[0];
+        let aSimpleAnim = oEffect.getChildrenTimeNodesInternal();
+        let oResultUnicolor = undefined;
+        let oTarget;
+        for(let nAnim = 0; nAnim < aSimpleAnim.length; ++nAnim) {
+            let oEffect = aSimpleAnim[nAnim];
+            if(oEffect instanceof CAnimClr) {
+                if(!oEffect.to) {
+                    return null;
+                }
+                if(!oTarget) {
+                    oTarget = oEffect.getTargetObject();
+                }
+                if(oResultUnicolor === undefined) {
+                    if(!oEffect.to) {
+                        return null;
+                    }
+                    oResultUnicolor = oEffect.to.createDuplicate();
+                }
+                else {
+                    oResultUnicolor = oEffect.to.compare(oResultUnicolor);
+                }
+            }
+        }
+        if(!oResultUnicolor || !oResultUnicolor.color || !oTarget) {
+            return null;
+        }
+        oResultUnicolor.check(oTarget.Get_Theme(), oTarget.Get_ColorMap());
+        return AscCommon.CreateAscColor(oResultUnicolor)
+    };
+    CTimeNodeContainer.prototype["asc_getColor"] = CTimeNodeContainer.prototype.asc_getColor;
 
+    CTimeNodeContainer.prototype.changeColor = function(oColor) {
+        if(oColor) {
+            let aSimpleEffects = this.getChildrenTimeNodes();
+            for(let nEffect = 0; nEffect < aSimpleEffects.length; ++nEffect) {
+                let oEffect = aSimpleEffects[nEffect];
+                if(oEffect instanceof CAnimClr) {
+                    if(oEffect.to) {
+                        let oUniColor = AscFormat.CorrectUniColor(oColor, new AscFormat.CUniColor(), 0);
+                        oEffect.setTo(oUniColor);
+                    }
+                }
+            }
+        }
+    };
 
     function CPar() {
         CTimeNodeContainer.call(this);
@@ -8967,7 +9032,7 @@
             aChildren[nChild].scheduleStart(oPlayer);
         }
     };
-    CPar.prototype.createEffect = function (sObjectId, nPresetClass, nPresetId, nPresetSubtype) {
+    CPar.prototype.createEffect = function (sObjectId, nPresetClass, nPresetId, nPresetSubtype, oColor) {
     };
 
     function CExcl() {//par, excl
@@ -12104,7 +12169,14 @@
         let bStrokeOn = oAttributesMap["stroke.on"];
 
 
-        let oCurBrush = oDrawing.brush;
+        let oCurBrush;
+        if(oDrawing.blipFill) {
+            oCurBrush = new AscFormat.CUniFill();
+            oCurBrush.fill = oDrawing.blipFill;
+        }
+        else {
+            oCurBrush = oDrawing.brush;
+        }
         let oCurPen = oDrawing.pen;
         let oNewBrush = oCurBrush;
         let oNewPen = oCurPen;
@@ -12124,15 +12196,6 @@
                 if (oStrokeColor) {
                     if (oCurPen) {
                         oNewPen = oCurPen.createDuplicate();
-                        let oMods;
-                        if (oNewPen.Fill &&
-                            oNewPen.Fill.fill &&
-                            oNewPen.Fill.fill.color &&
-                            oNewPen.Fill.fill.color.Mods &&
-                            oNewPen.Fill.fill.color.Mods.Mods.length !== 0) {
-                            oMods = oNewPen.Fill.fill.color.Mods;
-                            oMods.Apply(oStrokeColor.RGBA);
-                        }
                     } else {
                         oNewPen = AscFormat.CreateNoFillLine();
                     }

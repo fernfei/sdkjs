@@ -168,7 +168,7 @@ function (window, undefined) {
 		if (fTerm !== 0) {
 			nK = 1;
 			do {
-				fTerm = Math.pow(fXHalf, n + 2 * nK) / ( Math.fact(nK) * Math.fact(n + nK) );
+				fTerm = Math.pow(fXHalf, n + 2 * nK) / (Math.fact(nK) * Math.fact(n + nK));
 
 				/*  Calculation of TERM(n,k) from TERM(n,k-1):
 
@@ -208,8 +208,8 @@ function (window, undefined) {
 
 		} else {
 			y = 2 / fNum;
-			fRet = Math.exp(-fNum) / Math.sqrt(fNum) * ( 1.25331414 + y * ( -0.7832358e-1 + y * ( 0.2189568e-1 + y *
-				( -0.1062446e-1 + y * ( 0.587872e-2 + y * ( -0.251540e-2 + y * 0.53208e-3 ) ) ) ) ) );
+			fRet = Math.exp(-fNum) / Math.sqrt(fNum) * (1.25331414 + y * (-0.7832358e-1 + y * (0.2189568e-1 + y *
+				(-0.1062446e-1 + y * (0.587872e-2 + y * (-0.251540e-2 + y * 0.53208e-3))))));
 		}
 
 		return new cNumber(fRet);
@@ -224,8 +224,8 @@ function (window, undefined) {
 				(-0.67278579 + y * (-0.18156897 + y * (-0.1919402e-1 + y * (-0.110404e-2 + y * (-0.4686e-4)))))));
 		} else {
 			y = 2 / fNum;
-			fRet = Math.exp(-fNum) / Math.sqrt(fNum) * ( 1.25331414 + y * ( 0.23498619 + y * ( -0.3655620e-1 + y *
-				( 0.1504268e-1 + y * ( -0.780353e-2 + y * ( 0.325614e-2 + y * ( -0.68245e-3 ) ) ) ) ) ) );
+			fRet = Math.exp(-fNum) / Math.sqrt(fNum) * (1.25331414 + y * (0.23498619 + y * (-0.3655620e-1 + y *
+				(0.1504268e-1 + y * (-0.780353e-2 + y * (0.325614e-2 + y * (-0.68245e-3)))))));
 		}
 
 		return new cNumber(fRet);
@@ -504,7 +504,7 @@ function (window, undefined) {
 		} else {
 			charLim = parseInt(charLim);
 			if (charLim >= res.length) {
-				return new cString(( '0'.repeat(charLim - res.length) + res).toUpperCase());
+				return new cString(('0'.repeat(charLim - res.length) + res).toUpperCase());
 			} else {
 				return new cError(cErrorType.not_numeric);
 			}
@@ -528,9 +528,24 @@ function (window, undefined) {
 			var res = [];
 			var hasImag = this.img != 0, hasReal = !hasImag || (this.real != 0);
 
+			let toLocalString = function (val) {
+				let _res = val;
+				if (val != null) {
+					val = val.toString();
+					if (val) {
+						val = val.replace(AscCommon.FormulaSeparators.digitSeparatorDef, AscCommon.FormulaSeparators.digitSeparator);
+
+						if (val) {
+							_res = val;
+						}
+					}
+				}
+				return _res;
+			};
+
 			if (hasReal) {
 
-				res.push(this.real);
+				res.push(toLocalString(this.real));
 			}
 			if (hasImag) {
 				if (this.img == 1) {
@@ -540,7 +555,7 @@ function (window, undefined) {
 				} else if (this.img == -1) {
 					res.push("-");
 				} else {
-					this.img > 0 && hasReal ? res.push("+" + this.img) : res.push(this.img);
+					this.img > 0 && hasReal ? res.push("+" + (toLocalString(this.img))) : res.push(toLocalString(this.img));
 				}
 				res.push(this.suffix ? this.suffix : "i");
 			}
@@ -569,7 +584,7 @@ function (window, undefined) {
 		}, Cos: function () {
 			if (this.img) {
 				var a = Math.cos(this.real) * Math.cosh(this.img);
-				this.img = -( Math.sin(this.real) * Math.sinh(this.img) );
+				this.img = -(Math.sin(this.real) * Math.sinh(this.img));
 				this.real = a;
 			} else {
 				this.real = Math.cos(this.real);
@@ -787,7 +802,7 @@ function (window, undefined) {
 				if (i) {
 					suf = i[i.length - 1];
 					i = i.substr(0, i.length - 1);
-					if (i.length == 1 && (i[0] == "-" || i[0] == "+" )) {
+					if (i.length == 1 && (i[0] == "-" || i[0] == "+")) {
 						i = parseFloat(i + "1");
 					} else {
 						i = parseFloat(i);
@@ -838,7 +853,7 @@ function (window, undefined) {
 						this.c = pStr.pStr[1];
 						if (pStr.pStr[2] === undefined) {
 							this.real = f.f;
-							this.img = ( pStr.pStr[0] == '+' ) ? 1.0 : -1.0;
+							this.img = (pStr.pStr[0] == '+') ? 1.0 : -1.0;
 							return this;
 						}
 					} else if (this.ParseDouble(pStr, f) && this.isImagUnit(pStr.pStr[0])) {
@@ -4620,7 +4635,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validBINNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validBINNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			var substr = arg0.toString();
 			if (substr.length === 10 && substr.substring(0, 1) === '1') {
@@ -4688,7 +4703,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validBINNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validBINNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			var substr = arg0.toString();
 			if (substr.length === 10 && substr.substring(0, 1) === '1') {
@@ -5163,7 +5178,7 @@ function (window, undefined) {
 
 		var res;
 		if (validDEC2BINNumber(arg0) && arg0 >= -512 && arg0 <= 511 &&
-			( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+			(arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			if (arg0 < 0) {
 				res = new cString('1' + '0'.repeat(9 - (512 + arg0).toString(NumberBase.BIN).length) +
@@ -5226,7 +5241,7 @@ function (window, undefined) {
 
 		var res;
 		if (validDEC2HEXNumber(arg0) && arg0 >= -549755813888 && arg0 <= 549755813887 &&
-			( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+			(arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			if (arg0 < 0) {
 				res = new cString((1099511627776 + arg0).toString(NumberBase.HEX).toUpperCase());
@@ -5288,7 +5303,7 @@ function (window, undefined) {
 
 		var res;
 		if (validDEC2OCTNumber(arg0) && arg0 >= -536870912 && arg0 <= 536870911 &&
-			( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+			(arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			if (arg0 < 0) {
 				res = new cString((1073741824 + arg0).toString(NumberBase.OCT).toUpperCase());
@@ -5577,7 +5592,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validHEXNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validHEXNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			var negative = (arg0.length === 10 && arg0.substring(0, 1).toUpperCase() === 'F'),
 				arg0DEC = (negative) ? parseInt(arg0, NumberBase.HEX) - 1099511627776 : parseInt(arg0, NumberBase.HEX);
@@ -5703,7 +5718,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validHEXNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validHEXNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			arg0 = parseInt(arg0, NumberBase.HEX);
 
@@ -7112,7 +7127,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validOCTNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validOCTNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			var negative = (arg0.length === 10 && arg0.substring(0, 1).toUpperCase() === '7'),
 				arg0DEC = (negative) ? parseInt(arg0, NumberBase.OCT) - 1073741824 : parseInt(arg0, NumberBase.OCT);
@@ -7238,7 +7253,7 @@ function (window, undefined) {
 		arg1 = arg1.getValue();
 
 		var res;
-		if (validHEXNumber(arg0) && ( arg1 > 0 && arg1 <= 10 || arg1 == undefined )) {
+		if (validHEXNumber(arg0) && (arg1 > 0 && arg1 <= 10 || arg1 == undefined)) {
 
 			arg0 = parseInt(arg0, NumberBase.OCT);
 

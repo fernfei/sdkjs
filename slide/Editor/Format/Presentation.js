@@ -4411,7 +4411,9 @@ CPresentation.prototype.GetCurrentController = function () {
 	}
 	return null;
 };
-
+CPresentation.prototype.IsEmpty = function() {
+	return this.GetSlidesCount() === 0;
+};
 CPresentation.prototype.Get_TargetDocContent = function () {
 	var oController = this.GetCurrentController();
 	if (oController) {
@@ -6270,6 +6272,7 @@ CPresentation.prototype.GetSelectedSlides = function () {
 	if (!window["NATIVE_EDITOR_ENJINE"] && this.Api.WordControl.Thumbnails) {
 		return this.Api.WordControl.Thumbnails.GetSelectedArray();
 	} else {
+		//todo: check if this.CurPage is -1
 		return [this.CurPage];
 	}
 };
@@ -7792,6 +7795,12 @@ CPresentation.prototype.OnKeyDown = function (e) {
 		{
 			// Ничего не делаем
 			bRetValue = keydownresult_PreventAll;
+		} else if (e.KeyCode === 187) // +
+		{
+			if (e.IsCtrl() && e.IsShift()) {
+				// Ничего не делаем
+				bRetValue = keydownresult_PreventAll;
+			}
 		}
 	}
 
@@ -10779,7 +10788,7 @@ CPresentation.prototype.addNextSlideAction = function (layoutIndex) {
 		bRemoveOnTitle = layout.type === AscFormat.nSldLtTTitle && this.showSpecialPlsOnTitleSld === false;
 		for (i = 0; i < layout.cSld.spTree.length; ++i) {
 			if (layout.cSld.spTree[i].isPlaceholder()) {
-				_ph_type = layout.cSld.spTree[i].getPhType();
+				_ph_type = layout.cSld.spTree[i].getPlaceholderType();
 				bIsSpecialPh = _ph_type === AscFormat.phType_dt || _ph_type === AscFormat.phType_ftr || _ph_type === AscFormat.phType_hdr || _ph_type === AscFormat.phType_sldNum;
 				if (!bIsSpecialPh || hf && !bRemoveOnTitle && ((_ph_type === AscFormat.phType_dt && (hf.dt !== false)) ||
 					(_ph_type === AscFormat.phType_ftr && (hf.ftr !== false)) ||
@@ -10811,7 +10820,7 @@ CPresentation.prototype.addNextSlideAction = function (layoutIndex) {
 		new_slide.notes.setSlide(new_slide);
 		for (i = 0; i < layout.cSld.spTree.length; ++i) {
 			if (layout.cSld.spTree[i].isPlaceholder()) {
-				_ph_type = layout.cSld.spTree[i].getPhType();
+				_ph_type = layout.cSld.spTree[i].getPlaceholderType();
 				bIsSpecialPh = _ph_type === AscFormat.phType_dt || _ph_type === AscFormat.phType_ftr || _ph_type === AscFormat.phType_hdr || _ph_type === AscFormat.phType_sldNum;
 				if (!bIsSpecialPh || hf && ((_ph_type === AscFormat.phType_dt && (hf.dt !== false)) ||
 					(_ph_type === AscFormat.phType_ftr && (hf.ftr !== false)) ||
@@ -10834,6 +10843,16 @@ CPresentation.prototype.getDefaultMasterSlide = function () {
 		return this.lastMaster;
 	}
 	return this.slideMasters[0];
+};
+CPresentation.prototype.getLayoutsMasterSlide = function () {
+	let oCurSlide = this.GetCurrentSlide();
+	if(!oCurSlide ||
+		!oCurSlide.Layout ||
+		!oCurSlide.Layout.Master ||
+		oCurSlide.Layout.Master.sldLayoutLst.length <= 0) {
+		return this.getDefaultMasterSlide();
+	}
+	return oCurSlide.Layout.Master;
 };
 CPresentation.prototype.DublicateSlide = function () {
 	if (this.Api.WordControl.Thumbnails) {
@@ -11251,7 +11270,7 @@ CPresentation.prototype.moveSlidesPrevPos = function () {
 	if (can_move) {
 		History.Create_NewPoint(AscDFH.historydescription_Presentation_MoveSlidesPrevPos);
 		let aNewSelected = [];
-		for (i = first_index; i > -1; --i) {
+		for (i = first_index; i < _selected_array.length; ++i) {
 			let nOldIdx = _selected_array[i];
 			let nNewIdx = nOldIdx - 1;
 			this.moveSlides([nOldIdx], nNewIdx);
@@ -11928,7 +11947,7 @@ CPresentation.prototype.AddToLayout = function () {
 	}, [], false, AscDFH.historydescription_Presentation_AddToLayout);
 };
 
-CPresentation.prototype.AddAnimation = function (nPresetClass, nPresetId, nPresetSubtype, bReplace, bPreview) {
+CPresentation.prototype.AddAnimation = function (nPresetClass, nPresetId, nPresetSubtype, oColor, bReplace, bPreview) {
 	var oSlide = this.GetCurrentSlide();
 	if (oSlide) {
 		if (nPresetClass === AscFormat.PRESET_CLASS_PATH && nPresetId === AscFormat.MOTION_CUSTOM_PATH) {
@@ -11945,7 +11964,7 @@ CPresentation.prototype.AddAnimation = function (nPresetClass, nPresetId, nPrese
 		}
 		if (this.IsSelectionLocked(AscCommon.changestype_Timing) === false) {
 			this.StartAction(0);
-			var aAddedEffects = oSlide.addAnimation(nPresetClass, nPresetId, nPresetSubtype, bReplace);
+			var aAddedEffects = oSlide.addAnimation(nPresetClass, nPresetId, nPresetSubtype, oColor, bReplace);
 			this.FinalizeAction();
 			this.Document_UpdateInterfaceState();
 			if (bPreview && aAddedEffects.length > 0) {
@@ -12355,9 +12374,12 @@ CPresentation.prototype.StartAction = function (nDescription) {
 	this.StopAnimationPreview();
 	this.Api.sendEvent("asc_onUserActionStart");
 };
-CPresentation.prototype.FinalizeAction = function () {
+CPresentation.prototype.FinalizeAction = function (isCheckEmptyAction) {
 	this.Recalculate();
 	this.Api.checkChangesSize();
+	if (true === isCheckEmptyAction && AscCommon.History.Is_LastPointEmpty()) {
+		AscCommon.History.RemoveLastPoint();
+	}
 	this.Api.sendEvent("asc_onUserActionEnd");
 };
 

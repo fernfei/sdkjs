@@ -156,6 +156,7 @@
 			"cell/model/FormulaObjects/logicalFunctions.js",
 			"cell/model/FormulaObjects/traceDependents.js",
 			"cell/model/CellComment.js",
+			"cell/model/whatIfAnalysis.js",
 			"cell/model/WorkbookElems.js",
 			"cell/model/Workbook.js",
 			"cell/model/Serialize.js",
@@ -222,16 +223,23 @@
 			"word/Editor/Paragraph/RunContent/Tab.js",
 			"word/Editor/Paragraph/RunContent/ParagraphMark.js",
 			"word/Editor/ParagraphContent.js",
+			"word/Editor/Paragraph/bidi-flow.js",
+			"word/Editor/Paragraph/draw-selection.js",
+			"word/Editor/Paragraph/position-calculator.js",
+			"word/Editor/Paragraph/search-position-by-coords.js",
 			"word/Editor/Paragraph/ParaTextPr.js",
 			"word/Editor/Paragraph/ParaTextPrChanges.js",
 			"word/Editor/Paragraph/ParaDrawing.js",
 			"word/Editor/Paragraph/ParaDrawingChanges.js",
 			"word/Editor/Paragraph/ParagraphContentPos.js",
+			"word/Editor/Paragraph/ComplexFields/types.js",
+			"word/Editor/Paragraph/ComplexFields/instruction-base.js",
 			"word/Editor/Paragraph/ComplexFieldInstruction.js",
 			"word/Editor/Paragraph/ComplexFields/Addin.js",
 			"word/Editor/Paragraph/ComplexFields/AddinData.js",
 			"word/Editor/Paragraph/ComplexFields/FormText.js",
 			"word/Editor/Paragraph/ComplexFields/MergeField.js",
+			"word/Editor/Paragraph/ComplexFields/ref.js",
 			"word/Editor/Paragraph/ComplexField.js",
 			"word/Editor/Paragraph/DisplayStyleCalculator.js",
 			"word/Editor/Paragraph/ParaRevisionMove.js",
@@ -250,6 +258,10 @@
 			"word/Editor/Paragraph.js",
 			"word/Editor/ParagraphChanges.js",
 			"word/Editor/Paragraph_Recalculate.js",
+			"word/Editor/Paragraph/draw/content-draw-state.js",
+			"word/Editor/Paragraph/draw/highlight-draw-state.js",
+			"word/Editor/Paragraph/draw/line-draw-state.js",
+			"word/Editor/Paragraph/draw/paragraph-draw-state.js",
 			"word/Editor/Sections.js",
 			"word/Editor/SectionsChanges.js",
 			"word/Editor/Numbering/NumberingApplicator.js",
@@ -367,24 +379,7 @@
 				"cell/Local/api.js"
 			]
 		},
-		"mobile_banners": {
-			"min": [
-				"common/Native/Wrappers/memory.js"
-			],
-			"common": []
-		},
 		"mobile": [
-			"common/libfont/engine/fonts_native.js",
-			"common/Charts/ChartStyles.js",
-
-			"common/Native/Wrappers/serialize.js",
-			"common/Native/Wrappers/DrawingStream.js",
-			"common/Native/Wrappers/ShapeDrawer.js",
-
-			"cell/native/Overlay.js",
-			"cell/native/Graphics.js",
-			"cell/native/DrawingDocument.js",
-			"cell/native/native.js"
 		],
 		"exclude_mobile": [
 			"vendor/iscroll.js",

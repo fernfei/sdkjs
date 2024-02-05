@@ -1289,9 +1289,9 @@
 		map_prst_color["yellow"] = 0xFFFF00;
 		map_prst_color["yellowGreen"] = 0x9ACD32;
 
-		function CColorMod() {
-			this.name = "";
-			this.val = 0;
+		function CColorMod(sName, nVal) {
+			this.name = sName ? sName : "";
+			this.val = AscFormat.isRealNumber(nVal) ? nVal : 0;
 		}
 
 		CColorMod.prototype.setName = function (name) {
@@ -1321,10 +1321,18 @@
 
 		CColorModifiers.prototype.isUsePow = (!AscCommon.AscBrowser.isSailfish || !AscCommon.AscBrowser.isEmulateDevicePixelRatio);
 		CColorModifiers.prototype.getModValue = function (sName) {
+			let oMod = this.getMod(sName);
+			if(oMod) {
+				return oMod.val;
+			}
+			return null;
+		};
+		CColorModifiers.prototype.getMod = function (sName) {
 			if (Array.isArray(this.Mods)) {
-				for (var i = 0; i < this.Mods.length; ++i) {
-					if (this.Mods[i] && this.Mods[i].name === sName) {
-						return this.Mods[i].val;
+				for (let nMod = 0; nMod < this.Mods.length; ++nMod) {
+					let oMod = this.Mods[nMod];
+					if (oMod && oMod.name === sName) {
+						return oMod;
 					}
 				}
 			}
@@ -1347,7 +1355,20 @@
 			}
 		};
 		CColorModifiers.prototype.addMod = function (mod) {
-			this.Mods.push(mod);
+			let oModForAdd;
+			if(arguments.length === 1) {
+				if(arguments[0] instanceof CColorMod) {
+					oModForAdd = arguments[0];
+				}
+			}
+			else if(arguments.length === 2) {
+				if(typeof arguments[0] === "string" && AscFormat.isRealNumber(arguments[1])) {
+					oModForAdd = new CColorMod(arguments[0], arguments[1]);
+				}
+			}
+			if(oModForAdd) {
+				this.Mods.push(oModForAdd);
+			}
 		};
 		CColorModifiers.prototype.removeMod = function (pos) {
 			this.Mods.splice(pos, 1)[0];
@@ -1405,19 +1426,19 @@
 				if (H > 1.0) H -= 1.0;
 			}
 
-			H = ((H * max_hls) >> 0) & 0xFF;
+			H = H * max_hls;
 			if (H < 0)
 				H = 0;
 			if (H > 255)
 				H = 255;
 
-			S = ((S * max_hls) >> 0) & 0xFF;
+			S = S * max_hls;
 			if (S < 0)
 				S = 0;
 			if (S > 255)
 				S = 255;
 
-			L = ((L * max_hls) >> 0) & 0xFF;
+			L = L * max_hls;
 			if (L < 0)
 				L = 0;
 			if (L > 255)
@@ -1429,9 +1450,10 @@
 		};
 		CColorModifiers.prototype.HSL2RGB = function (HSL, RGB) {
 			if (HSL.S == 0) {
-				RGB.R = HSL.L;
-				RGB.G = HSL.L;
-				RGB.B = HSL.L;
+				const clampL = AscFormat.ClampColor(HSL.L);
+				RGB.R = clampL;
+				RGB.G = clampL;
+				RGB.B = clampL;
 			} else {
 				var H = HSL.H / max_hls;
 				var S = HSL.S / max_hls;
@@ -1444,28 +1466,13 @@
 
 				var v1 = 2.0 * L - v2;
 
-				var R = (255 * this.Hue_2_RGB(v1, v2, H + cd13)) >> 0;
-				var G = (255 * this.Hue_2_RGB(v1, v2, H)) >> 0;
-				var B = (255 * this.Hue_2_RGB(v1, v2, H - cd13)) >> 0;
+				var R = (255 * this.Hue_2_RGB(v1, v2, H + cd13));
+				var G = (255 * this.Hue_2_RGB(v1, v2, H));
+				var B = (255 * this.Hue_2_RGB(v1, v2, H - cd13));
 
-				if (R < 0)
-					R = 0;
-				if (R > 255)
-					R = 255;
-
-				if (G < 0)
-					G = 0;
-				if (G > 255)
-					G = 255;
-
-				if (B < 0)
-					B = 0;
-				if (B > 255)
-					B = 255;
-
-				RGB.R = R;
-				RGB.G = G;
-				RGB.B = B;
+				RGB.R = AscFormat.ClampColor(R);
+				RGB.G = AscFormat.ClampColor(G);
+				RGB.B = AscFormat.ClampColor(B);
 			}
 		};
 		CColorModifiers.prototype.Hue_2_RGB = function (v1, v2, vH) {
@@ -1507,23 +1514,22 @@
 			//RGBA.B = (this.lclCrgbCompToRgbComp(this.lclGamma(RGBA.B, INC_GAMMA)) + 0.5) >> 0;
 
 			if (this.isUsePow) {
-				RGBA.R = (Math.pow(RGBA.R / 100000, INC_GAMMA) * 255 + 0.5) >> 0;
-				RGBA.G = (Math.pow(RGBA.G / 100000, INC_GAMMA) * 255 + 0.5) >> 0;
-				RGBA.B = (Math.pow(RGBA.B / 100000, INC_GAMMA) * 255 + 0.5) >> 0;
-			} else {
-				RGBA.R = AscFormat.ClampColor(RGBA.R);
-				RGBA.G = AscFormat.ClampColor(RGBA.G);
-				RGBA.B = AscFormat.ClampColor(RGBA.B);
+				RGBA.R = Math.pow(RGBA.R / 100000, INC_GAMMA) * 255;
+				RGBA.G = Math.pow(RGBA.G / 100000, INC_GAMMA) * 255;
+				RGBA.B = Math.pow(RGBA.B / 100000, INC_GAMMA) * 255;
 			}
+			RGBA.R = AscFormat.ClampColor(RGBA.R);
+			RGBA.G = AscFormat.ClampColor(RGBA.G);
+			RGBA.B = AscFormat.ClampColor(RGBA.B);
 		};
 		CColorModifiers.prototype.Apply = function (RGBA) {
 			if (null == this.Mods)
 				return;
 
-			var _len = this.Mods.length;
-			for (var i = 0; i < _len; i++) {
-				var colorMod = this.Mods[i];
-				var val = colorMod.val / 100000.0;
+			const _len = this.Mods.length;
+			for (let i = 0; i < _len; i++) {
+				const colorMod = this.Mods[i];
+				let val = colorMod.val / 100000.0;
 
 				if (colorMod.name === "alpha") {
 					RGBA.A = AscFormat.ClampColor(255 * val);
@@ -1545,12 +1551,24 @@
 					RGBA.R = AscFormat.ClampColor(RGBA.R * val);
 				} else if (colorMod.name === "redOff") {
 					RGBA.R = AscFormat.ClampColor(RGBA.R + val * 255);
-				} else if (colorMod.name === "hueOff") {
-					var HSL = {H: 0, S: 0, L: 0};
+				} else if (colorMod.name === "hueMod") {
+					if (val === 1) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
+					HSL.H = AscCommon.trimMinMaxValue(HSL.H * val, 0, max_hls);
 
-					var res = (HSL.H + (val * 10.0) / 9.0 + 0.5) >> 0;
-					HSL.H = AscFormat.ClampColor2(res, 0, max_hls);
+					this.HSL2RGB(HSL, RGBA);
+				} else if (colorMod.name === "hueOff") {
+					if (val === 0) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
+					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
+					val = (colorMod.val / 60000) * (max_hls / 360);
+					const res = HSL.H + val;
+					HSL.H = AscCommon.trimMinMaxValue(res, 0, max_hls);
 
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "inv") {
@@ -1558,35 +1576,48 @@
 					RGBA.G ^= 0xFF;
 					RGBA.B ^= 0xFF;
 				} else if (colorMod.name === "lumMod") {
-					var HSL = {H: 0, S: 0, L: 0};
+					if (val === 1) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
 
-					HSL.L = AscFormat.ClampColor2(HSL.L * val, 0, max_hls);
+					HSL.L = AscCommon.trimMinMaxValue(HSL.L * val, 0, max_hls);
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "lumOff") {
-					var HSL = {H: 0, S: 0, L: 0};
+					if (val === 0) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
 
-					var res = (HSL.L + val * max_hls + 0.5) >> 0;
-					HSL.L = AscFormat.ClampColor2(res, 0, max_hls);
+					const res = HSL.L + val * max_hls;
+					HSL.L = AscCommon.trimMinMaxValue(res, 0, max_hls);
 
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "satMod") {
-					var HSL = {H: 0, S: 0, L: 0};
+					if (val === 1) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
 
-					HSL.S = AscFormat.ClampColor2(HSL.S * val, 0, max_hls);
+					HSL.S = AscCommon.trimMinMaxValue(HSL.S * val, 0, max_hls);
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "satOff") {
-					var HSL = {H: 0, S: 0, L: 0};
+					if (val === 0) {
+						continue;
+					}
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
-
-					var res = (HSL.S + val * max_hls + 0.5) >> 0;
-					HSL.S = AscFormat.ClampColor2(res, 0, max_hls);
-
+					const res = HSL.S + val * max_hls;
+					HSL.S = AscCommon.trimMinMaxValue(res, 0, max_hls);
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "wordShade") {
-					var val_ = colorMod.val / 255;
+					if (colorMod.val === 255) {
+						continue;
+					}
+					const val_ = colorMod.val / 255;
 					//GBA.R = Math.max(0, (RGBA.R * (1 - val_)) >> 0);
 					//GBA.G = Math.max(0, (RGBA.G * (1 - val_)) >> 0);
 					//GBA.B = Math.max(0, (RGBA.B * (1 - val_)) >> 0);
@@ -1596,22 +1627,25 @@
 					//RGBA.G = Math.max(0,  ((1 - val_)*(- RGBA.G) + RGBA.G) >> 0);
 					//RGBA.B = Math.max(0,  ((1 - val_)*(- RGBA.B) + RGBA.B) >> 0);
 
-					var HSL = {H: 0, S: 0, L: 0};
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
 
-					HSL.L = AscFormat.ClampColor2(HSL.L * val_, 0, max_hls);
+					HSL.L = AscCommon.trimMinMaxValue(HSL.L * val_, 0, max_hls);
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "wordTint") {
-					var _val = colorMod.val / 255;
+					if (colorMod.val === 255) {
+						continue;
+					}
+					const _val = colorMod.val / 255;
 					//RGBA.R = Math.max(0,  ((1 - _val)*(255 - RGBA.R) + RGBA.R) >> 0);
 					//RGBA.G = Math.max(0,  ((1 - _val)*(255 - RGBA.G) + RGBA.G) >> 0);
 					//RGBA.B = Math.max(0,  ((1 - _val)*(255 - RGBA.B) + RGBA.B) >> 0);
 
-					var HSL = {H: 0, S: 0, L: 0};
+					const HSL = {H: 0, S: 0, L: 0};
 					this.RGB2HSL(RGBA.R, RGBA.G, RGBA.B, HSL);
 
-					var L_ = HSL.L * _val + (255 - colorMod.val);
-					HSL.L = AscFormat.ClampColor2(L_, 0, max_hls);
+					const L_ = HSL.L * _val + (255 - colorMod.val);
+					HSL.L = AscCommon.trimMinMaxValue(L_, 0, max_hls);
 					this.HSL2RGB(HSL, RGBA);
 				} else if (colorMod.name === "shade") {
 					this.RgbtoCrgb(RGBA);
@@ -2420,22 +2454,14 @@
 			if (this.checkWordMods()) {
 				var val_, mod_;
 				if (this.Mods.Mods[0].name === "wordShade") {
-					mod_ = new CColorMod();
-					mod_.setName("lumMod");
-					mod_.setVal(((this.Mods.Mods[0].val / 255) * 100000) >> 0);
+					mod_ = new CColorMod("lumMod", ((this.Mods.Mods[0].val / 255) * 100000) >> 0);
 					this.Mods.Mods.splice(0, this.Mods.Mods.length);
 					this.Mods.Mods.push(mod_);
 				} else {
 					val_ = ((this.Mods.Mods[0].val / 255) * 100000) >> 0;
 					this.Mods.Mods.splice(0, this.Mods.Mods.length);
-					mod_ = new CColorMod();
-					mod_.setName("lumMod");
-					mod_.setVal(val_);
-					this.Mods.Mods.push(mod_);
-					mod_ = new CColorMod();
-					mod_.setName("lumOff");
-					mod_.setVal(100000 - val_);
-					this.Mods.Mods.push(mod_);
+					this.Mods.addMod("lumMod", val_);
+					this.Mods.addMod("lumOff", 100000 - val_);
 				}
 			}
 		};
@@ -2686,89 +2712,6 @@
 		};
 		CUniColor.prototype.isUnicolor = function (sName) {
 			return !!CUniColor.prototype.UNICOLOR_MAP[sName];
-		};
-		CUniColor.prototype.read = function (_params, _cursor) {
-			let _continue = true;
-			while (_continue) {
-				let _attr = _params[_cursor.pos++];
-				switch (_attr) {
-					case 0: {
-						this.color = new AscFormat.CPrstColor();
-						this.color.type = _params[_cursor.pos++];
-						this.color.id = _params[_cursor.pos++];
-						this.color.RGBA = {
-							R: _params[_cursor.pos++],
-							G: _params[_cursor.pos++],
-							B: _params[_cursor.pos++],
-							A: _params[_cursor.pos++],
-							needRecalc: _params[_cursor.pos++]
-						};
-						break;
-					}
-					case 1: {
-						var _count = _params[_cursor.pos++];
-						for (var i = 0; i < _count; i++) {
-							var _mod = new AscFormat.CColorMod();
-							_mod.name = _params[_cursor.pos++];
-							_mod.val = _params[_cursor.pos++];
-							this.Mods.push(_mod);
-						}
-						break;
-					}
-					case 2: {
-						this.RGBA = {
-							R: _params[_cursor.pos++],
-							G: _params[_cursor.pos++],
-							B: _params[_cursor.pos++],
-							A: _params[_cursor.pos++]
-						}
-						break;
-					}
-					case 255:
-					default: {
-						_continue = false;
-						break;
-					}
-				}
-			}
-		};
-		CUniColor.prototype.write = function (_type, _stream) {
-			_stream["WriteByte"](_type);
-
-			if (this.color !== undefined && this.color !== null)
-			{
-				_stream["WriteByte"](0);
-				_stream["WriteLong"](this.color.type);
-				_stream["WriteStringA"](this.color.id);
-				_stream["WriteByte"](this.color.RGBA.R);
-				_stream["WriteByte"](this.color.RGBA.G);
-				_stream["WriteByte"](this.color.RGBA.B);
-				_stream["WriteByte"](this.color.RGBA.A);
-				_stream["WriteBool"](this.color.RGBA.needRecalc);
-			}
-			if (this.Mods !== undefined && this.Mods !== null)
-			{
-				_stream["WriteByte"](1);
-
-				var _len = this.Mods.length;
-				_stream["WriteLong"](_len);
-
-				for (var i = 0; i < _len; i++)
-				{
-					_stream["WriteStringA"](this.Mods[i].name);
-					_stream["WriteLong"](this.Mods[i].val);
-				}
-			}
-			if (this.RGBA !== undefined && this.RGBA !== null)
-			{
-				_stream["WriteByte"](2);
-				_stream["WriteByte"](this.RGBA.R);
-				_stream["WriteByte"](this.RGBA.G);
-				_stream["WriteByte"](this.RGBA.B);
-				_stream["WriteByte"](this.RGBA.A);
-			}
-
-			_stream["WriteByte"](255);
 		};
 
 		function CreateUniColorRGB(r, g, b) {
@@ -4022,108 +3965,188 @@
 			return oCopy;
 		};
 
+		const RECT_ALIGN_B = 0;
+		const RECT_ALIGN_BL = 1;
+		const RECT_ALIGN_BR = 2;
+		const RECT_ALIGN_CTR = 3;
+		const RECT_ALIGN_L = 4;
+		const RECT_ALIGN_R = 5;
+		const RECT_ALIGN_T = 6;
+		const RECT_ALIGN_TL = 7;
+		const RECT_ALIGN_TR = 8;
 		function asc_CShadowProperty() {
 			COuterShdw.call(this);
+			this.setDefault();
+		}
+
+		InitClass(asc_CShadowProperty, COuterShdw, 0);
+		asc_CShadowProperty.prototype.setDefault = function() {
 			this.algn = 7;
 			this.blurRad = 50800;
 			this.color = new CUniColor();
 			this.color.color = new CPrstColor();
 			this.color.color.id = "black";
-			this.color.Mods = new CColorModifiers();
-			var oMod = new CColorMod();
-			oMod.name = "alpha";
-			oMod.val = 40000;
-			this.color.Mods.Mods.push(oMod);
+			this.putTransparency(60);
 			this.dir = 2700000;
 			this.dist = 38100;
 			this.rotWithShape = false;
-		}
-
-		InitClass(asc_CShadowProperty, COuterShdw, 0);
-		asc_CShadowProperty.prototype.write = function (_type, _stream) {
-			_stream["WriteByte"](_type);
-
-			if (this.color) {
-				this.color.write(0, _stream);
-			}
-
-			if (this.algn !== undefined && this.algn !== null) {
-				_stream["WriteByte"](1);
-				_stream["WriteLong"](this.algn);
-			}
-			if (this.blurRad !== undefined && this.blurRad !== null) {
-				_stream["WriteByte"](2);
-				_stream["WriteLong"](this.blurRad);
-			}
-			if (this.dir !== undefined && this.dir !== null) {
-				_stream["WriteByte"](3);
-				_stream["WriteLong"](this.dir);
-			}
-			if (this.dist !== undefined && this.dist !== null) {
-				_stream["WriteByte"](4);
-				_stream["WriteLong"](this.dist);
-			}
-			if (this.rotWithShape !== undefined && this.rotWithShape !== null) {
-				_stream["WriteByte"](5);
-				_stream["WriteBool"](this.dist);
-			}
-			_stream["WriteByte"](6);
-			_stream["WriteBool"](true);
-
-			_stream["WriteByte"](255);
 		};
-		asc_CShadowProperty.prototype.read = function (_params, _cursor) {
-			let _continue = true;
-			while (_continue) {
-				let _attr = _params[_cursor.pos++];
-
-				switch (_attr) {
-					case 0: {
-						this.color = new AscFormat.CUniColor();
-						this.color.read(_params, _cursor);
-						break;
-					}
-					case 1: {
-						this.algn = _params[_cursor.pos++];
-						break;
-					}
-					case 2: {
-						this.blurRad = _params[_cursor.pos++];
-						break;
-					}
-					case 3: {
-						this.dir = _params[_cursor.pos++];
-						break;
-					}
-					case 4: {
-						this.dist = _params[_cursor.pos++];
-						break;
-					}
-					case 5: {
-						this.rotWithShape = _params[_cursor.pos++];
-						break;
-					}
-					case 6: {
-						if (!_params[_cursor.pos++]) {
-							return null;
-						}
-						break;
-					}
-					case 255:
-					default: {
-						_continue = false;
-						break;
-					}
+		asc_CShadowProperty.prototype.putPreset = function (sAlgn) {
+			this.setDefault();
+			switch (sAlgn) {
+				case "l": {
+					this.algn = RECT_ALIGN_L;
+					this.dir = null;
+					break;
+				}
+				case "t": {
+					this.algn = RECT_ALIGN_T;
+					this.dir = 5400000;
+					break;
+				}
+				case "r": {
+					this.algn = RECT_ALIGN_R;
+					this.dir = 10800000;
+					break;
+				}
+				case "b": {
+					this.algn = null;
+					this.dir = 16200000;
+					break;
+				}
+				case "tl": {
+					this.algn = RECT_ALIGN_TL;
+					this.dir = 2700000;
+					break;
+				}
+				case "tr": {
+					this.algn = RECT_ALIGN_TR;
+					this.dir = 8100000;
+					break;
+				}
+				case "bl": {
+					this.algn = RECT_ALIGN_BL;
+					this.dir = 18900000;
+					break;
+				}
+				case "br": {
+					this.algn = RECT_ALIGN_BR;
+					this.dir = 13500000;
+					break;
+				}
+				case "ctr": {
+					this.algn = RECT_ALIGN_CTR;
+					this.dir = null;
+					this.sx = 102000;
+					this.sy = 102000;
+					this.dist = null;
+					break;
 				}
 			}
-			return this;
 		};
-
+		asc_CShadowProperty.prototype.getPreset = function() {
+			const aPresets = ["l", "t", "r", "b", "tl", "tr", "bl", "br", "ctr"];
+			for(let nPrst = 0; nPrst < aPresets.length; ++nPrst) {
+				let oShd = new asc_CShadowProperty();
+				let sPrst = aPresets[nPrst];
+				oShd.putPreset(sPrst);
+				if(this.IsIdentical(oShd)) {
+					return sPrst;
+				}
+			}
+			return null;
+		};
 		asc_CShadowProperty.prototype.createDuplicate = function () {
 			var oCopy = new asc_CShadowProperty();
 			this.fillObject(oCopy);
 			return oCopy;
 		};
+		asc_CShadowProperty.prototype.getTransparency = function() {
+			if(!this.color) {
+				return 0;
+			}
+			let nAlphaVal = this.color.getModValue("alpha");
+			if(nAlphaVal === null) {
+				return 0;
+			}
+			return (100000 - nAlphaVal) / 1000;
+		};
+		asc_CShadowProperty.prototype.putTransparency = function(nVal) {
+			if(!this.color) {
+				return;
+			}
+			if(!this.color.Mods) {
+				this.color.Mods = new CColorModifiers();
+			}
+			let oMod = this.color.Mods.getMod("alpha");
+			if(!oMod) {
+				oMod = new CColorMod("alpha", (100 - nVal) * 1000 + 0.5 >> 0);
+				this.color.Mods.addMod(oMod);
+			}
+			else {
+				oMod.setVal((100 - nVal) * 1000 + 0.5 >> 0);
+			}
+		};
+		asc_CShadowProperty.prototype.getSize = function() {
+			let nSX = this.sx !== null ? this.sx : 100000;
+			let nSY = this.sy !== null ? this.sy : 100000;
+			return Math.max(nSX, nSY) / 1000;
+		};
+		asc_CShadowProperty.prototype.putSize = function(nVal) {
+			this.sx = nVal * 1000 + 0.5 >> 0;
+			this.sy = this.sx;
+		};
+
+		asc_CShadowProperty.prototype.getAngle = function() {
+			let nAngle = this.dir || 0;
+			return nAngle / 60000;
+		};
+		asc_CShadowProperty.prototype.putAngle = function(nVal) {
+			this.dir = nVal * 60000 + 0.5 >> 0;
+		};
+		asc_CShadowProperty.prototype.getDistance = function() {
+			let nDist = this.dist || 0;
+			return nDist / 36000;
+		};
+		asc_CShadowProperty.prototype.putDistance = function(nVal) {
+			this.dist = nVal * 36000 + 0.5 >> 0;
+		};
+		asc_CShadowProperty.prototype.getColor = function() {
+			return AscCommon.CreateAscColor(this.color);
+		};
+		asc_CShadowProperty.prototype.putColor = function(oAscColor) {
+			let nTransparency = this.getTransparency();
+			let nFlag;
+			if(Asc.editor.editorId === AscCommon.c_oEditorId.Word) {
+				nFlag = 1;
+			}
+			else {
+				nFlag = 0;
+			}
+			this.color = AscFormat.CorrectUniColor(oAscColor, this.color, nFlag);
+			this.putTransparency(nTransparency);
+		};
+		asc_CShadowProperty.prototype.checkColor = function(oTheme, oColorMap) {
+			if(this.color) {
+				if(oTheme && oColorMap) {
+					this.color.check(oTheme, oColorMap);
+				}
+			}
+		};
+
+
+		asc_CShadowProperty.prototype["getTransparency"] = asc_CShadowProperty.prototype.getTransparency;
+		asc_CShadowProperty.prototype["putTransparency"] = asc_CShadowProperty.prototype.putTransparency;
+		asc_CShadowProperty.prototype["getSize"] = asc_CShadowProperty.prototype.getSize;
+		asc_CShadowProperty.prototype["putSize"] = asc_CShadowProperty.prototype.putSize;
+		asc_CShadowProperty.prototype["getAngle"] = asc_CShadowProperty.prototype.getAngle;
+		asc_CShadowProperty.prototype["putAngle"] = asc_CShadowProperty.prototype.putAngle;
+		asc_CShadowProperty.prototype["getDistance"] = asc_CShadowProperty.prototype.getDistance;
+		asc_CShadowProperty.prototype["putDistance"] = asc_CShadowProperty.prototype.putDistance;
+		asc_CShadowProperty.prototype["getColor"] = asc_CShadowProperty.prototype.getColor;
+		asc_CShadowProperty.prototype["putColor"] = asc_CShadowProperty.prototype.putColor;
+		asc_CShadowProperty.prototype["putPreset"] = asc_CShadowProperty.prototype.putPreset;
+		asc_CShadowProperty.prototype["getPreset"] = asc_CShadowProperty.prototype.getPreset;
 
 
 		window['Asc'] = window['Asc'] || {};
@@ -4982,10 +5005,10 @@
 			return color.R * 0.2126 + color.G * 0.7152 + color.B * 0.0722;
 		}
 
-		function FormatRGBAColor() {
-			this.R = 0;
-			this.G = 0;
-			this.B = 0;
+		function FormatRGBAColor(r, g, b) {
+			this.R = r || 0;
+			this.G = g || 0;
+			this.B = b || 0;
 			this.A = 255;
 		}
 
@@ -5246,6 +5269,47 @@
 				}
 			}
 			return new FormatRGBAColor();
+		};
+
+		CUniFill.prototype.getStartAnimRGBA = function () {
+			let oFill = this.fill;
+			if(!oFill) {
+				return new FormatRGBAColor(255, 255, 255);
+			}
+			switch (oFill.type) {
+				case c_oAscFill.FILL_TYPE_SOLID: {
+					if (oFill.color) {
+						return this.fill.color.RGBA;
+					}
+					else {
+						return new FormatRGBAColor(255, 255, 255);
+					}
+				}
+				case c_oAscFill.FILL_TYPE_GRAD: {
+					let _colors = this.fill.colors;
+					let _len = _colors.length;
+
+					if (0 === _len) {
+						return new FormatRGBAColor(255, 255, 255);
+					}
+
+					let oFirstColor = _colors[0].color;
+					if(!oFirstColor) {
+						return new FormatRGBAColor(255, 255, 255);
+					}
+					return oFirstColor.RGBA;
+				}
+				case c_oAscFill.FILL_TYPE_PATT: {
+					if(oFill.fgClr) {
+						return oFill.fgClr.RGBA
+					}
+					return new FormatRGBAColor(255, 255, 255);
+				}
+				case c_oAscFill.FILL_TYPE_NOFILL: {
+					return new FormatRGBAColor(255, 255, 255);
+				}
+			}
+			return new FormatRGBAColor(255, 255, 255);
 		};
 		CUniFill.prototype.createDuplicate = function () {
 			var duplicate = new CUniFill();
@@ -5847,12 +5911,17 @@
 		var ar_arrow = 0, ar_diamond = 1, ar_none = 2, ar_oval = 3, ar_stealth = 4, ar_triangle = 5;
 
 		var LineEndType = {
-			None: 0,
-			Arrow: 1,
-			Diamond: 2,
-			Oval: 3,
-			Stealth: 4,
-			Triangle: 5
+			None:				0,
+			Arrow:				1,
+			Diamond:			2,
+			Oval:				3,
+			Stealth:			4,
+			Triangle:			5,
+			ReverseArrow:		6,
+			ReverseTriangle:	7,
+			Butt:				8,
+			Square:				9,
+			Slash:				10
 		};
 		var LineEndSize = {
 			Large: 0,
@@ -7133,11 +7202,8 @@
 			unicolor = new CUniColor();
 			unicolor.setColor(new CSchemeColor());
 			unicolor.color.setId(g_clr_accent1);
-			var mod = new CColorMod();
-			mod.setName("shade");
-			mod.setVal(50000);
 			unicolor.setMods(new CColorModifiers());
-			unicolor.Mods.addMod(mod);
+			unicolor.Mods.addMod("shade", 50000);
 			lnRef.setColor(unicolor);
 
 			style.setLnRef(lnRef);
@@ -10673,12 +10739,12 @@
 				return;
 			}
 			var _this = this;
-			AscCommon.ShowImageFileDialog(Api.documentId, Api.documentUserId, Api.CoAuthoringApi.get_jwt(), function (error, files) {
+			AscCommon.ShowImageFileDialog(Api.documentId, Api.documentUserId, Api.CoAuthoringApi.get_jwt(), Api.documentShardKey, function (error, files) {
 					if (Asc.c_oAscError.ID.No !== error) {
 						Api.sendEvent("asc_onError", error, Asc.c_oAscError.Level.NoCritical);
 					} else {
 						Api.sync_StartAction(Asc.c_oAscAsyncActionType.BlockInteraction, Asc.c_oAscAsyncAction.UploadImage);
-						AscCommon.UploadImageFiles(files, Api.documentId, Api.documentUserId, Api.CoAuthoringApi.get_jwt(), function (error, urls) {
+						AscCommon.UploadImageFiles(files, Api.documentId, Api.documentUserId, Api.CoAuthoringApi.get_jwt(), Api.documentShardKey, function (error, urls) {
 							if (Asc.c_oAscError.ID.No !== error) {
 								Api.sendEvent("asc_onError", error, Asc.c_oAscError.Level.NoCritical);
 								Api.sync_EndAction(Asc.c_oAscAsyncActionType.BlockInteraction, Asc.c_oAscAsyncAction.UploadImage);
@@ -13612,9 +13678,7 @@
 			oColor.color.id = id;
 			for(let nMod = 0; nMod < aMods.length; ++nMod) {
 				let oModObject = aMods[nMod];
-				let oMod = new CColorMod();
-				oMod.name = oModObject.name;
-				oMod.val = oModObject.val;
+				let oMod = new CColorMod(oModObject.name, oModObject.val);
 				oColor.addColorMod(oMod);
 			}
 			return oColor;
@@ -13742,14 +13806,8 @@
 				pen.Fill.fill.color.color.setId(phClr);
 				pen.Fill.fill.color.setMods(new CColorModifiers());
 
-				var mod = new CColorMod();
-				mod.setName("shade");
-				mod.setVal(95000);
-				pen.Fill.fill.color.Mods.addMod(mod);
-				mod = new CColorMod();
-				mod.setName("satMod");
-				mod.setVal(105000);
-				pen.Fill.fill.color.Mods.addMod(mod);
+				pen.Fill.fill.color.Mods.addMod("shade", 95000);
+				pen.Fill.fill.color.Mods.addMod("satMod", 105000);
 				theme.themeElements.fmtScheme.lnStyleLst.push(pen);
 
 				pen = new CLn();
@@ -13816,11 +13874,8 @@
 
 			unicolor.setColor(new CSchemeColor());
 			unicolor.color.setId(g_clr_accent1);
-			var mod = new CColorMod();
-			mod.setName("shade");
-			mod.setVal(50000);
 			unicolor.setMods(new CColorModifiers());
-			unicolor.Mods.addMod(mod);
+			unicolor.Mods.addMod("shade", 50000);
 			lnRef.setColor(unicolor);
 			style.setLnRef(lnRef);
 

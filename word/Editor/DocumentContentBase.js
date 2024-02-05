@@ -192,17 +192,18 @@ CDocumentContentBase.prototype.GetAllSeqFieldsByType = function(sType, aFields)
 	}
 };
 
+
 /**
- * Finds a paragraph with a given style
- * @param {string} sStyleId - id of paragraph style
- * @param {boolean} bBackward - whether to search backward or forward
+ * Finds a paragraph which satisfies the specific condition
+ * @param {function} fCondition - represents the condition which paragraph should satisfy.
+ * @param {boolean} bBackward - whether to search backward or forward.
  * @param {?number} nStartIdx - index of searching start. If it is null searching starts depends on bBackward.
  * @returns {?Paragraph}
  */
-CDocumentContentBase.prototype.FindParaWithStyle = function (sStyleId, bBackward, nStartIdx)
+CDocumentContentBase.prototype.FindParagraph = function (fCondition, bBackward, nStartIdx)
 {
-	var nIdx, oElement, oResultPara = null, oContent;
-	var nSearchStartIdx;
+	let nIdx, oElement, oResultPara = null, oContent;
+	let nSearchStartIdx;
 	if(bBackward)
 	{
 		if(nStartIdx !== null)
@@ -218,19 +219,19 @@ CDocumentContentBase.prototype.FindParaWithStyle = function (sStyleId, bBackward
 			oElement = this.Content[nIdx];
 			if(oElement.GetType() === type_Paragraph)
 			{
-				if(oElement.GetParagraphStyle() === sStyleId)
+				if(fCondition(oElement))
 				{
 					oResultPara = oElement;
 				}
 			}
 			else if(oElement.GetType() === type_Table)
 			{
-				oResultPara = oElement.FindParaWithStyle(sStyleId, bBackward, null);
+				oResultPara = oElement.FindParagraph(fCondition, bBackward, null);
 			}
 			else if(oElement.GetType() === type_BlockLevelSdt)
 			{
 				oContent = oElement.GetContent();
-				oResultPara = oContent.FindParaWithStyle(sStyleId, bBackward, null);
+				oResultPara = oContent.FindParagraph(fCondition, bBackward, null);
 			}
 			if(oResultPara !== null)
 			{
@@ -253,19 +254,19 @@ CDocumentContentBase.prototype.FindParaWithStyle = function (sStyleId, bBackward
 			oElement = this.Content[nIdx];
 			if(oElement.GetType() === type_Paragraph)
 			{
-				if(oElement.GetParagraphStyle() === sStyleId)
+				if(fCondition(oElement))
 				{
 					oResultPara = oElement;
 				}
 			}
 			else if(oElement.GetType() === type_Table)
 			{
-				oResultPara = oElement.FindParaWithStyle(sStyleId, bBackward, null);
+				oResultPara = oElement.FindParagraph(fCondition, bBackward, null);
 			}
 			else if(oElement.GetType() === type_BlockLevelSdt)
 			{
 				oContent = oElement.GetContent();
-				oResultPara = oContent.FindParaWithStyle(sStyleId, bBackward, null);
+				oResultPara = oContent.FindParagraph(fCondition, bBackward, null);
 			}
 			if(oResultPara !== null)
 			{
@@ -274,6 +275,37 @@ CDocumentContentBase.prototype.FindParaWithStyle = function (sStyleId, bBackward
 		}
 	}
 	return null;
+};
+
+/**
+ * Finds a paragraph with a given style
+ * @param {string} sStyleId - id of paragraph style
+ * @param {boolean} bBackward - whether to search backward or forward
+ * @param {?number} nStartIdx - index of searching start. If it is null searching starts depends on bBackward.
+ * @returns {?Paragraph}
+ */
+CDocumentContentBase.prototype.FindParaWithStyle = function (sStyleId, bBackward, nStartIdx)
+{
+	let fCondition = function (oParagraph)
+	{
+		return oParagraph.GetParagraphStyle() === sStyleId;
+	};
+	return this.FindParagraph(fCondition, bBackward, nStartIdx);
+};
+
+/**
+ * Finds a paragraph with a given outline level
+ * @param {number} nOutlineLvl - outline level of paragraph
+ * @param {boolean} bBackward - whether to search backward or forward
+ * @param {?number} nStartIdx - index of searching start. If it is null searching starts depends on bBackward.
+ * @returns {?Paragraph}
+ */
+CDocumentContentBase.prototype.FindParaWithOutlineLvl = function (nOutlineLvl, bBackward, nStartIdx)
+{
+	let fCondition = function (oParagraph) {
+		return oParagraph.GetOutlineLvl() === nOutlineLvl;
+	};
+	return this.FindParagraph(fCondition, bBackward, nStartIdx);
 };
 
 /**
@@ -2613,12 +2645,26 @@ CDocumentContentBase.prototype.GetSelectedParagraphs = function()
 	
 	return logicDocument.GetSelectedParagraphs();
 };
+CDocumentContentBase.prototype.setSelectionStateSilent = function(state)
+{
+	let logicDocument = this.GetLogicDocument();
+	if (logicDocument && !logicDocument.IsDocumentEditor())
+		logicDocument = null;
+
+	if (logicDocument)
+		logicDocument.Start_SilentMode();
+	
+	this.SetSelectionState(state);
+	
+	if (logicDocument)
+		logicDocument.End_SilentMode(false);
+};
 CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action)
 {
 	if (!prevState)
 		return null;
 	
-	if (action && (action.type !== AscCommon.SpeakerActionType.keyDown || action.event.KeyCode < 35 || action.event.KeyCode > 40))
+	if (action && (action.type !== AscCommon.SpeakerActionType.keyDown || action.event.KeyCode < 33 || action.event.KeyCode > 40))
 		return null;
 	
 	// В данном метод предполагается, что curState равен this.GetSelectionState()
@@ -2629,10 +2675,10 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 	let obj  = {};
 	let type = AscCommon.SpeechWorkerCommands.Text;
 	
-	this.SetSelectionState(prevState);
+	this.setSelectionStateSilent(prevState);
 	let prevInfo = this.getSelectionInfo();
 	
-	this.SetSelectionState(curState);
+	this.setSelectionStateSilent(curState);
 	let curInfo = this.getSelectionInfo();
 	
 	let isActionSelectionChange = action && action.type === AscCommon.SpeakerActionType.keyDown && action.event.ShiftKey;
@@ -2666,10 +2712,10 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 		if (prevInfo.isSelection && !curInfo.isSelection && isActionSelectionChange)
 		{
 			obj.cancelSelection = true;
-			this.SetSelectionState(prevState);
+			this.setSelectionStateSilent(prevState);
 			type     = AscCommon.SpeechWorkerCommands.TextUnselected;
 			obj.text = this.GetSelectedText(false);
-			this.SetSelectionState(curState);
+			this.setSelectionStateSilent(curState);
 		}
 		else if (!curInfo.isSelection || 0 === AscWord.CompareDocumentPositions(curInfo.selectionStart, curInfo.selectionEnd))
 		{
@@ -2680,10 +2726,10 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 			{
 				if (prevInfo.isSelection && 0 !== AscWord.CompareDocumentPositions(prevInfo.selectionStart, prevInfo.selectionEnd))
 				{
-					this.SetSelectionState(prevState);
+					this.setSelectionStateSilent(prevState);
 					type     = AscCommon.SpeechWorkerCommands.TextUnselected;
 					obj.text = this.GetSelectedText(false);
-					this.SetSelectionState(curState);
+					this.setSelectionStateSilent(curState);
 				}
 				else
 				{
@@ -2716,6 +2762,14 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 						else
 							obj.moveToEndOfLine = true;
 					}
+					else if (33 === keyCode)
+					{
+						obj.movePageUp = true;
+					}
+					else if (34 === keyCode)
+					{
+						obj.movePageDown = true;
+					}
 					
 					if (36 === keyCode || 38 === keyCode || 40 === keyCode)
 						obj.text = paragraph.getTextOnLine();
@@ -2742,10 +2796,10 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 							&& AscWord.CompareDocumentPositions(prevInfo.selectionStart, curInfo.selectionEnd) < 0)))
 				{
 					// TODO: Нужно ли посылать два ивента?
-					// this.SetSelectionState(prevState);
+					// this.setSelectionStateSilent(prevState);
 					// type     = AscCommon.SpeechWorkerCommands.TextUnselected;
 					// obj.text = this.GetSelectedText(false);
-					// this.SetSelectionState(curState);
+					// this.setSelectionStateSilent(curState);
 					
 					type     = AscCommon.SpeechWorkerCommands.TextSelected;
 					obj.text = this.GetSelectedText(false);
@@ -2763,7 +2817,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 					type     = isAdd ? AscCommon.SpeechWorkerCommands.TextSelected : AscCommon.SpeechWorkerCommands.TextUnselected;
 					obj.text = this.GetSelectedText(false);
 					
-					this.SetSelectionState(curState);
+					this.setSelectionStateSilent(curState);
 				}
 			}
 		}

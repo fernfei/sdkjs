@@ -1093,7 +1093,7 @@ CChartsDrawer.prototype =
 
 		if (horizontalAxis && horizontalAxis.xPoints && horizontalAxis.xPoints.length && this.calcProp.widthCanvas != undefined) {
 			if (horizontalAxis instanceof AscFormat.CValAx) {
-				if (horizontalAxis.scaling.orientation == ORIENTATION_MIN_MAX) {
+				if (!horizontalAxis.isReversed()) {
 					calculateLeft = horizontalAxis.xPoints[0].pos;
 					calculateRight = this.calcProp.widthCanvas / pxToMM - horizontalAxis.xPoints[horizontalAxis.xPoints.length - 1].pos;
 				} else {
@@ -1104,7 +1104,7 @@ CChartsDrawer.prototype =
 				diffPoints = horizontalAxis.xPoints[1] ? Math.abs(horizontalAxis.xPoints[1].pos - horizontalAxis.xPoints[0].pos) : Math.abs(horizontalAxis.xPoints[0].pos - verticalAxis.posX) * 2;
 
 				curBetween = 0;
-				if (horizontalAxis.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!horizontalAxis.isReversed()) {
 					if (crossBetween === AscFormat.CROSS_BETWEEN_BETWEEN) {
 						curBetween = diffPoints / 2;
 					}
@@ -1124,7 +1124,7 @@ CChartsDrawer.prototype =
 
 		if (verticalAxis && verticalAxis.yPoints && verticalAxis.yPoints.length && this.calcProp.heightCanvas != undefined) {
 			if (verticalAxis instanceof AscFormat.CValAx) {
-				if (verticalAxis.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!verticalAxis.isReversed()) {
 					calculateTop = verticalAxis.yPoints[verticalAxis.yPoints.length - 1].pos;
 					calculateBottom = this.calcProp.heightCanvas / pxToMM - verticalAxis.yPoints[0].pos;
 				} else {
@@ -1136,7 +1136,7 @@ CChartsDrawer.prototype =
 				diffPoints = verticalAxis.yPoints[1] ? Math.abs(verticalAxis.yPoints[1].pos - verticalAxis.yPoints[0].pos) : Math.abs(verticalAxis.yPoints[0].pos - horizontalAxis.posY) * 2;
 
 				curBetween = 0;
-				if (verticalAxis.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!verticalAxis.isReversed()) {
 					if (crossBetween === AscFormat.CROSS_BETWEEN_BETWEEN) {
 						curBetween = diffPoints / 2;
 					}
@@ -1206,7 +1206,7 @@ CChartsDrawer.prototype =
 
 		let diffPoints;
 		if(horizontalAxis && horizontalAxis.xPoints &&  horizontalAxis.xPoints.length) {
-			let orientationHorAxis = horizontalAxis.scaling.orientation === ORIENTATION_MIN_MAX;
+			let orientationHorAxis = !horizontalAxis.isReversed();
 			diffPoints = 0;
 			if((horizontalAxis instanceof AscFormat.CDateAx || horizontalAxis instanceof AscFormat.CCatAx) && crossBetween === AscFormat.CROSS_BETWEEN_BETWEEN) {
 				diffPoints = Math.abs((horizontalAxis.interval) / 2);
@@ -1231,7 +1231,7 @@ CChartsDrawer.prototype =
 		}
 
 		if(verticalAxis && verticalAxis.yPoints && verticalAxis.yPoints.length) {
-			let orientationVerAxis = verticalAxis.scaling.orientation === ORIENTATION_MIN_MAX;
+			let orientationVerAxis = !verticalAxis.isReversed();
 			diffPoints = 0;
 			if((verticalAxis instanceof AscFormat.CDateAx || verticalAxis instanceof AscFormat.CCatAx)&& crossBetween === AscFormat.CROSS_BETWEEN_BETWEEN) {
 				diffPoints = Math.abs((verticalAxis.interval) / 2);
@@ -1329,24 +1329,24 @@ CChartsDrawer.prototype =
 			return;
 		}
 
-		var maxMinObj;
-		var grouping = this.getChartGrouping(chart);
-		var chartType = this._getChartType(chart);
-		var t = this;
+		let maxMinObj;
+		let grouping = this.getChartGrouping(chart);
+		let chartType = this._getChartType(chart);
+		let t = this;
 
 		//TODO стоит сделать общую обработку для всех диаграмм
-		var calculateStacked = function(sum) {
+		let calculateStacked = function(sum) {
 			if(c_oChartTypes.HBar === chartType || c_oChartTypes.Bar === chartType) {
-				var originalData = $.extend(true, [], data);
-				for (var j = 0; j < data.length; j++) {
-					for (var i = 0; i < data[j].length; i++) {
+				let originalData = $.extend(true, [], data);
+				for (let j = 0; j < data.length; j++) {
+					for (let i = 0; i < data[j].length; i++) {
 						data[j][i] = t._findPrevValue(originalData, j, i)
 					}
 				}
 
 				if(sum) {
-					for (var j = 0; j < data.length; j++) {
-						for (var i = 0; i < data[j].length; i++) {
+					for (let j = 0; j < data.length; j++) {
+						for (let i = 0; i < data[j].length; i++) {
 							if (sum[j] === 0) {
 								break;
 							}
@@ -1355,8 +1355,8 @@ CChartsDrawer.prototype =
 					}
 				}
 			} else {
-				for (var j = 0; j < (data.length - 1); j++) {
-					for (var i = 0; i < data[j].length; i++) {
+				for (let j = 0; j < (data.length - 1); j++) {
+					for (let i = 0; i < data[j].length; i++) {
 						if (!data[j + 1]) {
 							data[j + 1] = [];
 						}
@@ -1365,8 +1365,8 @@ CChartsDrawer.prototype =
 				}
 
 				if(sum && data[0]) {
-					for (var j = 0; j < (data[0].length); j++) {
-						for (var i = 0; i < data.length; i++) {
+					for (let j = 0; j < (data[0].length); j++) {
+						for (let i = 0; i < data.length; i++) {
 							if (sum[j] == 0) {
 								data[i][j] = 0;
 							} else {
@@ -1378,23 +1378,27 @@ CChartsDrawer.prototype =
 			}
 		};
 
-		var calculateSum = function() {
+		let calculateSum = function() {
 			//вычисляем сумму
 			//для разных диаграмм она вычисляется по-разному
-			var res = [];
+			let res = [];
 			if(c_oChartTypes.HBar === chartType || c_oChartTypes.Bar === chartType) {
-				for (var j = 0; j < (data.length); j++) {
+				for (let j = 0; j < (data.length); j++) {
 					res[j] = 0;
-					for (var i = 0; i < data[j].length; i++) {
-						res[j] += Math.abs(data[j][i]);
+					for (let i = 0; i < data[j].length; i++) {
+						if (data[j][i] != null) {
+							res[j] += Math.abs(data[j][i]);
+						}
 					}
 				}
 			} else {
 				if(data[0]) {
-					for (var j = 0; j < (data[0].length); j++) {
+					for (let j = 0; j < (data[0].length); j++) {
 						res[j] = 0;
-						for (var i = 0; i < data.length; i++) {
-							res[j] += Math.abs(data[i][j]);
+						for (let i = 0; i < data.length; i++) {
+							if (data[i][j] != null) {
+								res[j] += Math.abs(data[i][j]);
+							}
 						}
 					}
 				}
@@ -2126,6 +2130,9 @@ CChartsDrawer.prototype =
 					break;
 				}
 				result[step] = temp;
+				if (manualMax === temp) {
+					break;
+				}
 				pow++;
 				step++;
 			}
@@ -2145,6 +2152,9 @@ CChartsDrawer.prototype =
 					break;
 				}
 				result[step] = temp;
+				if (manualMax === temp) {
+					break;
+				}
 				pow++;
 				step++;
 			}
@@ -2690,13 +2700,13 @@ CChartsDrawer.prototype =
 
 		//позиция в заисимости от положения точек на оси OY
 		var result, resPos, resVal, diffVal;
-		var plotArea = this.cChartSpace.chart.plotArea;
 
 		if (!yPoints[1] && val === yPoints[0].val) {
 			result = yPoints[0].pos;
 		} else if (val < yPoints[0].val) {
-			resPos = Math.abs(yPoints[1].pos - yPoints[0].pos);
-			resVal = yPoints[1].val - yPoints[0].val;
+			let firstVal = yPoints[1] ? yPoints[1] : yPoints[0];
+			resPos = Math.abs(firstVal.pos - yPoints[0].pos);
+			resVal = firstVal.val - yPoints[0].val;
 			diffVal = Math.abs(yPoints[0].val) - Math.abs(val);
 			if (isOx || isRect) {
 				result = yPoints[0].pos - Math.abs((diffVal / resVal) * resPos);
@@ -2713,7 +2723,7 @@ CChartsDrawer.prototype =
 			resVal = test.val - yPoints[0].val;
 			diffVal = Math.abs(yPoints[yPoints.length - 1].val - val);
 
-			if (axis.scaling.orientation === ORIENTATION_MIN_MAX) {
+			if (!axis.isReversed()) {
 				if (isOx) {
 					result = yPoints[yPoints.length - 1].pos + (diffVal / resVal) * resPos;
 				} else {
@@ -2743,13 +2753,13 @@ CChartsDrawer.prototype =
 					var startPos = yPoints[s].pos;
 
 					if (!isOx) {
-						if (axis.scaling.orientation === ORIENTATION_MIN_MAX) {
+						if (!axis.isReversed()) {
 							result = -(resPos / resVal) * (Math.abs(val - yPoints[s].val)) + startPos;
 						} else {
 							result = (resPos / resVal) * (Math.abs(val - yPoints[s].val)) + startPos;
 						}
 					} else {
-						if (axis.scaling.orientation !== ORIENTATION_MIN_MAX) {
+						if (axis.isReversed()) {
 							result = -(resPos / resVal) * (Math.abs(val - yPoints[s].val)) + startPos;
 						} else {
 							result = (resPos / resVal) * (Math.abs(val - yPoints[s].val)) + startPos;
@@ -2772,13 +2782,13 @@ CChartsDrawer.prototype =
 				var startPos = yPoints[index].pos;
 
 				if (!isOx) {
-					if (axis.scaling.orientation === ORIENTATION_MIN_MAX) {
+					if (!axis.isReversed()) {
 						res = -(resPos / resVal) * (Math.abs(val - yPoints[index].val)) + startPos;
 					} else {
 						res = (resPos / resVal) * (Math.abs(val - yPoints[index].val)) + startPos;
 					}
 				} else {
-					if (axis.scaling.orientation !== ORIENTATION_MIN_MAX) {
+					if (axis.isReversed()) {
 						res = -(resPos / resVal) * (Math.abs(val - yPoints[index].val)) + startPos;
 					} else {
 						res = (resPos / resVal) * (Math.abs(val - yPoints[index].val)) + startPos;
@@ -2821,43 +2831,77 @@ CChartsDrawer.prototype =
 		if (yPoints.length < 2) {
 			return parseFloat("0." + logVal.toString().split(".")[1]) * yPoints[0].pos;
 		}
+
+		parseVal = logVal.toString().split(".");
 		if (logVal < 0) {
-			parseVal = logVal.toString().split(".");
 			maxVal = Math.pow(logBase, parseVal[0]);
 			minVal = Math.pow(logBase, parseFloat(parseVal[0]) - 1);
-			for (var i = 0; i < yPoints.length; i++) {
-				if (yPoints[i].val < maxVal && yPoints[i].val >= minVal) {
-					if(yPoints[i + 1]) {
-						startPos = yPoints[i + 1].pos;
-						diffPos = yPoints[i].pos - yPoints[i + 1].pos;
-					} else {
-						startPos = yPoints[i].pos;
-						diffPos = yPoints[i - 1].pos - yPoints[i].pos;
-					}
-
-					break;
-				}
-			}
-			result = startPos + parseFloat("0." + parseVal[1]) * diffPos;
 		} else {
-			parseVal = logVal.toString().split(".");
 			minVal = Math.pow(logBase, parseVal[0]);
 			maxVal = Math.pow(logBase, parseFloat(parseVal[0]) + 1);
-			for (var i = 0; i < yPoints.length; i++) {
-				if (yPoints[i].val < maxVal && yPoints[i].val >= minVal) {
-					if(yPoints[i + 1]) {
-						startPos = yPoints[i].pos;
-						diffPos = yPoints[i].pos - yPoints[i + 1].pos;
-					} else {
-						startPos = yPoints[i].pos;
-						diffPos = yPoints[i - 1].pos - yPoints[i].pos;
-					}
-					break;
-				}
-			}
-			result = startPos - parseFloat("0." + parseVal[1]) * diffPos;
 		}
 
+		for (var i = 0; i < yPoints.length; i++) {
+			if (yPoints[i].val < maxVal && yPoints[i].val >= minVal) {
+				if(yPoints[i + 1]) {
+					startPos = logVal < 0 ? yPoints[i + 1].pos : yPoints[i].pos;
+					diffPos = yPoints[i].pos - yPoints[i + 1].pos;
+				} else {
+					startPos = yPoints[i].pos;
+					diffPos = yPoints[i - 1].pos - yPoints[i].pos;
+				}
+				break;
+			}
+		}
+
+		if (diffPos == null) {
+			let maxIteration = 100;
+			if (maxVal > yPoints[yPoints.length - 1].val) {
+				diffPos = Math.abs(yPoints[1].pos - yPoints[0].pos);
+				let pow = Math.log(yPoints[yPoints.length - 1].val) / Math.log(logBase);
+
+				let _startPos = yPoints[yPoints.length - 1].pos;
+				let _endPos = _startPos - diffPos;
+				while (true) {
+					let start = Math.pow(logBase, pow);
+					let end = Math.pow(logBase, pow + 1);
+					_startPos -= diffPos;
+					_endPos -= diffPos;
+
+					if (start <= maxVal && end >= minVal) {
+						startPos = logVal < 0 ? _endPos : _startPos;
+						break;
+					}
+					pow++;
+					if (pow > maxIteration) {
+						break;
+					}
+				}
+			} else if (minVal < yPoints[0].val) {
+				diffPos = Math.abs(yPoints[1].pos - yPoints[0].pos);
+				let pow = Math.log(yPoints[0].val) / Math.log(logBase);
+
+				let _startPos = yPoints[0].pos;
+				let _endPos = _startPos + diffPos;
+				while (true) {
+					let start = Math.pow(logBase, pow);
+					let end = Math.pow(logBase, pow - 1);
+					_startPos += diffPos;
+					_endPos += diffPos;
+
+					if (start <= maxVal && end >= minVal) {
+						startPos = logVal < 0 ? _endPos : _startPos;
+						break;
+					}
+					pow--;
+					if (Math.abs(pow) > maxIteration) {
+						break;
+					}
+				}
+			}
+		}
+
+		result = logVal < 0 ? (startPos + parseFloat("0." + parseVal[1]) * diffPos) : (startPos - parseFloat("0." + parseVal[1]) * diffPos);
 		return result;
 	},
 
@@ -3936,7 +3980,7 @@ CChartsDrawer.prototype =
 		if(this.calcProp.type === c_oChartTypes.Bar)
 		{
 			result = val > 0 && visible < 0 || val < 0 && visible > 0;
-			if(!(this.calcProp.subType === "stacked") && !(this.calcProp.subType === "stackedPer") && _valAx.scaling.orientation !== ORIENTATION_MIN_MAX)
+			if(!(this.calcProp.subType === "stacked") && !(this.calcProp.subType === "stackedPer") && _valAx.isReversed())
 				result = !result;
 		}
 		else if(this.calcProp.type === c_oChartTypes.Line)
@@ -3947,7 +3991,7 @@ CChartsDrawer.prototype =
 		{
 			result = val < 0 && visible < 0 || val > 0 && visible > 0;
 			
-			if(!(this.calcProp.subType === "stacked") && !(this.calcProp.subType === "stackedPer") && _valAx.scaling.orientation !== ORIENTATION_MIN_MAX)
+			if(!(this.calcProp.subType === "stacked") && !(this.calcProp.subType === "stackedPer") && _valAx.isReversed())
 				result = !result;
 		}
 
@@ -4678,7 +4722,7 @@ CChartsDrawer.prototype =
 
 		if (axis.getObjectType() === AscDFH.historyitem_type_ValAx) {
 			var yPoints = axis.yPoints;
-			var orientation = axis.scaling.orientation === AscFormat.ORIENTATION_MIN_MAX;
+			var orientation = !axis.isReversed();
 			var trueWidth = this.calcProp.trueWidth;
 			var xCenter = axis.posX;
 
@@ -4947,7 +4991,7 @@ CChartsDrawer.prototype =
 					point3 = point7;
 					point4 = point8;
 				}
-				if (this.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				if (this.cChartSpace.chart.plotArea.valAx.isReversed()) {
 					x5 = startX, y5 = startY - height / 2, z5 = 0 + gapDepth;
 					x6 = startX, y6 = startY - height / 2, z6 = perspectiveDepth + gapDepth;
 					x7 = startX + individualBarValue, y7 = startY - height / 2, z7 = perspectiveDepth + gapDepth;
@@ -5067,7 +5111,7 @@ CChartsDrawer.prototype =
 				value = hbar ? -minH: minH;
 			}
 		}
-		if (this.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+		if (this.cChartSpace.chart.plotArea.valAx.isReversed()) {
 			if (subType === "stacked" || subType === "stackedPer") {
 				if (hbar) {
 					startX = val < 0 ? --startX : ++startX;
@@ -5429,7 +5473,7 @@ CChartsDrawer.prototype =
 			points = this.isConeIntersection(hbar, subType, startX, startY, height, gapDepth, individualBarWidth, perspectiveDepth,
 				val, nullPositionOX, maxH, minH);
 
-			if ((subType === "stacked" || subType === "stackedPer") && this.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+			if ((subType === "stacked" || subType === "stackedPer") && this.cChartSpace.chart.plotArea.valAx.isReversed()) {
 				sizes12 = points.wUp !== 0 ? points.wUp : individualBarWidth / 2;
 				sizes22 = points.lUp !== 0 ? points.lUp : perspectiveDepth / 2;
 				sizes1 = points.wDown;
@@ -5910,7 +5954,7 @@ drawBarChart.prototype = {
 				seriesHeight[i][idx] = height;
 
 				//стартовая позиция колонки X
-				if (this.catAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!this.catAx.isReversed()) {
 					if (xPoints[1] && xPoints[1].pos && xPoints[idx]) {
 						startXPosition = xPoints[idx].pos - Math.abs((xPoints[1].pos - xPoints[0].pos) / 2);
 					} else if (xPoints[idx]) {
@@ -5929,7 +5973,7 @@ drawBarChart.prototype = {
 				}
 
 
-				if (this.catAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!this.catAx.isReversed()) {
 					if (seriesCounter === 0) {
 						startX =
 							startXPosition * this.chartProp.pxToMM + hmargin + seriesCounter * (individualBarWidth);
@@ -5948,11 +5992,11 @@ drawBarChart.prototype = {
 				}
 
 
-				if (this.catAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				if (this.catAx.isReversed()) {
 					startX = startX - individualBarWidth;
 				}
 
-				if (this.valAx.scaling.orientation !== ORIENTATION_MIN_MAX &&
+				if (this.valAx.isReversed() &&
 					(this.subType === "stackedPer" || this.subType === "stacked")) {
 					startY = startY + height;
 				}
@@ -6169,7 +6213,7 @@ drawBarChart.prototype = {
 				height = startBlockPosition - endBlockPosition;
 			}
 
-			if (this.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+			if (this.valAx.isReversed()) {
 				height = -height;
 			}
 		} else {
@@ -6388,7 +6432,7 @@ drawBarChart.prototype = {
 
 		var centerX, centerY;
 		//TODO check revert valAx orientation for other charts labels
-		var maxMinAxis = this.valAx && this.valAx.scaling && this.valAx.scaling.orientation === ORIENTATION_MAX_MIN;
+		var maxMinAxis = this.valAx && this.valAx.isReversed();
 
 		switch (point.compiledDlb.dLblPos) {
 			case c_oAscChartDataLabelsPos.bestFit: {
@@ -6605,7 +6649,7 @@ drawBarChart.prototype = {
 						var colors = duplicateBrush.fill.colors;
 						//ToDo проверить stacked charts!
 						var color;
-						var valAxOrientation = this.valAx.scaling.orientation;
+						var valAxOrientation = this.valAx.getOrientation();
 						if ((val > 0 && valAxOrientation === ORIENTATION_MIN_MAX) ||
 							(val < 0 && valAxOrientation !== ORIENTATION_MIN_MAX)) {
 							if (k === 4 && colors && colors[0] && colors[0].color) {
@@ -6839,7 +6883,7 @@ drawBarChart.prototype = {
 					uRadius2 = 0;
 					dRadius1 = points.wDown;
 					dRadius2 = points.lDown;
-				} else if ((t.subType === "stacked" || t.subType === "stackedPer") && t.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				} else if ((t.subType === "stacked" || t.subType === "stackedPer") && t.cChartSpace.chart.plotArea.valAx.isReversed()) {
 					uRadius1 = points.wUp !== 0 ? points.wUp : individualBarWidth / 2;
 					uRadius2 = points.lUp !== 0 ? points.lUp : perspectiveDepth / 2;
 					dRadius1 = points.wDown;
@@ -7702,17 +7746,15 @@ drawAreaChart.prototype = {
 	},
 
 	_calculatePaths: function () {
-		var points = this.points;
-		var prevPoints;
-		var isStacked = this.subType === "stackedPer" || this.subType === "stacked";
+		let points = this.points;
+		let isStacked = this.subType === "stackedPer" || this.subType === "stacked";
 
-		for (var i = 0; i < points.length; i++) {
+		for (let i = 0; i < points.length; i++) {
 			if (!this.paths.series) {
 				this.paths.series = [];
 			}
-			prevPoints = isStacked ? this._getPrevSeriesPoints(points, i) : null;
 			if (points[i]) {
-				this.paths.series[i] = this._calculateLine(points[i], prevPoints);
+				this.paths.series[i] = this._calculateLine(points[i], isStacked ? i : null);
 			}
 		}
 	},
@@ -7743,10 +7785,12 @@ drawAreaChart.prototype = {
 		}
 	},
 
-	_calculateLine: function (points, prevPoints) {
+	_calculateLine: function (points, seriesIndex) {
 		if (!points) {
 			return;
 		}
+		let allPoints = this.points;
+
 		let pathId = this.cChartSpace.AllocPath();
 		let path = this.cChartSpace.GetPath(pathId);
 
@@ -7763,11 +7807,22 @@ drawAreaChart.prototype = {
 
 		let nullPositionOX = this.catAx && this.catAx.posY * this.chartProp.pxToMM;
 
-		var i;
+		let isPrevPoints = seriesIndex !== null && seriesIndex !== 0;
+		let t = this;
+		let searchPreviousPoint = function (pointIndex) {
+			for (let i = seriesIndex; i >= 0; i--) {
+				let prevPoints = t._getPrevSeriesPoints(allPoints, i);
+				if (prevPoints && prevPoints[pointIndex]) {
+					return prevPoints[pointIndex];
+				}
+			}
+			return null;
+		};
+
 		//точки данной серии
 		if(this.subType === "stacked" || this.subType === "stackedPer") {
 			let pointsLength = points.length;
-			for (i = 0; i < pointsLength; i++) {
+			for (let i = 0; i < pointsLength; i++) {
 				point = points[i];
 				if(!point) {
 
@@ -7779,9 +7834,12 @@ drawAreaChart.prototype = {
 			}
 
 			//точки предыдущей серии
-			if (prevPoints != null && pointsLength) {
+			if (isPrevPoints && pointsLength) {
 				for (let i = pointsLength - 1; i >= 0; i--) {
-					point = prevPoints[i];
+					point = searchPreviousPoint(i);
+					if (!point) {
+						continue;
+					}
 					path.lnTo(point.x * pathW, point.y * pathH);
 
 					if (i === 0) {
@@ -7795,7 +7853,7 @@ drawAreaChart.prototype = {
 			}
 		} else {
 			let startSegmentPoint;
-			for (i = 0; i < points.length; i++) {
+			for (let i = 0; i < points.length; i++) {
 				point = points[i];
 				if(!point) {
 					if(startSegmentPoint) {
@@ -8986,13 +9044,13 @@ drawAreaChart.prototype = {
 			var angle = Math.abs(this.cChartDrawer.processor3D.angleOy);
 			if (!this.cChartDrawer.processor3D.view3D.getRAngAx() && angle > Math.PI / 2 &&
 				angle < 3 * Math.PI / 2) {
-				if (this.serAx && this.serAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				if (this.serAx && this.serAx.isReversed()) {
 					this._standardDraw(false);
 				} else {
 					this._standardDraw(true);
 				}
 			} else {
-				if (this.serAx && this.serAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				if (this.serAx && this.serAx.isReversed()) {
 					this._standardDraw(true);
 				} else {
 					this._standardDraw(false);
@@ -9057,8 +9115,8 @@ drawAreaChart.prototype = {
 		var cZ = k.x * n.y - n.x * k.y;
 		var visible = (aX + bY + cZ) < 0;
 
-		var valOrientation = this.valAx.scaling.orientation === ORIENTATION_MIN_MAX;
-		var catOrientation = this.catAx.scaling.orientation === ORIENTATION_MIN_MAX;
+		var valOrientation = !this.valAx.isReversed();
+		var catOrientation = !this.catAx.isReversed();
 
 		if ((!valOrientation && !isSideFace) || (!valOrientation && catOrientation)) {
 			return !visible;
@@ -9225,7 +9283,7 @@ drawHBarChart.prototype = {
 
 
 				//стартовая позиция колонки Y
-				if (this.catAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!this.catAx.isReversed()) {
 					if (yPoints[1] && yPoints[1].pos && yPoints[idx]) {
 						startYPosition = yPoints[idx].pos + Math.abs((yPoints[1].pos - yPoints[0].pos) / 2);
 					} else if(yPoints[idx]){
@@ -9244,7 +9302,7 @@ drawHBarChart.prototype = {
 				}
 
 
-				if (this.catAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+				if (!this.catAx.isReversed()) {
 					if (seriesCounter === 0) {
 						startY = startYPosition * this.chartProp.pxToMM - hmargin - seriesCounter * (individualBarHeight);
 					} else {
@@ -9259,12 +9317,12 @@ drawHBarChart.prototype = {
 				}
 
 				newStartY = startY;
-				if (this.catAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+				if (this.catAx.isReversed()) {
 					newStartY = startY + individualBarHeight;
 				}
 
 				newStartX = startX;
-				if (this.valAx.scaling.orientation !== ORIENTATION_MIN_MAX &&
+				if (this.valAx.isReversed() &&
 					(this.subType === "stackedPer" || this.subType === "stacked")) {
 					newStartX = startX - width;
 				}
@@ -9442,7 +9500,7 @@ drawHBarChart.prototype = {
 			startY = startBlockPosition;
 			width = endBlockPosition - startBlockPosition;
 
-			if (this.valAx.scaling.orientation !== ORIENTATION_MIN_MAX) {
+			if (this.valAx.isReversed()) {
 				width = -width;
 			}
 		} else {
@@ -9826,7 +9884,7 @@ drawHBarChart.prototype = {
 		};
 
 		if (this.subType === "stacked" || this.subType === "stackedPer") {
-			if (this.valAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+			if (!this.valAx.isReversed()) {
 				drawReverse(true);
 				draw(false);
 			} else {
@@ -9834,7 +9892,7 @@ drawHBarChart.prototype = {
 				draw(true);
 			}
 		} else {
-			if (this.catAx.scaling.orientation === ORIENTATION_MIN_MAX) {
+			if (!this.catAx.isReversed()) {
 				draw();
 			} else {
 				drawReverse();
@@ -10153,10 +10211,7 @@ drawHBarChart.prototype = {
 	_applyColorModeByBrush: function (brushFill, val) {
 		var props = this.cChartSpace.getParentObjects();
 		var duplicateBrush = brushFill.createDuplicate();
-		var cColorMod = new AscFormat.CColorMod;
-		cColorMod.val = val;
-
-		cColorMod.name = "shade";
+		var cColorMod = new AscFormat.CColorMod("shade", val);
 		duplicateBrush.addColorMod(cColorMod);
 		duplicateBrush.calculate(props.theme, props.slide, props.layout, props.master, new AscFormat.CUniColor().RGBA, this.cChartSpace.clrMapOvr);
 
@@ -11317,11 +11372,7 @@ drawPieChart.prototype = {
 				if (brush) {
 					var props = t.cChartSpace.getParentObjects();
 					var duplicateBrush = brush.createDuplicate();
-					var cColorMod = new AscFormat.CColorMod;
-
-					cColorMod.val = shadeValue;
-					cColorMod.name = shade;
-
+					var cColorMod = new AscFormat.CColorMod(shade, shadeValue);
 					if (duplicateBrush) {
 						duplicateBrush.addColorMod(cColorMod);
 						duplicateBrush.calculate(props.theme, props.slide, props.layout, props.master, new AscFormat.CUniColor().RGBA, t.cChartSpace.clrMapOvr);
@@ -11912,10 +11963,7 @@ drawPieChart.prototype = {
 				var duplicateBrush = brush;
 				if (n !== this.paths.series.length - 1) {
 					duplicateBrush = brush.createDuplicate();
-					var cColorMod = new AscFormat.CColorMod;
-
-					cColorMod.val = 35000;
-					cColorMod.name = "shade";
+					var cColorMod = new AscFormat.CColorMod("shade", 35000);
 
 					duplicateBrush.addColorMod(cColorMod);
 					duplicateBrush.calculate(props.theme, props.slide, props.layout, props.master, new AscFormat.CUniColor().RGBA, this.cChartSpace.clrMapOvr);
@@ -12205,7 +12253,7 @@ drawRadarChart.prototype = {
 		let yPoints = this.valAx.yPoints;
 
 		let xCenter = this.valAx.posX;
-		let yCenter = this.valAx.scaling.orientation === AscFormat.ORIENTATION_MIN_MAX ? yPoints[0].pos : yPoints[yPoints.length - 1].pos;
+		let yCenter = !this.valAx.isReversed() ? yPoints[0].pos : yPoints[yPoints.length - 1].pos;
 
 		let valueMinMax;
 		if (yPoints && yPoints.length > 1) {
@@ -12544,7 +12592,7 @@ drawRadarChart.prototype = {
 				let yPoints = this.valAx.yPoints;
 				if (yPoints && yPoints.length > 1) {
 					let xCenter = this.valAx.posX;
-					let yCenter = this.valAx.scaling.orientation === AscFormat.ORIENTATION_MIN_MAX ? yPoints[0].pos : yPoints[yPoints.length - 1].pos;
+					let yCenter = !this.valAx.isReversed() ? yPoints[0].pos : yPoints[yPoints.length - 1].pos;
 
 					let radius1 = this._getRadius(point.val, this._minMaxValue);
 					let alpha1 = this._getAlpha(point.idx);
@@ -12577,7 +12625,7 @@ drawRadarChart.prototype = {
 
 	_getRadius: function (val) {
 		var yPoints = this.valAx.yPoints;
-		var orientation = this.valAx.scaling.orientation === AscFormat.ORIENTATION_MIN_MAX;
+		var orientation = !this.valAx.isReversed();
 		return (orientation ? yPoints[0].pos : yPoints[yPoints.length - 1].pos) - this.cChartDrawer.getYPosition(val, this.valAx);
 	},
 
@@ -14210,7 +14258,7 @@ axisChart.prototype = {
 
 			var axis = this.axis;
 			var yPoints = axis.yPoints;
-			var orientation = axis.scaling.orientation === AscFormat.ORIENTATION_MIN_MAX;
+			var orientation = !axis.isReversed();
 			var xCenter = axis.posX;
 
 			var yCenter, trueHeight;
@@ -14384,7 +14432,7 @@ axisChart.prototype = {
 		var widthLine = tickmarksProps.widthLine, widthMinorLine = tickmarksProps.widthMinorLine;
 		var crossMajorStep = tickmarksProps.crossMajorStep, crossMinorStep = tickmarksProps.crossMinorStep;
 
-		var orientation = this.axis ? this.axis.scaling.orientation : ORIENTATION_MIN_MAX;
+		var orientation = this.axis ? this.axis.getOrientation() : ORIENTATION_MIN_MAX;
 		var minorStep, posX, posY, k, firstDiff = 0;
 		var tickMarkSkip = this.axis.tickMarkSkip ? this.axis.tickMarkSkip : 1;
 
@@ -14522,7 +14570,7 @@ axisChart.prototype = {
 	},
 
 	_calculateValTickMark: function () {
-		let orientation = this.axis ? this.axis.scaling.orientation : ORIENTATION_MIN_MAX;
+		let orientation = this.axis ? this.axis.getOrientation() : ORIENTATION_MIN_MAX;
 		let tickmarksProps = this._getTickmarksProps();
 		let widthLine = tickmarksProps.widthLine;
 		let widthMinorLine = tickmarksProps.widthMinorLine / this.chartProp.pxToMM;
@@ -16044,7 +16092,7 @@ CColorObj.prototype =
 		if(this.chartsDrawer.calcProp.type === c_oChartTypes.Bar)
 		{
 			result = val > 0 && visible < 0 || val < 0 && visible > 0;
-			if(!(this.chartsDrawer.calcProp.subType === "stacked") && !(this.chartsDrawer.calcProp.subType === "stackedPer") && this.chartsDrawer.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX)
+			if(!(this.chartsDrawer.calcProp.subType === "stacked") && !(this.chartsDrawer.calcProp.subType === "stackedPer") && this.chartsDrawer.cChartSpace.chart.plotArea.valAx.isReversed())
 				result = !result;
 		}
 		else if(this.chartsDrawer.calcProp.type === c_oChartTypes.Line)
@@ -16055,7 +16103,7 @@ CColorObj.prototype =
 		{
 			result = val < 0 && visible < 0 || val > 0 && visible > 0;
 
-			if(!(this.chartsDrawer.calcProp.subType === "stacked") && !(this.chartsDrawer.calcProp.subType === "stackedPer") && this.chartsDrawer.cChartSpace.chart.plotArea.valAx.scaling.orientation !== ORIENTATION_MIN_MAX)
+			if(!(this.chartsDrawer.calcProp.subType === "stacked") && !(this.chartsDrawer.calcProp.subType === "stackedPer") && this.chartsDrawer.cChartSpace.chart.plotArea.valAx.isReversed())
 				result = !result;
 		}
 		if (cylinder) {

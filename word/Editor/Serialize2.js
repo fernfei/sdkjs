@@ -1095,7 +1095,9 @@ var c_oSerSdt = {
 	FormPrLabel    : 46,
 	FormPrHelpText : 47,
 	FormPrRequired : 48,
-
+	
+	CheckboxGroupKey: 49,
+	
 	TextFormPr              : 50,
 	TextFormPrComb          : 51,
 	TextFormPrCombWidth     : 52,
@@ -1106,8 +1108,6 @@ var c_oSerSdt = {
 	TextFormPrAutoFit       : 57,
 	TextFormPrMultiLine     : 58,
 	TextFormPrFormat        : 59,
-
-	CheckboxGroupKey: 59,
 
 	PictureFormPr                : 60,
 	PictureFormPrScaleFlag       : 61,
@@ -1413,16 +1413,10 @@ function CreateThemeUnifill(color, tint, shade){
 			ret.fill.color.setMods(new AscFormat.CColorModifiers());
 			var mod;
 			if(null != tint){
-				mod = new AscFormat.CColorMod();
-				mod.setName("wordTint");
-				mod.setVal(tint /** 100000.0 / 0xff*/);
-				ret.fill.color.Mods.addMod(mod);
+				ret.fill.color.Mods.addMod("wordTint", tint);
 			}
 			if(null != shade){
-				mod = new AscFormat.CColorMod();
-				mod.setName("wordShade");
-				mod.setVal(shade /** 100000.0 / 0xff*/);
-				ret.fill.color.Mods.addMod(mod);
+				ret.fill.color.Mods.addMod("wordShade", shade);
 			}
 		}
 	}
@@ -3250,7 +3244,17 @@ function Binary_rPrWriter(memory, saveParams)
 		{
 			this.memory.WriteByte(c_oSerProp_rPrType.TextOutline);
             this.memory.WriteByte(c_oSerPropLenType.Variable);
+
+			let oFill = rPr.TextOutline.Fill;
+			if(oFill && null != oFill.transparent)
+			{
+				oFill.transparent = 255 - oFill.transparent;
+			}
 			this.bs.WriteItemWithLength(function () { pptx_content_writer.WriteSpPr(_this.memory, rPr.TextOutline, 0); });
+			if(oFill && null != oFill.transparent)
+			{
+				oFill.transparent = 255 - oFill.transparent;
+			}
 		}
 		if(null != rPr.TextFill)
 		{
@@ -5356,7 +5360,7 @@ function BinaryDocumentTableWriter(memory, doc, oMapCommentId, oNumIdMap, copyPa
                     break;
 				case para_Field:
 					let Instr = item.GetInstructionLine();
-					var oFFData = fieldtype_FORMTEXT === item.Get_FieldType() ? {} : null;
+					var oFFData = AscWord.fieldtype_FORMTEXT === item.Get_FieldType() ? {} : null;
 					if (Instr) {
 						if(this.saveParams && this.saveParams.bMailMergeDocx)
 							oThis.WriteParagraphContent(item, bUseSelection, false);
@@ -10205,8 +10209,15 @@ function Binary_rPrReader(doc, oReadResult, stream)
 			case c_oSerProp_rPrType.TextOutline:
 				if(length > 0){
 					var TextOutline = pptx_content_loader.ReadShapeProperty(this.stream, 0);
-					if(null != TextOutline)
+					if(null != TextOutline) {
 						rPr.TextOutline = TextOutline;
+						let oFill = TextOutline.Fill;
+						if(null != oFill){
+							if(null != oFill.transparent){
+								oFill.transparent = 255 - oFill.transparent;
+							}
+						}
+					}
 				}
 				else
 					res = c_oSerConstants.ReadUnknown;
@@ -11015,11 +11026,7 @@ function Binary_NumberingTableReader(doc, oReadResult, stream)
         {
 			if(nLevelNum < oNewNum.Lvl.length)
 			{
-				var oOldLvl = oNewNum.Lvl[nLevelNum];
-				var oNewLvl = oOldLvl.Copy();
-				//сбрасываем свойства
-				oNewLvl.ParaPr = new CParaPr();
-				oNewLvl.TextPr = new CTextPr();
+				var oNewLvl = new CNumberingLvl();
 				var tmp = {nLevelNum: nLevelNum};
 				res = this.bcr.Read2(length, function(t, l){
 					return oThis.ReadLevel(t, l, oNewLvl, tmp);
@@ -11740,12 +11747,12 @@ function Binary_DocumentTableReader(doc, oReadResult, openParams, stream, curNot
 		let paragraph = paragraphContent.GetParagraph();
         if (c_oSer_FldSimpleType.Instr === type) {
 			var Instr = this.stream.GetString2LE(length);
-			let elem = new ParaField(fieldtype_UNKNOWN);
+			let elem = new ParaField(AscWord.fieldtype_UNKNOWN);
 			elem.SetParagraph(paragraph);
 			let oParser = new CFieldInstructionParser();
 			let Instruction = oParser.GetInstructionClass(Instr);
 			oParser.InitParaFieldArguments(Instruction.Type, Instr, elem);
-			if (fieldtype_UNKNOWN !== elem.FieldType) {
+			if (AscWord.fieldtype_UNKNOWN !== elem.FieldType) {
 				oFldSimpleObj.ParaField = elem;
 			} else {
 				this.ConcatContent(elem.Content);

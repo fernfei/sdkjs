@@ -297,11 +297,6 @@ ParaComment.prototype =
         return false;
     },
 
-    Recalculate_CurPos : function(X, Y, CurrentRun, _CurRange, _CurLine, CurPage, UpdateCurPos, UpdateTarget, ReturnTarget)
-    {
-        return { X : X };
-    },
-
 	RecalculateMinMaxContentWidth : function()
     {
 
@@ -358,11 +353,11 @@ ParaComment.prototype =
 	MoveCursorToEndPos : function(SelectFromEnd)
     {
     },
-
-    Get_ParaContentPosByXY : function(SearchPos, Depth, _CurLine, _CurRange, StepEnd)
-    {
-        return false;
-    },
+	
+	getParagraphContentPosByXY : function(state)
+	{
+		return false;
+	},
 
     Get_ParaContentPos : function(bSelection, bStart, ContentPos, bUseCorrection)
     {
@@ -461,7 +456,7 @@ ParaComment.prototype =
     {
     },
 
-    Selection_DrawRange : function(_CurLine, _CurRange, SelectionDraw)
+    drawSelectionInRange : function(line, range, drawState)
     {
     },
 

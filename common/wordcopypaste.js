@@ -2285,8 +2285,8 @@ function sendImgUrls(api, images, callback, bNotShowError, token) {
     var _data = [];
     for (var i = 0; i < images.length; i++)
     {
-      var _url = window["native"]["getImageUrl"](images[i]);
-      var _full_path = window["native"]["getImagesDirectory"]() + "/" + _url;
+      var _url = window["native"]["GetImageUrl"](images[i]);
+      var _full_path = window["native"]["GetImagesPath"]() + "/" + _url;
       var _local_url = "media/" + _url;
       AscCommon.g_oDocumentUrls.addUrls({_local_url:_full_path});
       _data[i] = {url:_full_path, path:_local_url};
@@ -2416,7 +2416,7 @@ function PasteProcessor(api, bUploadImage, bUploadFonts, bNested, pasteInExcel, 
     this.bInBlock = null;
 
 	//ширина элемента в который вставляем страница или ячейка
-    this.dMaxWidth = Page_Width - X_Left_Margin - X_Right_Margin;
+    this.dMaxWidth = getPageWidth();
 	//коэфициент сжатия(например при вставке таблица сжалась, значит при вставке содержимого ячейки к картинкам и таблице будет применен этот коэффициент)
     this.dScaleKoef = 1;
     this.bUseScaleKoef = false;
@@ -5196,6 +5196,12 @@ PasteProcessor.prototype =
 					}
 					oPasteHelper.Paste_Process_End();
 				}
+
+				if (false === oThis.bNested) {
+					if (oThis.pasteCallback) {
+						oThis.pasteCallback();
+					}
+				}
 			};
 			if (oPresentation.GetSlidesCount() === 0) {
 				oPresentation.addNextSlide();
@@ -6507,8 +6513,8 @@ PasteProcessor.prototype =
 			var originalSrcArr = [];
 			for (var image in this.oImages) {
 				var src = this.oImages[image];
-				if (undefined !== window["Native"] && undefined !== window["Native"]["GetImageUrl"]) {
-					this.oImages[image] = window["Native"]["GetImageUrl"](this.oImages[image]);
+				if (undefined !== window["native"] && undefined !== window["native"]["GetImageUrl"]) {
+					this.oImages[image] = window["native"]["GetImageUrl"](this.oImages[image]);
 				} else if (!g_oDocumentUrls.getImageLocal(src)) {
 					if (oThis.rtfImages && oThis.rtfImages[src]) {
 						aImagesToDownload.push(oThis.rtfImages[src]);
@@ -7931,6 +7937,7 @@ PasteProcessor.prototype =
 			};
 
 			res = this.oLogicDocument.GetNumbering().CreateNum();
+			res.CreateDefault();
 			for (var i = 1; i < aNumbering.length; i++) {
 				var curNumbering = aNumbering[i];
 				if (!curNumbering) {
@@ -8459,8 +8466,8 @@ PasteProcessor.prototype =
 		var oDocument = this.oDocument;
 		var tableNode = node, newNode, headNode;
 		var bPresentation = !PasteElementsId.g_bIsDocumentCopyPaste;
-        var bPercentWidth = node.style.width.indexOf('%') !== -1 || node.width.indexOf('%') !== -1;
-        var nPercentWidth = bPercentWidth ? parseInt(node.style.width || node.width) : 0;
+		let tBodyNode;
+
 		//Ищем если есть tbody
 		var i, length, j, length2;
 		for (i = 0, length = node.childNodes.length; i < length; ++i) {
@@ -8487,11 +8494,10 @@ PasteProcessor.prototype =
 
 		if (newNode) {
 			node = newNode;
-			tableNode = newNode;
+			tBodyNode = newNode;
 		} else if (headNode) {
 			node = headNode;
-			//tableNode = headNode;
-			//pPr.repeatHeaderRow = true;
+			tBodyNode = tableNode;
 		}
 
 		//валидация талиц. В таблице не может быть строк состоящих из вертикально замерженых ячеек.
@@ -8671,12 +8677,24 @@ PasteProcessor.prototype =
 				aSumGrid[i] = nSum;
 			}
 			//набиваем content
-			this._ExecuteTable(tableNode, node, table, aSumGrid, nMaxColCount !== nMinColCount ? aColsCountByRow : null, pPr, bUseScaleKoef, dScaleKoef, arrShapes, arrImages, arrTables);
+			this._ExecuteTable(tBodyNode, node, table, aSumGrid, nMaxColCount !== nMinColCount ? aColsCountByRow : null, pPr, bUseScaleKoef, dScaleKoef, arrShapes, arrImages, arrTables);
 			table.MoveCursorToStartPos();
 
-            if (bPercentWidth) {
-                table.SetTableProps({TableWidth:-nPercentWidth});
-            }
+			if (tableNode) {
+				let nWidth = null;
+				if (tableNode.style.width.indexOf('%') !== -1 || tableNode.width.indexOf('%') !== -1) {
+					nWidth = -1 * parseInt(tableNode.style.width || tableNode.width);
+				} else {
+					let nodeStyleWidth =  node.style.width;
+					nWidth = AscCommon.valueToMmType(nodeStyleWidth);
+					nWidth = nWidth && nWidth.val;
+				}
+
+				if (nWidth != null) {
+					table.SetTableProps({TableWidth: nWidth});
+				}
+			}
+
 			if (!bPresentation) {
 				this.aContent.push(table);
 			}
@@ -10973,6 +10991,16 @@ function CheckDefaultFontSize(val, api)
 	return "0px" === val && api && api.getDefaultFontSize ? api.getDefaultFontSize() + "pt" : val;
 }
 
+function getPageWidth()
+{
+	let logicDocument = editor && editor.WordControl && editor.WordControl.m_oLogicDocument && editor.WordControl.m_oLogicDocument;
+	let isPortraitOrient = true;
+	if (logicDocument) {
+		isPortraitOrient = logicDocument && logicDocument.Get_DocumentOrientation && logicDocument.Get_DocumentOrientation();
+	}
+	return !isPortraitOrient ? Page_Height - (Y_Top_Margin + Y_Bottom_Margin) : Page_Width - (X_Left_Margin + X_Right_Margin);
+}
+
 function CreateImageFromBinary(bin, nW, nH)
 {
     var w, h;
@@ -11042,9 +11070,9 @@ function Check_LoadingDataBeforePrepaste(_api, _fonts, _images, _callback)
     for (let image in _images)
     {
         var src = _images[image];
-        if (undefined !== window["Native"] && undefined !== window["Native"]["GetImageUrl"])
+        if (undefined !== window["native"] && undefined !== window["native"]["GetImageUrl"])
         {
-            _images[image] = window["Native"]["GetImageUrl"](_images[image]);
+            _images[image] = window["native"]["GetImageUrl"](_images[image]);
         }
         else if (!g_oDocumentUrls.getImageUrl(src) && !g_oDocumentUrls.getImageLocal(src) && !g_oDocumentUrls.isThemeUrl(src))
         {

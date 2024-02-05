@@ -120,7 +120,7 @@
 		this.api              = api;
 		this["api"]			  = this.api;
 
-		this.isSupportManyPlugins = false;
+		this.isSupportManyPlugins = (this.api.isMobileVersion || this.api.isEmbedVersion) ? false : true;
 
 		// используется только если this.isSupportManyPlugins === false
 		this.runAndCloseData = null;
@@ -343,9 +343,12 @@
 		{
 			for (let i in this.runnedPluginsMap)
 			{
-				let pluginType = this.pluginsMap[i] ? this.pluginsMap[i].type : -1;
+				let oPlugin = this.pluginsMap[i];
+
+				let pluginType = oPlugin ? oPlugin.type : -1;
 				if (pluginType !== Asc.PluginType.System &&
-					pluginType !== Asc.PluginType.Background)
+					pluginType !== Asc.PluginType.Background &&
+					!(oPlugin && oPlugin.isConnector))
 				{
 					this.close(i);
 				}
@@ -1263,7 +1266,7 @@
 
 					AscFonts.IsCheckSymbols = false;
 
-					if (task.recalculate === true)
+					if (task.recalculate === true && !AscCommon.History.Is_LastPointEmpty())
 					{
 						this.api._afterEvalCommand(function() {
 							window.g_asc_plugins.shiftCommand(commandReturnValue);
@@ -1277,7 +1280,7 @@
 							case AscCommon.c_oEditorId.Word:
 							case AscCommon.c_oEditorId.Presentation:
 							{
-								this.api.WordControl.m_oLogicDocument.FinalizeAction();
+								this.api.WordControl.m_oLogicDocument.FinalizeAction(true);
 								break;
 							}
 							case AscCommon.c_oEditorId.Spreadsheet:

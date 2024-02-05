@@ -71,6 +71,7 @@ var g_dKoef_emu_to_twips = g_dKoef_emu_to_mm * g_dKoef_mm_to_twips;
 var g_dKoef_pt_to_twips = 20;
 var g_dKoef_twips_to_emu = 1 / g_dKoef_emu_to_twips;
 var g_dKoef_twips_to_pt = 1 / g_dKoef_pt_to_twips;
+var g_dKoef_em_to_mm = 4.21752;
 
 var tblwidth_Auto = 0x00;
 var tblwidth_Mm   = 0x01;
@@ -9057,11 +9058,14 @@ CStyles.prototype =
 
     Get_Name : function(StyleId)
     {
-        if ( undefined != this.Style[StyleId] )
-            return this.Style[StyleId].Name;
-
-        return "";
+        return this.GetName(StyleId);
     },
+	
+	GetName : function(styleId)
+	{
+		let style = this.Get(styleId);
+		return style ? style.GetName() : "";
+	},
 
     Get_Default_Paragraph : function()
     {
@@ -10442,6 +10446,10 @@ CDocumentColor.prototype =
         return true;
     }
 };
+CDocumentColor.prototype.isBlackAutoColor = function()
+{
+	return this.Check_BlackAutoColor();
+};
 CDocumentColor.prototype.WriteToBinary = function(oWriter)
 {
 	this.Write_ToBinary(oWriter);
@@ -10708,7 +10716,7 @@ CDocumentShd.prototype.GetSimpleColor = function(oTheme, oColorMap)
 		var RGBA = this.ThemeFill.getRGBAColor();
 		oFillColor = new CDocumentColor(RGBA.R, RGBA.G, RGBA.B, false);
 	}
-	else if (undefined !== this.Fill)
+	else if (this.Fill && !this.Fill.IsAuto())
 	{
 		oFillColor = this.Fill;
 	}
@@ -10721,7 +10729,7 @@ CDocumentShd.prototype.GetSimpleColor = function(oTheme, oColorMap)
 		var RGBA = this.Unifill.getRGBAColor();
 		oStrokeColor = new CDocumentColor(RGBA.R, RGBA.G, RGBA.B, false);
 	}
-	else if (undefined !== this.Color)
+	else if (this.Color && !this.Color.IsAuto())
 	{
 		oStrokeColor = this.Color;
 	}
@@ -10891,13 +10899,13 @@ CDocumentShd.prototype.GetSimpleColor = function(oTheme, oColorMap)
 
 	return oResultColor;
 };
-CDocumentShd.prototype.private_GetPctShdColor = function(nPct, oColor1, oColor2)
+CDocumentShd.prototype.private_GetPctShdColor = function(nPct, strokeColor, fillColor)
 {
 	var _nPct = 1 - nPct;
 	return new CDocumentColor(
-		(oColor1.r * nPct + oColor2.r * _nPct) | 0,
-		(oColor1.g * nPct + oColor2.g * _nPct) | 0,
-		(oColor1.b * nPct + oColor2.b * _nPct) | 0,
+		(strokeColor.r * nPct + fillColor.r * _nPct) | 0,
+		(strokeColor.g * nPct + fillColor.g * _nPct) | 0,
+		(strokeColor.b * nPct + fillColor.b * _nPct) | 0,
 		false
 	);
 };
@@ -14700,26 +14708,9 @@ CTextPr.prototype.Check_NeedRecalc = function()
 
 	return false;
 };
-CTextPr.prototype.Get_FontKoef = function()
+CTextPr.prototype.getFontCoef = function()
 {
-	var dFontKoef = 1;
-
-	switch (this.VertAlign)
-	{
-		case AscCommon.vertalign_Baseline:
-		{
-			dFontKoef = 1;
-			break;
-		}
-		case AscCommon.vertalign_SubScript:
-		case AscCommon.vertalign_SuperScript:
-		{
-			dFontKoef = AscCommon.vaKSize;
-			break;
-		}
-	}
-
-	return dFontKoef;
+	return (AscCommon.vertalign_SubScript === this.VertAlign || AscCommon.vertalign_SubScript === this.VertAlign ? AscCommon.vaKSize : 1);
 };
 CTextPr.prototype.Document_Get_AllFontNames = function(AllFonts)
 {
@@ -15198,7 +15189,8 @@ CTextPr.prototype.FillFromExcelFont = function(oFont)
 	this.SetFontSize(oFont.getSize());
 	this.SetBold(oFont.getBold());
 	this.SetItalic(oFont.getItalic());
-	this.SetUnderline(oFont.getUnderline());
+	let bUnderline = (oFont.getUnderline() !== Asc.EUnderline.underlineNone);
+	this.SetUnderline(bUnderline);
 	var oColor = oFont.getColor();
 	this.SetUnifill(AscFormat.CreateSolidFillRGBA(oColor.getR(), oColor.getG(), oColor.getB(), 255));
 };
@@ -18324,6 +18316,7 @@ window["AscCommonWord"].g_dKoef_mm_to_pt = g_dKoef_mm_to_pt;
 window["AscCommonWord"].g_dKoef_mm_to_emu = g_dKoef_mm_to_emu;
 window["AscCommonWord"].g_dKoef_twips_to_pt = g_dKoef_twips_to_pt;
 window["AscCommonWord"].g_dKoef_twips_to_emu = g_dKoef_twips_to_emu;
+window["AscCommonWord"].g_dKoef_em_to_mm = g_dKoef_em_to_mm;
 window["AscCommonWord"].g_dKoef_pt_to_twips = g_dKoef_pt_to_twips;
 window["AscCommonWord"].border_Single = border_Single;
 window["AscCommonWord"].Default_Tab_Stop = Default_Tab_Stop;
@@ -18365,6 +18358,9 @@ window["AscWord"].DEFAULT_TABLE_PR       = g_oDocumentDefaultTablePr;
 window["AscWord"].DEFAULT_TABLE_CELL_PR  = g_oDocumentDefaultTableCellPr;
 window["AscWord"].DEFAULT_TABLE_ROW_PR   = g_oDocumentDefaultTableRowPr;
 window["AscWord"].DEFAULT_TABLE_STYLE_PR = g_oDocumentDefaultTableStylePr;
+
+AscWord.BLACK_COLOR = new AscWord.CDocumentColor(0, 0, 0, false);
+AscWord.WHITE_COLOR = new AscWord.CDocumentColor(255, 255, 255, false);
 
 var g_oDocumentDefaultFillColor   = new CDocumentColor(255, 255, 255, true);
 var g_oDocumentDefaultStrokeColor = new CDocumentColor(0, 0, 0, true);

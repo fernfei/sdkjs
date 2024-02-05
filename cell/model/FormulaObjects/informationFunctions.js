@@ -36,7 +36,7 @@
  * @param {Window} window
  * @param {undefined} undefined
  */
-	function (window, undefined) {
+function (window, undefined) {
 	var cErrorType = AscCommonExcel.cErrorType;
 	var cNumber = AscCommonExcel.cNumber;
 	var cString = AscCommonExcel.cString;
@@ -63,41 +63,41 @@
 		});
 		//такие форматы как дата не поддерживаются
 		//TODO функция нуждается в доработке
-		if(formatInfo) {
+		if (formatInfo) {
 			let postfix = "";
-			if(numFormat && (numFormat.oNegativeFormat && numFormat.oNegativeFormat.Color !== -1)) {
+			if (numFormat && (numFormat.oNegativeFormat && numFormat.oNegativeFormat.Color !== -1)) {
 				postfix += "-";
 			}
-			if(numFormat && numFormat.oPositiveFormat && numFormat.oPositiveFormat.formatString.indexOf('(') != -1) {
+			if (numFormat && numFormat.oPositiveFormat && numFormat.oPositiveFormat.formatString.indexOf('(') != -1) {
 				postfix += "()";
 			}
 
 			let formatPart;
-			if(formatInfo.type === Asc.c_oAscNumFormatType.Number) {
+			if (formatInfo.type === Asc.c_oAscNumFormatType.Number) {
 				formatPart = "F";
-			} else if(formatInfo.type === Asc.c_oAscNumFormatType.Currency || formatInfo.type === Asc.c_oAscNumFormatType.Accounting) {
+			} else if (formatInfo.type === Asc.c_oAscNumFormatType.Currency || formatInfo.type === Asc.c_oAscNumFormatType.Accounting) {
 				formatPart = "С";
-			} else if(formatInfo.type === Asc.c_oAscNumFormatType.Percent) {
+			} else if (formatInfo.type === Asc.c_oAscNumFormatType.Percent) {
 				formatPart = "P";
-			} else if(formatInfo.type === Asc.c_oAscNumFormatType.Scientific) {
+			} else if (formatInfo.type === Asc.c_oAscNumFormatType.Scientific) {
 				formatPart = "S";
-			} else if(formatInfo.type === Asc.c_oAscNumFormatType.Date || formatInfo.type === Asc.c_oAscNumFormatType.Time) {
+			} else if (formatInfo.type === Asc.c_oAscNumFormatType.Date || formatInfo.type === Asc.c_oAscNumFormatType.Time) {
 				formatPart = "D";
 			}
 
 			// ,0 and ,2 types
-			if(sFormat) {
-				if(sFormat === "#,##0") {
+			if (sFormat) {
+				if (sFormat === "#,##0") {
 					formatPart = ",0";
 					formatInfo.decimalPlaces = "";
-				} else if(sFormat === "#,##0.00") {
+				} else if (sFormat === "#,##0.00") {
 					formatPart = ",2";
 					formatInfo.decimalPlaces = "";
 				}
 			}
 
-			if(formatPart) {
-				if(formatPart === "D") {
+			if (formatPart) {
+				if (formatPart === "D") {
 					let regularD1 = /d+[\s\/-]m+[\s\/-]y+/gi, // d-mmm-yy || dd-mmm-yy
 						regularD2 = /d+(\s|-|\/)m+;/gi, // d-mmm || dd-mmm
 						regularD3 = /]m+(\s|-|\/)y+;/gi, // mmm-yy  
@@ -108,7 +108,7 @@
 						regularD8 = /(((h|\[h\]):m+:ss;)|(\[\$-F400\]h:mm:ss))/gi, // h:mm:ss
 						regularD9 = /h+:m+;/gi; // h:mm
 
-					if(regularD1.test(sFormat)) {
+					if (regularD1.test(sFormat)) {
 						formatInfo.decimalPlaces = 1;
 					} else if (regularD2.test(sFormat)) {
 						formatInfo.decimalPlaces = 2;
@@ -149,7 +149,7 @@
 	}
 
 	cFormulaFunctionGroup['Information'] = cFormulaFunctionGroup['Information'] || [];
-	cFormulaFunctionGroup['Information'].push(cCell , cERROR_TYPE, cISBLANK, cISERR, cISERROR, cISEVEN, cISFORMULA, cISLOGICAL,
+	cFormulaFunctionGroup['Information'].push(cCell, cERROR_TYPE, cISBLANK, cISERR, cISERROR, cISEVEN, cISFORMULA, cISLOGICAL,
 		cISNA, cISNONTEXT, cISNUMBER, cISODD, cISREF, cISTEXT, cN, cNA, cSHEET, cSHEETS, cTYPE);
 
 
@@ -169,6 +169,7 @@
 	cCell.prototype.ca = true;
 	cCell.prototype.returnValueType = AscCommonExcel.cReturnFormulaType.area_to_ref;
 	cCell.prototype.argumentsType = [argType.text, argType.reference];
+	cCell.prototype.numFormat = AscCommonExcel.cNumFormatNone;
 	cCell.prototype.Calculate = function (arg, opt_bbox, opt_defName, ws) {
 		//специально ввожу ограничения - минимум 2 аргумента
 		//в случае одного аргумента необходимо следить всегда за последней измененной ячейкой
@@ -181,23 +182,23 @@
 		if (cElementType.error === arg0.type) {
 			return arg0;
 		} else {
-			let str = arg0.toString().toUpperCase();
+			let str = arg0.toString().toLowerCase();
 
 			//если первый аргумент из набора тех, которые не требуют значения второго аргумента, то обрабатываем его частично
-			let needCheckVal2Arg = {"CONTENTS": 1, "TYPE": 1};
+			let needCheckVal2Arg = {"contents": 1, "type": 1};
 
 			let cell, bbox;
-			if(arg1) {
+			if (arg1) {
 				//TODO добавил заглушку, на случай если приходит массив.
 				// необходимо пересмотреть - сейчас мы рассматриваем как функции массива все дочерние элементы аргумента с типом .reference
 				if (cElementType.array === arg1.type) {
-					arg1 = arg1.getElementRowCol(0,0);
+					arg1 = arg1.getElementRowCol(0, 0);
 				}
 
 				let isRangeArg1 = cElementType.cellsRange === arg1.type || cElementType.cellsRange3D === arg1.type;
 				if (isRangeArg1 || cElementType.cell === arg1.type || cElementType.cell3D === arg1.type) {
 					if (needCheckVal2Arg[str]) {
-						let _tempValue = isRangeArg1 ? arg1.getValueByRowCol(0,0) : arg1.getValue();
+						let _tempValue = isRangeArg1 ? arg1.getValueByRowCol(0, 0) : arg1.getValue();
 						if (_tempValue instanceof cError) {
 							return _tempValue;
 						}
@@ -209,28 +210,29 @@
 				}
 			}
 
+			let _cCellFunctionLocal = window["AscCommon"].cCellFunctionLocal;
 			let res, numFormat;
 			switch (str) {
-				case "COL": {
+				case _cCellFunctionLocal["col"]: {
 					res = new cNumber(bbox.c1 + 1);
 					break;
 				}
-				case "ROW": {
+				case _cCellFunctionLocal["row"]: {
 					res = new cNumber(bbox.r1 + 1);
 					break;
 				}
-				case "SHEET": {
+				case _cCellFunctionLocal["sheet"]: {
 					//нет в офф. документации
 					//ms excel returns 1?
 					res = new cNumber(1);
 					break;
 				}
-				case "ADDRESS": {
+				case _cCellFunctionLocal["address"]: {
 					res = new Asc.Range(bbox.c1, bbox.r1, bbox.c1, bbox.r1);
 					res = new cString(res.getAbsName());
 					break;
 				}
-				case "FILENAME": {
+				case _cCellFunctionLocal["filename"]: {
 					//TODO без пути
 					let docInfo = window["Asc"]["editor"].DocInfo;
 					let fileName = docInfo ? docInfo.get_Title() : "";
@@ -243,41 +245,41 @@
 					}
 					break;
 				}
-				case "COORD": {
+				case _cCellFunctionLocal["coord"]: {
 					//нет в офф. документации
 					break;
 				}
-				case "CONTENTS": {
-					if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type){
+				case _cCellFunctionLocal["contents"]: {
+					if (cElementType.cell === arg1.type || cElementType.cell3D === arg1.type) {
 						res = arg1.getValue();
 					} else {
 						res = arg1.getValue()[0];
-						if(!res) {
+						if (!res) {
 							res = new cNumber(0);
 						}
 					}
 					break;
 				}
-				case "TYPE": {
+				case _cCellFunctionLocal["type"]: {
 					// b = blank; l = string (label); v = otherwise (value)
 					res = arg1.getValue();
-					if(res.type === cElementType.empty) {
+					if (res.type === cElementType.empty) {
 						res = new cString("b");
-					} else if(res.type === cElementType.string) {
+					} else if (res.type === cElementType.string) {
 						res = new cString("l");
 					} else {
 						res = new cString("v");
 					}
 					break;
 				}
-				case "WIDTH": {
+				case _cCellFunctionLocal["width"]: {
 					//return array
 					//{width 1 column; is default}
 					let col = ws._getCol(bbox.c1);
 					let props = col ? col.getWidthProp() : null;
 					let isDefault = !props.CustomWidth;
 					let width, colWidthPx;
-					if(isDefault) {
+					if (isDefault) {
 						let defaultColWidthChars = ws.charCountToModelColWidth(ws.getBaseColWidth());
 						colWidthPx = ws.modelColWidthToColWidth(defaultColWidthChars);
 						colWidthPx = Asc.ceil(colWidthPx / 8) * 8;
@@ -287,7 +289,7 @@
 						width = ws.colWidthToCharCount(colWidthPx);
 					}
 
-					if(props) {
+					if (props) {
 						res = new cArray();
 						res.addElement(new cNumber(Math.round(width)));
 						res.addElement(new cBool(isDefault));
@@ -295,18 +297,18 @@
 
 					break;
 				}
-				case "PREFIX": {
+				case _cCellFunctionLocal["prefix"]: {
 					// ' = left; " = right; ^ = centered; \ =
 					cell = ws.getCell3(bbox.r1, bbox.c1);
 					let align = cell.getAlign();
 					let alignHorizontal = align.getAlignHorizontal();
-					if(cell.isNullTextString()) {
+					if (cell.isNullTextString()) {
 						res = new cString('');
-					} else if(alignHorizontal === null || alignHorizontal === AscCommon.align_Left) {
+					} else if (alignHorizontal === null || alignHorizontal === AscCommon.align_Left) {
 						res = new cString("'");
-					} else if(alignHorizontal === AscCommon.align_Right) {
+					} else if (alignHorizontal === AscCommon.align_Right) {
 						res = new cString('"');
-					} else if(alignHorizontal === AscCommon.align_Center) {
+					} else if (alignHorizontal === AscCommon.align_Center) {
 						res = new cString('^');
 					} /*else if(alignHorizontal === AscCommon.align_Fill) {
 						res = new cString("\/");
@@ -316,32 +318,32 @@
 
 					break;
 				}
-				case "PROTECT": {
+				case _cCellFunctionLocal["protect"]: {
 					//default - protect, do not support on open
 					cell = ws.getCell3(bbox.r1, bbox.c1);
-					if(cell.getLocked()) {
+					if (cell.getLocked()) {
 						res = new cNumber(1);
 					} else {
 						res = new cNumber(0);
 					}
 					break;
 				}
-				case "FORMAT": {
+				case _cCellFunctionLocal["format"]: {
 					res = getCellFormat(ws, bbox.r1, bbox.c1);
 					break
 				}
-				case "COLOR": {
+				case _cCellFunctionLocal["color"]: {
 					numFormat = getNumFormat(ws, bbox.r1, bbox.c1);
-					if(numFormat && (numFormat.oNegativeFormat && numFormat.oNegativeFormat.Color !== -1)) {
+					if (numFormat && (numFormat.oNegativeFormat && numFormat.oNegativeFormat.Color !== -1)) {
 						res = new cNumber(1);
 					} else {
 						res = new cNumber(0);
 					}
 					break
 				}
-				case "PARENTHESES": {
+				case _cCellFunctionLocal["parentheses"]: {
 					numFormat = getNumFormat(ws, bbox.r1, bbox.c1);
-					if(numFormat && numFormat.oPositiveFormat && numFormat.oPositiveFormat.formatString.indexOf('(') != -1) {
+					if (numFormat && numFormat.oPositiveFormat && numFormat.oPositiveFormat.formatString.indexOf('(') != -1) {
 						res = new cNumber(1);
 					} else {
 						res = new cNumber(0);
@@ -751,7 +753,7 @@
 	cISREF.prototype.name = 'ISREF';
 	cISREF.prototype.argumentsMin = 1;
 	cISREF.prototype.argumentsMax = 1;
-	cISREF.prototype.arrayIndexes = {0:1};
+	cISREF.prototype.arrayIndexes = {0: 1};
 	cISREF.prototype.argumentsType = [argType.any];
 	cISREF.prototype.Calculate = function (arg) {
 		if ((arg[0] instanceof cRef || arg[0] instanceof cArea || arg[0] instanceof cArea3D ||
@@ -868,6 +870,7 @@
 	cSHEET.prototype.name = 'SHEET';
 	cSHEET.prototype.argumentsMin = 0;
 	cSHEET.prototype.argumentsMax = 1;
+	cSHEET.prototype.ca = true;
 	cSHEET.prototype.isXLFN = true;
 	cSHEET.prototype.returnValueType = AscCommonExcel.cReturnFormulaType.array;
 	cSHEET.prototype.argumentsType = [argType.text];
@@ -971,7 +974,7 @@
 			//todo пересмотреть!
 			//заглушка для формулы массива
 			//ms воспринимает данный аргумент как массив
-			if(this.bArrayFormula) {
+			if (this.bArrayFormula) {
 				arg0 = arg[0].getValue()
 			} else {
 				arg0 = arg0.cross(arguments[1]);

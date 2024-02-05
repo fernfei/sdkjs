@@ -109,7 +109,9 @@ var c_oAscSelectionDialogType = {
   Function: 9,
   DataValidation: 10,
   ConditionalFormattingRule: 11,
-  ImportXml: 12
+  ImportXml: 12,
+  GoalSeek_Cell: 13,
+  GoalSeek_ChangingCell: 14
 };
 
 var c_oAscScrollType = {
@@ -119,7 +121,8 @@ var c_oAscScrollType = {
 
 var c_oAscHyperlinkType = {
   WebLink: 1,
-  RangeLink: 2
+  RangeLink: 2,
+  FileLink: 3
 };
 
 var c_oAscMouseMoveType = {
@@ -581,11 +584,55 @@ var c_oAscPopUpSelectorType = {
     reset: 3
   };
 
+  var c_oAscSeriesInType = {
+    rows: 0,
+    columns: 1
+  };
+
+  var c_oAscSeriesType = {
+    linear: 0,
+    growth: 1,
+    date: 2,
+    autoFill: 3
+  };
+
+  var c_oAscDateUnitType = {
+    day: 0,
+    weekday: 1,
+    month: 2,
+    year: 3
+  };
 
   var c_oAscRemoveArrowsType = {
     all: 0,
     precedent: 1,
     dependent: 2
+  };
+
+  var c_oAscFillType = {
+    copyCells: 0,
+    fillSeries: 1,
+    fillFormattingOnly: 2,
+    fillWithoutFormatting: 3,
+    fillDays: 4,
+    fillWeekdays: 5,
+    fillMonths: 6,
+    fillYears: 7,
+    linearTrend: 8,
+    growthTrend: 9,
+    flashFill: 10,
+    series: 11,
+    fillDown: 12,
+    fillRight: 13,
+    fillUp: 14,
+    fillLeft: 15,
+    justify: 16
+  };
+
+  /** @enum {number} */
+  var c_oAscContextMenuTypes = {
+    common       : 0, // default context menu
+    changeSeries : 1  // fill right click mouse - series menu
   };
 
   //----------------------------------------------------------export----------------------------------------------------
@@ -683,11 +730,15 @@ var c_oAscPopUpSelectorType = {
   prot['DataValidation'] = prot.DataValidation;
   prot['ImportXml'] = prot.ImportXml;
   prot['ConditionalFormattingRule'] = prot.ConditionalFormattingRule;
+  prot['GoalSeek_Cell'] = prot.GoalSeek_Cell;
+  prot['GoalSeek_ChangingCell'] = prot.GoalSeek_ChangingCell;
+
 
   window['Asc']['c_oAscHyperlinkType'] = window['Asc'].c_oAscHyperlinkType = c_oAscHyperlinkType;
   prot = c_oAscHyperlinkType;
   prot['WebLink'] = prot.WebLink;
   prot['RangeLink'] = prot.RangeLink;
+  prot['FileLink'] = prot.FileLink;
   window['Asc']['c_oAscMouseMoveType'] = window['Asc'].c_oAscMouseMoveType = c_oAscMouseMoveType;
   prot = c_oAscMouseMoveType;
   prot['None'] = prot.None;
@@ -996,5 +1047,48 @@ var c_oAscPopUpSelectorType = {
   prot['precedent'] = prot.precedent;
   prot['dependent'] = prot.dependent;
 
+  window['Asc']['c_oAscSeriesInType'] = window['Asc'].c_oAscSeriesInType = c_oAscSeriesInType;
+  prot = c_oAscSeriesInType;
+  prot['rows'] = prot.rows;
+  prot['columns'] = prot.columns;
+
+  window['Asc']['c_oAscSeriesType'] = window['Asc'].c_oAscSeriesType = c_oAscSeriesType;
+  prot = c_oAscSeriesType;
+  prot['linear'] = prot.linear;
+  prot['growth'] = prot.growth;
+  prot['date'] = prot.date;
+  prot['autoFill'] = prot.autoFill;
+
+  window['Asc']['c_oAscDateUnitType'] = window['Asc'].c_oAscDateUnitType = c_oAscDateUnitType;
+  prot = c_oAscDateUnitType;
+  prot['day'] = prot.day;
+  prot['weekday'] = prot.weekday;
+  prot['month'] = prot.month;
+  prot['year'] = prot.year;
+
+  window['Asc']['c_oAscFillType'] = window['Asc'].c_oAscFillType = c_oAscFillType;
+  prot = c_oAscFillType;
+  prot['copyCells'] = prot.copyCells;
+  prot['fillSeries'] = prot.fillSeries;
+  prot['fillFormattingOnly'] = prot.fillFormattingOnly;
+  prot['fillWithoutFormatting'] = prot.fillWithoutFormatting;
+  prot['fillDays'] = prot.fillDays;
+  prot['fillWeekdays'] = prot.fillWeekdays;
+  prot['fillMonths'] = prot.fillMonths;
+  prot['fillYears'] = prot.fillYears;
+  prot['linearTrend'] = prot.linearTrend;
+  prot['growthTrend'] = prot.growthTrend;
+  prot['flashFill'] = prot.flashFill;
+  prot['series'] = prot.series;
+  prot['fillDown'] = prot.fillDown;
+  prot['fillRight'] = prot.fillRight;
+  prot['fillUp'] = prot.fillUp;
+  prot['fillLeft'] = prot.fillLeft;
+  prot['justify'] = prot.justify;
+
+  window['Asc']['c_oAscContextMenuTypes'] = window['Asc'].c_oAscContextMenuTypes = c_oAscContextMenuTypes;
+  prot = c_oAscContextMenuTypes;
+  prot['common'] = prot.common;
+  prot['changeSeries'] = prot.changeSeries;
 
 })(window);

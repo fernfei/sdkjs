@@ -76,6 +76,7 @@ var numFormat_DigitDrop = 104;
 var numFormat_Plus = 105;
 var numFormat_Minus = 106;
 var numFormat_ThousandText = 107;
+var numFormat_DayOfWeek = 110;
 
 var FormatStates = {Decimal: 1, Frac: 2, Scientific: 3, Slash: 4, SlashFrac: 5};
 var SignType = {Negative: 1, Null:2, Positive: 3};
@@ -256,7 +257,8 @@ function FormatObjBracket(sData)
                 else if("yellow" == sLowerColor)
                     this.color = 0xffff00;
                 else if("y" == first || "m" == first || "d" == first || "h" == first || "s" == first ||
-                    "Y" == first || "M" == first || "D" == first || "H" == first || "S" == first)
+                    "Y" == first || "M" == first || "D" == first || "H" == first || "S" == first ||
+					"a" == first)
                 {
                     var bSame = true;
                     var nCount = 1;
@@ -283,6 +285,7 @@ function FormatObjBracket(sData)
                             case "h": this.dataObj = new FormatObjDateVal(numFormat_Hour, nCount, true);break;
                             case "S":
                             case "s": this.dataObj = new FormatObjDateVal(numFormat_Second, nCount, true);break;
+                            case "a": this.dataObj = new FormatObjDateVal(numFormat_DayOfWeek, nCount, true);break;
                         }
                     }
                 }
@@ -305,6 +308,7 @@ function ParseLocalFormatSymbol(Name)
 	LocaleFormatSymbol['minute'] = 'm';
 	LocaleFormatSymbol['S'] = 'S';
 	LocaleFormatSymbol['s'] = 's';
+	LocaleFormatSymbol['a'] = 'a';
 	LocaleFormatSymbol['general'] = 'General';
 	switch (Name) {
 //___________________________________________________fi________________________________________________________________
@@ -358,6 +362,7 @@ function ParseLocalFormatSymbol(Name)
 		case("ca-ES-valencia"): {
 			LocaleFormatSymbol['Y'] = 'A';
 			LocaleFormatSymbol['y'] = 'a';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Estándar';
 			break;
 		}
@@ -365,6 +370,7 @@ function ParseLocalFormatSymbol(Name)
 		case("es-BR"): {
 			LocaleFormatSymbol['Y'] = 'A';
 			LocaleFormatSymbol['y'] = 'a';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Geral';
 			break;
 		}
@@ -372,6 +378,7 @@ function ParseLocalFormatSymbol(Name)
 		case("pt-PT"): {
 			LocaleFormatSymbol['Y'] = 'A';
 			LocaleFormatSymbol['y'] = 'a';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Éstandar';
 			break;
 		}
@@ -433,6 +440,7 @@ function ParseLocalFormatSymbol(Name)
 			LocaleFormatSymbol['y'] = 'a';
 			LocaleFormatSymbol['D'] = 'J';
 			LocaleFormatSymbol['d'] = 'j';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Standard';
 			break;
 		}
@@ -475,6 +483,7 @@ function ParseLocalFormatSymbol(Name)
 			LocaleFormatSymbol['y'] = 'a';
 			LocaleFormatSymbol['D'] = 'G';
 			LocaleFormatSymbol['d'] = 'g';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Standard';
 			break;
 		}
@@ -580,6 +589,7 @@ function ParseLocalFormatSymbol(Name)
 			LocaleFormatSymbol['minute'] = 'd';
 			LocaleFormatSymbol['S'] = 'N';
 			LocaleFormatSymbol['s'] = 'n';
+			LocaleFormatSymbol['a'] = 'o';
 			LocaleFormatSymbol['general'] = 'Genel';
 			break;
 		}
@@ -724,37 +734,27 @@ NumFormat.prototype =
     },
     _ReadAmPm : function(next)
     {
-        var sAm = next;
-        var sPm  = "";
-        var bAm = true;
-        while(true)
-        {
-            next = this._readChar();
-            if(this.EOF == next)
-                break;
-            else if("/" == next)
-            {
-                bAm = false;
-            }
-            else if("A" == next || "a" == next || "P" == next || "p" == next || "M" == next || "m" == next)
-            {
-                if(true == bAm)
-                    sAm += next;
-                else
-                    sPm += next;
-            }
-            else
-            {
-                this._skip(-1);
-                break;
-            }
-        }
-        if("" != sAm && "" != sPm)
-        {
-            this._addToFormat2(new FormatObj(numFormat_AmPm));
-            this.bTimePeriod = true;
-            this.bDateTime = true;
-        }
+		if ("A" === next || "a" === next) {
+			let ampm = "AM/PM";
+			if (ampm.substring(1) === this._GetText(ampm.length - 1).toUpperCase()) {
+				this._addToFormat2(new FormatObj(numFormat_AmPm));
+				this.bTimePeriod = true;
+				this.bDateTime = true;
+				this._skip(ampm.length - 1);
+				return true;
+			}
+		}
+		if ("上" === next) {
+			let ampm = "上午/下午";
+			if (ampm.substring(1) === this._GetText(ampm.length - 1).toUpperCase()) {
+				this._addToFormat2(new FormatObj(numFormat_AmPm));
+				this.bTimePeriod = true;
+				this.bDateTime = true;
+				this._skip(ampm.length - 1);
+				return true;
+			}
+		}
+		return false;
     },
 	_ReadAmPmPDF : function(next)
     {
@@ -805,6 +805,7 @@ NumFormat.prototype =
         var minute;
         var Second;
         var second;
+		var dayOfWeek;
 		if (useLocaleFormat) {
 			sGeneral = LocaleFormatSymbol['general'].toLowerCase();
 			DecimalSeparator = g_oDefaultCultureInfo.NumberDecimalSeparator;
@@ -822,6 +823,7 @@ NumFormat.prototype =
 			minute = LocaleFormatSymbol['minute'];
 			Second = LocaleFormatSymbol['S'];
 			second = LocaleFormatSymbol['s'];
+			dayOfWeek = LocaleFormatSymbol['a'];
 		} else {
 			sGeneral = AscCommon.g_cGeneralFormat.toLowerCase();
 			DecimalSeparator = gc_sFormatDecimalPoint;
@@ -839,6 +841,7 @@ NumFormat.prototype =
 			minute = 'm';
 			Second = 'S';
 			second = 's';
+			dayOfWeek = 'a';
 		}
         var sGeneralFirst = sGeneral[0];
         this.bGeneralChart = true;
@@ -895,6 +898,10 @@ NumFormat.prototype =
                 this._addToFormat(numFormat_General);
                 this._skip(sGeneral.length - 1);
             }
+			else if (this._ReadAmPm(next))
+			{
+
+			}
             else if("E" == next || "e" == next)
             {
                 var nextnext = this._readChar();
@@ -948,9 +955,11 @@ NumFormat.prototype =
             {
                 this._addToFormat2(new FormatObjDateVal(numFormat_Second, 1, false));
             }
-            else if ("A" == next || "a" == next) {
-                this._ReadAmPm(next);
-            } else {
+			else if (dayOfWeek == next)
+			{
+				this._addToFormat2(new FormatObjDateVal(numFormat_DayOfWeek, 1, false));
+			}
+            else {
                 bNoFormat = true;
                 this._addToFormat(numFormat_Text, next);
             }
@@ -968,6 +977,10 @@ NumFormat.prototype =
 				break;
 			else if("\'" == next)
 				this._ReadText("\'");
+			else if (this._ReadAmPm(next))
+			{
+
+			}
 			else if("Y" == next || "y" == next)
 			{
 				this._addToFormat2(new FormatObjDateVal(numFormat_Year, 1, false));
@@ -988,8 +1001,9 @@ NumFormat.prototype =
 			{
 				this._addToFormat2(new FormatObjDateVal(numFormat_Second, 1, false));
 			}
-			else if ("A" == next || "a" == next) {
-				this._ReadAmPm(next);
+			else if ("a" == next)
+			{
+				this._addToFormat2(new FormatObjDateVal(numFormat_DayOfWeek, 1, false));
 			}
 			else {
 					this._addToFormat(numFormat_Text, next);
@@ -1116,7 +1130,8 @@ NumFormat.prototype =
                     }
                 }
             }
-            else if(numFormat_Year == item.type || numFormat_MonthMinute == item.type || numFormat_Month == item.type || numFormat_Day == item.type || numFormat_Hour == item.type || numFormat_Minute == item.type || numFormat_Second == item.type || numFormat_Thousand == item.type)
+            else if(numFormat_Year == item.type || numFormat_MonthMinute == item.type || numFormat_Month == item.type || numFormat_Day == item.type || numFormat_Hour == item.type || numFormat_Minute == item.type || numFormat_Second == item.type || numFormat_Thousand == item.type ||
+				numFormat_DayOfWeek == item.type)
             {
                 //Собираем в одно целое последовательности hhh
                 var nStartType = item.type;
@@ -1627,14 +1642,14 @@ NumFormat.prototype =
 		}
 		else
 		{
-			if(numberAbs === 60)
+			if (60 <= numberAbs && numberAbs < 61)
 			{
 				day = 29;
 				month = 1;
 				year = 1900;
 				dayWeek = 3;
 			}
-			else if(numberAbs === 0)
+			else if (0 <= numberAbs && numberAbs < 1)
 			{
 				//TODO необходимо использовать cDate везде
 				stDate = new Asc.cDate(Date.UTC(1899,11,31,0,0,0));
@@ -1647,6 +1662,7 @@ NumFormat.prototype =
 			{
 				stDate = new Date(Date.UTC(1899,11,31,0,0,0));
 				if(d.val)
+				// setUTCDate doesn't consider the transition from 1899 to 1900 when adding d.val
 					stDate.setUTCDate( stDate.getUTCDate() + d.val );
 				day = stDate.getUTCDate();
 				dayWeek = ( stDate.getUTCDay() > 0) ? stDate.getUTCDay() - 1 : 6;
@@ -2214,6 +2230,21 @@ NumFormat.prototype =
                 {
                     oCurText.text += cultureInfo.TimeSeparator;
 				}
+				else if(numFormat_DayOfWeek == item.type)
+				{
+					if (item.val === 3)
+					{
+						oCurText.text += cultureInfoLCID.AbbreviatedDayNames[oParsedNumber.date.dayWeek];
+					}
+					else if (item.val > 3)
+					{
+						oCurText.text += cultureInfoLCID.DayNames[oParsedNumber.date.dayWeek];
+					}
+					else
+					{
+						oCurText.text += 'a'.repeat(item.val);
+					}
+				}
                 else if(numFormat_Year == item.type)
                 {
                   if (item.val > 0) {
@@ -2395,6 +2426,7 @@ NumFormat.prototype =
 		var hour;
 		var minute;
 		var second;
+		var dayOfWeek;
 		if (useLocaleFormat) {
 			sGeneral = LocaleFormatSymbol['general'];
 			DecimalSeparator = g_oDefaultCultureInfo.NumberDecimalSeparator;
@@ -2412,6 +2444,7 @@ NumFormat.prototype =
 			hour = LocaleFormatSymbol['h'];
 			minute = LocaleFormatSymbol['minute'];
 			second = LocaleFormatSymbol['s'];
+			dayOfWeek = LocaleFormatSymbol['a'];
 		} else {
 			sGeneral = AscCommon.g_cGeneralFormat;
 			DecimalSeparator = gc_sFormatDecimalPoint;
@@ -2423,6 +2456,7 @@ NumFormat.prototype =
 			hour = 'h';
 			minute = 'm';
 			second = 's';
+			dayOfWeek = 'a';
 		}
         var nDecLength = this.aDecFormat.length;
         var nDecIndex = 0;
@@ -2617,6 +2651,12 @@ NumFormat.prototype =
                 for(var j = 0; j < item.val; ++j)
                     res += second;
             }
+			else if(numFormat_DayOfWeek == item.type)
+			{
+				var nIndex = (item.val > 3) ? 3 : item.val;
+				for(var j = 0; j < nIndex; ++j)
+					res += dayOfWeek;
+			}
             else if(numFormat_AmPm == item.type)
                 res += "AM/PM";
             else if(numFormat_Milliseconds == item.type)
@@ -2699,84 +2739,8 @@ function CellFormat(format, formatType, useLocaleFormat)
 		aParsedFormats.push(oNewFormat);
 	}
   var nFormatsLength = aParsedFormats.length;
-	var bComporationOperator = false;
-	if(nFormatsLength > 0)
-	{
-		var oFirstFormat = aParsedFormats[0];
-		if(null != oFirstFormat.ComporationOperator)
-		{
-			bComporationOperator = true;
-			//проверяем можно ли привести к стандартному формату
-			//todo сохранять измененный формат в файл
-			if(3 == nFormatsLength)
-			{
-				var oPositive = null;
-				var oNegative = null;
-				var oNull = null;
-				for(var i = 0; i < nFormatsLength; ++i)
-				{
-					var oCurFormat = aParsedFormats[i];
-					if(null == oCurFormat.ComporationOperator)
-					{
-						if(null == oPositive)
-							oPositive = oCurFormat;
-						else if(null == oNegative)
-							oNegative = oCurFormat;
-						else if(null == oNull)
-							oNull = oCurFormat;
-					}
-					else
-					{
-						var oComporationOperator = oCurFormat.ComporationOperator;
-						if(0 == oComporationOperator.operatorValue)
-						{
-							switch(oComporationOperator.operator)
-							{
-								case NumComporationOperators.greater: oPositive = oCurFormat;break;
-								case NumComporationOperators.less: oNegative = oCurFormat;break;
-								case NumComporationOperators.equal: oNull = oCurFormat;break;
-							}
-						}
-						else
-						{
-							//невозможно привести
-							oPositive = oNegative = oNull = null;
-							break;
-						}
-					}
-				}
-			}
-			this.oTextFormat = new NumFormat(false);
-			this.oTextFormat.setFormat("@", undefined, undefined, useLocaleFormat);
-			if(null == oPositive || null == oNegative || null == oNull)
-			{
-				//по результатам опытов, если оператор сравнения проходит через 0, то надо добавлять знак минус в зависимости от значения
-				//пример [<100] надо добавлять знак, [<-100] знак добавлять не надо
-				for(var i = 0, length = aParsedFormats.length; i < length; ++i)
-				{
-					var oCurFormat = aParsedFormats[i];
-					if(null == oCurFormat.ComporationOperator)
-						oCurFormat.bAddMinusIfNes = true;
-					else
-					{
-						var oComporationOperator = oCurFormat.ComporationOperator;
-						if(0 < oComporationOperator.operatorValue && (oComporationOperator.operator == NumComporationOperators.less || oComporationOperator.operator == NumComporationOperators.lessorequal))
-							oCurFormat.bAddMinusIfNes = true;
-						else if(0 > oComporationOperator.operatorValue && (oComporationOperator.operator == NumComporationOperators.greater || oComporationOperator.operator == NumComporationOperators.greaterorequal))
-							oCurFormat.bAddMinusIfNes = true;
-					}
-				}
-				this.aComporationFormats = aParsedFormats;
-			}
-			else
-			{
-				this.oPositiveFormat = oPositive;
-				this.oNegativeFormat = oNegative;
-				this.oNullFormat = oNull;
-			}
-		}
-	}
-	if(false == bComporationOperator)
+	var noComparisonn = aParsedFormats.every(function(format) {return !format.ComporationOperator});
+	if(noComparisonn)
 	{
 		if(4 <= nFormatsLength)
 		{
@@ -2794,8 +2758,8 @@ function CellFormat(format, formatType, useLocaleFormat)
 			this.oNullFormat = aParsedFormats[2];
 			this.oTextFormat = this.oPositiveFormat;
 			if (this.oNullFormat.bTextFormat) {
-			    this.oTextFormat = this.oNullFormat;
-			    this.oNullFormat = this.oPositiveFormat;
+				this.oTextFormat = this.oNullFormat;
+				this.oNullFormat = this.oPositiveFormat;
 			}
 		}
 		else if(2 == nFormatsLength)
@@ -2805,8 +2769,8 @@ function CellFormat(format, formatType, useLocaleFormat)
 			this.oNullFormat = this.oPositiveFormat;
 			this.oTextFormat = this.oPositiveFormat;
 			if (this.oNegativeFormat.bTextFormat) {
-			    this.oTextFormat = this.oNegativeFormat;
-			    this.oNegativeFormat = this.oPositiveFormat;
+				this.oTextFormat = this.oNegativeFormat;
+				this.oNegativeFormat = this.oPositiveFormat;
 				this.oPositiveFormat.bAddMinusIfNes = true;
 			}
 		}
@@ -2818,6 +2782,28 @@ function CellFormat(format, formatType, useLocaleFormat)
 			this.oNullFormat = this.oPositiveFormat;
 			this.oTextFormat = this.oPositiveFormat;
 		}
+	}
+	else
+	{
+		this.oTextFormat = new NumFormat(false);
+		this.oTextFormat.setFormat("@", undefined, undefined, useLocaleFormat);
+		//по результатам опытов, если оператор сравнения проходит через 0, то надо добавлять знак минус в зависимости от значения
+		//пример [<100] надо добавлять знак, [<-100] знак добавлять не надо
+		for (let i = 0; i < aParsedFormats.length && i < 2; ++i) {
+			let oCurFormat = aParsedFormats[i];
+			if (oCurFormat.ComporationOperator) {
+				let operator = oCurFormat.ComporationOperator.operator;
+				let operatorValue = oCurFormat.ComporationOperator.operatorValue;
+				if (0 < operatorValue && (operator === NumComporationOperators.less || operator === NumComporationOperators.lessorequal))
+					oCurFormat.bAddMinusIfNes = true;
+				else if (0 > operatorValue && (operator === NumComporationOperators.greater || operator === NumComporationOperators.greaterorequal))
+					oCurFormat.bAddMinusIfNes = true;
+			}
+		}
+		if (aParsedFormats.length > 2) {
+			aParsedFormats[2].bAddMinusIfNes = true;
+		}
+		this.aComporationFormats = aParsedFormats.slice(0, 3);
 	}
     this.formatCache = {};
 }
@@ -2878,32 +2864,30 @@ CellFormat.prototype =
 		else
 		{
 			//ищем совпадение
-			var nLength = this.aComporationFormats.length;
-			var oDefaultComporationFormat = null;
-			for(var i = 0, length = nLength; i < length ; ++i)
+			for (let i = 0; i < this.aComporationFormats.length && i < 2; ++i)
 			{
-				var oCurFormat = this.aComporationFormats[i];
-				if(null != oCurFormat.ComporationOperator)
-				{
-					var bOperationResult = false;
-					var oOperationValue = oCurFormat.ComporationOperator.operatorValue;
-					switch(oCurFormat.ComporationOperator.operator)
-					{
-						case NumComporationOperators.equal: bOperationResult = (dNumber == oOperationValue);break;
-						case NumComporationOperators.greater: bOperationResult = (dNumber > oOperationValue);break;
-						case NumComporationOperators.less: bOperationResult = (dNumber < oOperationValue);break;
-						case NumComporationOperators.greaterorequal: bOperationResult = (dNumber >= oOperationValue);break;
-						case NumComporationOperators.lessorequal: bOperationResult = (dNumber <= oOperationValue);break;
-						case NumComporationOperators.notequal: bOperationResult = (dNumber != oOperationValue);break;
-					}
-					if(true == bOperationResult)
-						oRes = oCurFormat;
+				let oCurFormat = this.aComporationFormats[i];
+				let oOperationValue, operator;
+				if (null != oCurFormat.ComporationOperator) {
+					operator = oCurFormat.ComporationOperator.operator;
+					oOperationValue = oCurFormat.ComporationOperator.operatorValue;
+				} else {
+					oOperationValue = 0;
+					operator = 0 === i ? NumComporationOperators.greater : NumComporationOperators.less;
 				}
-				else if(null == oDefaultComporationFormat)
-					oDefaultComporationFormat = oCurFormat;
+				let isMatch = (operator === NumComporationOperators.equal && dNumber === oOperationValue) ||
+					(operator === NumComporationOperators.greater && dNumber > oOperationValue) ||
+					(operator === NumComporationOperators.less && dNumber < oOperationValue) ||
+					(operator === NumComporationOperators.greaterorequal && dNumber >= oOperationValue) ||
+					(operator === NumComporationOperators.lessorequal && dNumber <= oOperationValue) ||
+					(operator === NumComporationOperators.notequal && dNumber !== oOperationValue);
+				if (isMatch) {
+					oRes = oCurFormat;
+					break;
+				}
 			}
-			if(null == oRes && null != oDefaultComporationFormat)
-				oRes = oDefaultComporationFormat;
+			if (null == oRes && null != this.aComporationFormats.length > 2)
+				oRes = this.aComporationFormats[2];
 		}
 		return oRes;
 	},
@@ -4236,6 +4220,7 @@ FormatParser.prototype =
     },
 	parseDate: function (value, cultureInfo)
 	{
+		//todo "11: AM" should fail
 		var res = null;
 		var match = [];
 		var sCurValue = null;
@@ -4372,6 +4357,7 @@ FormatParser.prototype =
 				
 				var bDate = false;
 				var bTime = false;
+				var bSeconds = false;
 				var nDay;
 				var nMounth;
 				var nYear;
@@ -4437,8 +4423,11 @@ FormatParser.prototype =
 					if(null != s)
 					{
 						nSecond = s - 0;
-						if(nSecond > 59)
+						if (0 <= nSecond && nSecond < 60) {
+							bSeconds = true;
+						} else {
 							bValidDate = false;
+						}
 					}
 				}
 				if(true == bValidDate && (true == bDate || true == bTime))
@@ -4456,23 +4445,27 @@ FormatParser.prototype =
 					}
 					if(dValue >= 0)
 					{
-						var sFormat;
-						if(true == bDate && true == bTime)
-						{
-							sFormat = sDateFormat + " h:mm:ss";
+						var sFormat = "";
+						if (bDate) {
+							if (bTime && nHour > 23) {
+								sFormat = AscCommon.g_cGeneralFormat;
+							} else {
+								sFormat += sDateFormat;
+								if (bTime) {
+									sFormat += " h:mm";
+								}
+							}
+						} else {
+							if (dValue > 1) {
+								sFormat += "[h]:mm";
+							} else {
+								sFormat += "h:mm";
+							}
+							if (bSeconds || dValue > 1) {
+								sFormat += ":ss";
+							}
 							if (am || pm)
 								sFormat += " AM/PM";
-						}
-						else if(true == bDate)
-							sFormat = sDateFormat;
-						else
-						{
-							if(dValue > 1)
-								sFormat = "[h]:mm:ss";
-							else if (am || pm)
-								sFormat = "h:mm:ss AM/PM";
-							else
-								sFormat = "h:mm:ss";
 						}
 						res = {format: sFormat, value: dValue, bDateTime: true, bDate: bDate, bTime: bTime, bPercent: false, bCurrency: false};
 					}
@@ -4501,7 +4494,7 @@ FormatParser.prototype =
 		        oDataType = oDataTypes.digit;
 		    else if(" " == sChar)
 		        oDataType = oDataTypes.space;
-		    else if ("." == sChar || "/" == sChar || "-" == sChar || ":" == sChar || cultureInfo.DateSeparator == sChar || cultureInfo.TimeSeparator == sChar)
+		    else if ("." == sChar || "/" == sChar || "-" == sChar || ":" == sChar || "," == sChar || cultureInfo.DateSeparator == sChar || cultureInfo.TimeSeparator == sChar)
 		        oDataType = oDataTypes.delimiter;
 		    else
 		        oDataType = oDataTypes.letter;
@@ -5388,8 +5381,122 @@ function setCurrentCultureInfo (LCID, decimalSeparator, groupSeparator) {
 		}
 		return res;
 	}
-	function getFormatByStandardId(id) {
-		var res = null;
+	function getFormatByCulturalStandardId(id, opt_cultureInfo) {
+		var cultureInfo = opt_cultureInfo ? opt_cultureInfo : g_oDefaultCultureInfo;
+		let standartNumFormatsByLocale = {
+			1028: {//"zh-tw"
+				27: '[$-404]e/m/d',
+				28: '[$-404]e"年"m"月"d"日"',
+				29: '[$-404]e"年"m"月"d"日"',
+				30: 'm/d/yy',
+				31: 'yyyy"年"m"月"d"日"',
+				32: 'hh"時"mm"分"',
+				33: 'hh"時"mm"分"ss"秒"',
+				34: '上午/下午hh"時"mm"分"',
+				35: '上午/下午hh"時"mm"分"ss"秒"',
+				36: '[$-404]e/m/d',
+				50: '[$-404]e/m/d',
+				51: '[$-404]e"年"m"月"d"日"',
+				52: '上午/下午hh"時"mm"分"',
+				53: '上午/下午hh"時"mm"分"ss"秒"',
+				54: '上午/下午hh"時"mm"分"',
+				55: '上午/下午hh"時"mm"分"ss"秒"',
+				56: '[$-404]e/m/d',
+				57: '[$-404]e"年"m"月"d"日"',
+				58: '[$-404]e"年"m"月"d"日"'
+			},
+			2052: {//"zh-cn"
+				27: 'yyyy"年"m"月"',
+				28: 'm"月"d"日"',
+				29: 'm"月"d"日"',
+				30: 'm-d-yy',
+				31: 'yyyy"年"m"月"d"日"',
+				32: 'h"时"mm"分"',
+				33: 'h"时"mm"分"ss"秒"',
+				34: '上午/下午h"时"mm"分"',
+				35: '上午/下午h"时"mm"分"ss"秒"',
+				36: 'yyyy"年"m"月"',
+				50: 'yyyy"年"m"月"',
+				51: 'm"月"d"日"',
+				52: 'yyyy"年"m"月"',
+				53: 'm"月"d"日"',
+				54: 'm"月"d"日"',
+				55: '上午/下午h"时"mm"分"',
+				56: '上午/下午h"时"mm"分"ss"秒"',
+				57: 'yyyy"年"m"月"',
+				58: 'm"月"d"日"'
+			},
+			1041: {//"ja-jp"
+				27: '[$-411]ge.m.d',
+				28: '[$-411]ggge"年"m"月"d"日"',
+				29: '[$-411]ggge"年"m"月"d"日"',
+				30: 'm/d/yy',
+				31: 'yyyy"年"m"月"d"日"',
+				32: 'h"時"mm"分"',
+				33: 'h"時"mm"分"ss"秒"',
+				34: 'yyyy"年"m"月"',
+				35: 'm"月"d"日"',
+				36: '[$-411]ge.m.d',
+				50: '[$-411]ge.m.d',
+				51: '[$-411]ggge"年"m"月"d"日"',
+				52: 'yyyy"年"m"月"',
+				53: 'm"月"d"日"',
+				54: '[$-411]ggge"年"m"月"d"日"',
+				55: 'yyyy"年"m"月"',
+				56: 'm"月"d"日"',
+				57: '[$-411]ge.m.d',
+				58: '[$-411]ggge"年"m"月"d"日"'
+			},
+			1042: {//"ko-kr"
+				27: 'yyyy"年" mm"月" dd"日"',
+				28: 'mm-dd',
+				29: 'mm-dd',
+				30: 'mm-dd-yy',
+				31: 'yyyy"년" mm"월" dd"일"',
+				32: 'h"시" mm"분"',
+				33: 'h"시" mm"분" ss"초"',
+				34: 'yyyy-mm-dd',
+				35: 'yyyy-mm-dd',
+				36: 'yyyy"年" mm"月" dd"日"',
+				50: 'yyyy"年" mm"月" dd"日"',
+				51: 'mm-dd',
+				52: 'yyyy-mm-dd',
+				53: 'yyyy-mm-dd',
+				54: 'mm-dd',
+				55: 'yyyy-mm-dd',
+				56: 'yyyy-mm-dd',
+				57: 'yyyy"年" mm"月" dd"日"',
+				58: 'mm-dd'
+			},
+			1054: {//"th-th"
+				59: 't0',
+				60: 't0.00',
+				61: 't#,##0',
+				62: 't#,##0.00',
+				67: 't0%',
+				68: 't0.00%',
+				69: 't# ?/?',
+				70: 't# ??/??',
+				71: 'ว/ด/ปปปป',
+				72: 'ว-ดดด-ปป',
+				73: 'ว-ดดด',
+				74: 'ดดด-ปป',
+				75: 'ช:นน',
+				76: 'ช:นน:ทท',
+				77: 'ว/ด/ปปปป ช:นน',
+				78: 'นน:ทท',
+				79: '[ช]:นน:ทท',
+				80: '80 นน:ทท.0',
+				81: 'd/m/bb'
+			}
+		}
+		return standartNumFormatsByLocale[cultureInfo.LCID] && standartNumFormatsByLocale[cultureInfo.LCID][id] || null;
+	}
+	function getFormatByStandardId(id, opt_cultureInfo) {
+		var res = getFormatByCulturalStandardId(id, opt_cultureInfo);
+		if (res) {
+			return res;
+		}
 		if (59 <= id && id <= 78) {
 			if (69 <= id && id <= 71) {
 				id += 1;
@@ -5523,6 +5630,7 @@ var g_aCultureInfos = {
 	25: {LCID: 25, Name: "ru", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "₽", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"], AbbreviatedDayNames: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"], MonthNames: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь", ""], AbbreviatedMonthNames: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек", ""], MonthGenitiveNames: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря", ""], AbbreviatedMonthGenitiveNames: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек", ""], AMDesignator: "", PMDesignator: "", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "d\\ mmmm\\ yyyy\\ \"г.\""},
 	29: {LCID: 29, Name: "sv", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "kr", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"], AbbreviatedDayNames: ["sön", "mån", "tis", "ons", "tor", "fre", "lör"], MonthNames: ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december", ""], AbbreviatedMonthNames: ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "", PMDesignator: "", UseAMPM: 0, DateSeparator: "-", TimeSeparator: ":", ShortDatePattern: "531", LongDatePattern: "\"den \"d\\ mmmm\\ yyyy"},
 	31: {LCID: 31, Name: "tr", CurrencyPositivePattern: 0, CurrencyNegativePattern: 1, CurrencySymbol: "₺", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"], AbbreviatedDayNames: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"], MonthNames: ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık", ""], AbbreviatedMonthNames: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "ÖÖ", PMDesignator: "ÖS", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "035", LongDatePattern: "d\\ mmmm\\ yyyy\\ dddd"},
+	33: {LCID: 33, Name: "id", CurrencyPositivePattern: 0, CurrencyNegativePattern: 1, CurrencySymbol: "Rp", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], AbbreviatedDayNames: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"], MonthNames: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember", ""], AbbreviatedMonthNames: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "AM", PMDesignator: "PM", UseAMPM: 0, DateSeparator: "/", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "dddd\\,\\ dd\\ mmmm\\ yyyy"},
 	34: {LCID: 34, Name: "uk", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "₴", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"], AbbreviatedDayNames: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"], MonthNames: ["січень", "лютий", "березень", "квітень", "травень", "червень", "липень", "серпень", "вересень", "жовтень", "листопад", "грудень", ""], AbbreviatedMonthNames: ["Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру", ""], MonthGenitiveNames: ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня", ""], AbbreviatedMonthGenitiveNames: ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру", ""], AMDesignator: "", PMDesignator: "", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "d\\ mmmm\\ yyyy\" р.\""},
 	36: {LCID: 36, Name: "sl", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "€", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["nedelja", "ponedeljek", "torek", "sreda", "četrtek", "petek", "sobota"], AbbreviatedDayNames: ["ned.", "pon.", "tor.", "sre.", "čet.", "pet.", "sob."], MonthNames: ["januar", "februar", "marec", "april", "maj", "junij", "julij", "avgust", "september", "oktober", "november", "december", ""], AbbreviatedMonthNames: ["jan.", "feb.", "mar.", "apr.", "maj", "jun.", "jul.", "avg.", "sep.", "okt.", "nov.", "dec.", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "dop.", PMDesignator: "pop.", UseAMPM: 0, DateSeparator: ". ", TimeSeparator: ":", ShortDatePattern: "035", LongDatePattern: "dddd\\,\\ dd\\.\\ mmmm\\ yyyy"},
 	38: {LCID: 38, Name: "lv", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "€", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["svētdiena", "pirmdiena", "otrdiena", "trešdiena", "ceturtdiena", "piektdiena", "sestdiena"], AbbreviatedDayNames: ["svētd.", "pirmd.", "otrd.", "trešd.", "ceturtd.", "piektd.", "sestd."], MonthNames: ["janvāris", "februāris", "marts", "aprīlis", "maijs", "jūnijs", "jūlijs", "augusts", "septembris", "oktobris", "novembris", "decembris", ""], AbbreviatedMonthNames: ["janv.", "febr.", "marts", "apr.", "maijs", "jūn.", "jūl.", "aug.", "sept.", "okt.", "nov.", "dec.", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "priekšp.", PMDesignator: "pēcp.", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "dddd\\,\\ yyyy\\.\\ \"gada\"\\ d\\.\\ mmmm"},
@@ -5552,6 +5660,7 @@ var g_aCultureInfos = {
 	1051: {LCID: 1051, Name: "sk-SK", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "€", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"], AbbreviatedDayNames: ["ne", "po", "ut", "st", "št", "pi", "so"], MonthNames: ["január", "február", "marec", "apríl", "máj", "jún", "júl", "august", "september", "október", "november", "december", ""], AbbreviatedMonthNames: ["jan", "feb", "mar", "apr", "máj", "jún", "júl", "aug", "sep", "okt", "nov", "dec", ""], MonthGenitiveNames: ["januára", "februára", "marca", "apríla", "mája", "júna", "júla", "augusta", "septembra", "októbra", "novembra", "decembra", ""], AbbreviatedMonthGenitiveNames: [], AMDesignator: "AM", PMDesignator: "PM", UseAMPM: 0, DateSeparator: ". ", TimeSeparator: ":", ShortDatePattern: "025", LongDatePattern: "dddd\\ d\\.\\ mmmm\\ yyyy"},
 	1053: {LCID: 1053, Name: "sv-SE", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "kr", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"], AbbreviatedDayNames: ["sön", "mån", "tis", "ons", "tor", "fre", "lör"], MonthNames: ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december", ""], AbbreviatedMonthNames: ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "", PMDesignator: "", UseAMPM: 0, DateSeparator: "-", TimeSeparator: ":", ShortDatePattern: "531", LongDatePattern: "\"den \"d\\ mmmm\\ yyyy"},
 	1055: {LCID: 1055, Name: "tr-TR", CurrencyPositivePattern: 0, CurrencyNegativePattern: 1, CurrencySymbol: "₺", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"], AbbreviatedDayNames: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"], MonthNames: ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık", ""], AbbreviatedMonthNames: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "ÖÖ", PMDesignator: "ÖS", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "035", LongDatePattern: "d\\ mmmm\\ yyyy\\ dddd"},
+	1057: {LCID: 1057, Name: "id-ID", CurrencyPositivePattern: 0, CurrencyNegativePattern: 1, CurrencySymbol: "Rp", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], AbbreviatedDayNames: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"], MonthNames: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember", ""], AbbreviatedMonthNames: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "AM", PMDesignator: "PM", UseAMPM: 0, DateSeparator: "/", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "dddd\\,\\ dd\\ mmmm\\ yyyy"},
 	1058: {LCID: 1058, Name: "uk-UA", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "₴", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"], AbbreviatedDayNames: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"], MonthNames: ["січень", "лютий", "березень", "квітень", "травень", "червень", "липень", "серпень", "вересень", "жовтень", "листопад", "грудень", ""], AbbreviatedMonthNames: ["Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру", ""], MonthGenitiveNames: ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня", ""], AbbreviatedMonthGenitiveNames: ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру", ""], AMDesignator: "", PMDesignator: "", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "d\\ mmmm\\ yyyy\" р.\""},
 	1060: {LCID: 1060, Name: "sl-SI", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "€", NumberDecimalSeparator: ",", NumberGroupSeparator: ".", NumberGroupSizes: [3], DayNames: ["nedelja", "ponedeljek", "torek", "sreda", "četrtek", "petek", "sobota"], AbbreviatedDayNames: ["ned.", "pon.", "tor.", "sre.", "čet.", "pet.", "sob."], MonthNames: ["januar", "februar", "marec", "april", "maj", "junij", "julij", "avgust", "september", "oktober", "november", "december", ""], AbbreviatedMonthNames: ["jan.", "feb.", "mar.", "apr.", "maj", "jun.", "jul.", "avg.", "sep.", "okt.", "nov.", "dec.", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "dop.", PMDesignator: "pop.", UseAMPM: 0, DateSeparator: ". ", TimeSeparator: ":", ShortDatePattern: "035", LongDatePattern: "dddd\\,\\ dd\\.\\ mmmm\\ yyyy"},
 	1062: {LCID: 1062, Name: "lv-LV", CurrencyPositivePattern: 3, CurrencyNegativePattern: 8, CurrencySymbol: "€", NumberDecimalSeparator: ",", NumberGroupSeparator: " ", NumberGroupSizes: [3], DayNames: ["svētdiena", "pirmdiena", "otrdiena", "trešdiena", "ceturtdiena", "piektdiena", "sestdiena"], AbbreviatedDayNames: ["svētd.", "pirmd.", "otrd.", "trešd.", "ceturtd.", "piektd.", "sestd."], MonthNames: ["janvāris", "februāris", "marts", "aprīlis", "maijs", "jūnijs", "jūlijs", "augusts", "septembris", "oktobris", "novembris", "decembris", ""], AbbreviatedMonthNames: ["janv.", "febr.", "marts", "apr.", "maijs", "jūn.", "jūl.", "aug.", "sept.", "okt.", "nov.", "dec.", ""], MonthGenitiveNames: [], AbbreviatedMonthGenitiveNames: [], AMDesignator: "priekšp.", PMDesignator: "pēcp.", UseAMPM: 0, DateSeparator: ".", TimeSeparator: ":", ShortDatePattern: "135", LongDatePattern: "dddd\\,\\ yyyy\\.\\ \"gada\"\\ d\\.\\ mmmm"},

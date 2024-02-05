@@ -58,8 +58,9 @@
      * The editors which the plugin is available for:
 	 * * <b>word</b> - text document editor,
 	 * * <b>cell</b> - spreadsheet editor,
-	 * * <b>slide</b> - presentation editor.
-	 * @typedef {("word" | "cell" | "slide")} editorType
+	 * * <b>slide</b> - presentation editor,
+	 * * <b>pdf</b> - pdf editor.
+	 * @typedef {("word" | "cell" | "slide" | "pdf")} editorType
      */
 
     /**
@@ -263,88 +264,78 @@
         AscCommon.g_inputContext.keyPressInput = "";
     };
 
-    /**
-     * Pastes text in the HTML format into the document.
-     * @memberof Api
-     * @typeofeditors ["CDE", "CSE", "CPE"]
-     * @alias PasteHtml
-     * @param {string} htmlText - A string value that specifies the text in the *HTML* format to be pasted into the document.
-     */
-    Api.prototype["pluginMethod_PasteHtml"] = function(htmlText)
-    {
-        if (!AscCommon.g_clipboardBase)
-            return null;
+	/**
+	 * Pastes text in the HTML format into the document.
+	 * @memberof Api
+	 * @typeofeditors ["CDE", "CSE", "CPE"]
+	 * @alias PasteHtml
+	 * @param {string} htmlText - A string value that specifies the text in the *HTML* format to be pasted into the document.
+	 */
+	Api.prototype["pluginMethod_PasteHtml"] = function (htmlText) {
+		if (!AscCommon.g_clipboardBase)
+			return null;
 
 		if (this.isViewMode)
 			return null;
 
-        var _elem = document.getElementById("pmpastehtml");
-        if (_elem)
-            return;
+		let _elem = document.getElementById("pmpastehtml");
+		if (_elem)
+			return;
 
-        _elem = document.createElement("div");
-        _elem.id = "pmpastehtml";
-        _elem.style.color = "rgb(0,0,0)";
+		window.g_asc_plugins && window.g_asc_plugins.setPluginMethodReturnAsync();
+		_elem = document.createElement("div");
+		_elem.id = "pmpastehtml";
+		_elem.style.color = "rgb(0,0,0)";
 
-        if (this.editorId == AscCommon.c_oEditorId.Word || this.editorId == AscCommon.c_oEditorId.Presentation)
-        {
-            var textPr = this.get_TextProps();
-            if (textPr)
-            {
-                if (undefined !== textPr.TextPr.FontSize)
-                    _elem.style.fontSize = textPr.TextPr.FontSize + "pt";
+		if (this.editorId === AscCommon.c_oEditorId.Word || this.editorId === AscCommon.c_oEditorId.Presentation) {
+			let textPr = this.get_TextProps();
+			if (textPr) {
+				if (undefined !== textPr.TextPr.FontSize)
+					_elem.style.fontSize = textPr.TextPr.FontSize + "pt";
 
-                _elem.style.fontWeight = (true === textPr.TextPr.Bold) ? "bold" : "normal";
-                _elem.style.fontStyle = (true === textPr.TextPr.Italic) ? "italic" : "normal";
+				_elem.style.fontWeight = (true === textPr.TextPr.Bold) ? "bold" : "normal";
+				_elem.style.fontStyle = (true === textPr.TextPr.Italic) ? "italic" : "normal";
 
-                var _color = textPr.TextPr.Color;
-                if (_color)
-                    _elem.style.color = "rgb(" + _color.r + "," + _color.g + "," + _color.b + ")";
-                else
-                    _elem.style.color = "rgb(0,0,0)";
-            }
-        }
-        else if (this.editorId == AscCommon.c_oEditorId.Spreadsheet)
-        {
-            var props = this.asc_getCellInfo();
+				let _color = textPr.TextPr.Color;
+				if (_color)
+					_elem.style.color = "rgb(" + _color.r + "," + _color.g + "," + _color.b + ")";
+				else
+					_elem.style.color = "rgb(0,0,0)";
+			}
+		} else if (this.editorId === AscCommon.c_oEditorId.Spreadsheet) {
+			let props = this.asc_getCellInfo();
 
-            if (props && props.font)
-            {
-                if (undefined != props.font.size)
-                    _elem.style.fontSize = props.font.size + "pt";
+			if (props && props.font) {
+				if (undefined != props.font.size)
+					_elem.style.fontSize = props.font.size + "pt";
 
-                _elem.style.fontWeight = (true === props.font.bold) ? "bold" : "normal";
-                _elem.style.fontStyle = (true === props.font.italic) ? "italic" : "normal";
-            }
-        }
+				_elem.style.fontWeight = (true === props.font.bold) ? "bold" : "normal";
+				_elem.style.fontStyle = (true === props.font.italic) ? "italic" : "normal";
+			}
+		}
 
-        _elem.innerHTML = htmlText;
-        document.body.appendChild(_elem);
-        this.incrementCounterLongAction();
-        var b_old_save_format = AscCommon.g_clipboardBase.bSaveFormat;
-        AscCommon.g_clipboardBase.bSaveFormat = true;
-        this.asc_PasteData(AscCommon.c_oAscClipboardDataFormat.HtmlElement, _elem);
-        this.decrementCounterLongAction();
+		_elem.innerHTML = htmlText;
+		document.body.appendChild(_elem);
+		this.incrementCounterLongAction();
+		let b_old_save_format = AscCommon.g_clipboardBase.bSaveFormat;
+		AscCommon.g_clipboardBase.bSaveFormat = false;
+		let _t = this;
+		this.asc_PasteData(AscCommon.c_oAscClipboardDataFormat.HtmlElement, _elem, undefined, undefined, undefined,
+			function () {
+				_t.decrementCounterLongAction();
 
-        if (true)
-        {
-            var fCallback = function ()
-            {
-                document.body.removeChild(_elem);
-                _elem = null;
-                AscCommon.g_clipboardBase.bSaveFormat = b_old_save_format;
-            };
-            if(this.checkLongActionCallback(fCallback, null)){
-                fCallback();
-            }
-        }
-        else
-        {
-            document.body.removeChild(_elem);
-            _elem = null;
-            AscCommon.g_clipboardBase.bSaveFormat = b_old_save_format;
-        }
-    };
+				let fCallback = function () {
+					document.body.removeChild(_elem);
+					_elem = null;
+					AscCommon.g_clipboardBase.bSaveFormat = b_old_save_format;
+				};
+				if (_t.checkLongActionCallback(fCallback, null)) {
+					fCallback();
+				}
+				window.g_asc_plugins &&	window.g_asc_plugins.onPluginMethodReturn(true);
+			}
+		);
+	};
 
     /**
      * Pastes text into the document.
@@ -1708,17 +1699,20 @@
         return langName;
     };
 
-	function correctItemsWithData(items)
+	function correctItemsWithData(items, baseUrl)
 	{
 		for (let i = 0, itemsLen = items.length; i < itemsLen; i++)
 		{
 			if (undefined !== items[i]["id"] && undefined !== items[i]["data"])
 				items[i]["id"] = items[i]["id"] + "_oo_sep_" + items[i]["data"];
 
+			if (items[i]["icons"]) 
+				items[i]["icons"] = baseUrl + items[i]["icons"];
+
 			if (items[i]["items"])
-				correctItemsWithData(items[i]["items"]);
+				correctItemsWithData(items[i]["items"], baseUrl);
 		}
-	}
+	};
 
 	/**
 	 * @typedef {Object} ContextMenuItem
@@ -1739,7 +1733,8 @@
 	 */
 	Api.prototype["pluginMethod_AddContextMenuItem"] = function(items)
 	{
-		if (items["items"]) correctItemsWithData(items["items"]);
+		let baseUrl = this.pluginsManager.pluginsMap[items["guid"]].baseUrl;
+		if (items["items"]) correctItemsWithData(items["items"], baseUrl);
 		this.onPluginAddContextMenuItem(items);
 	};
 
@@ -1753,7 +1748,8 @@
 	 */
 	Api.prototype["pluginMethod_UpdateContextMenuItem"] = function(items)
 	{
-		if (items["items"]) correctItemsWithData(items["items"]);
+		let baseUrl = this.pluginsManager.pluginsMap[items["guid"]].baseUrl;
+		if (items["items"]) correctItemsWithData(items["items"], baseUrl);
 		this.onPluginUpdateContextMenuItem([items]);
 	};
 
