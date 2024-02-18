@@ -1891,10 +1891,6 @@
 				this._onDrop(dataObject);
 				break;
 			case 'documentOpen'    :
-                // 处理数据
-                if (dataObject.data && dataObject.data.data['Editor.bin']) {
-                  dataObject.data.data['Editor.bin'] = `http://localhost:8848/Editor.bin?url=${dataObject.data.data['Editor.bin']}`;
-                }
 				this._documentOpen(dataObject);
 				break;
 			case 'warning':
