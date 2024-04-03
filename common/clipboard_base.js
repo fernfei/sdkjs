@@ -241,6 +241,13 @@
 			}
 			else
 			{
+				const _html_has_image = function (document) {
+					return "" === document.body.innerText.trim() && !!document.querySelector("img")
+				};
+				const is_html_outputting_single_mage = function (htmlStr) {
+					const document = (new DOMParser).parseFromString(htmlStr, "text/html");
+					return _html_has_image(document)
+				};
 				var _clipboard = (e && e.clipboardData) ? e.clipboardData : window.clipboardData;
 				if (!_clipboard || !_clipboard.getData)
 					return false;
@@ -264,7 +271,7 @@
 				}
 
 				var _html_format = isDisableRawPaste ? "" : this.ClosureParams.getData("text/html");
-				if (_html_format && _html_format != "")
+				if (_html_format && _html_format != "" && !is_html_outputting_single_mage(_html_format))
 				{
 					var nIndex = _html_format.indexOf("</html>");
 					if (-1 != nIndex)
