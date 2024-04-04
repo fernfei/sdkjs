@@ -241,10 +241,10 @@
 			}
 			else
 			{
-				const _html_has_image = function (document) {
+				var _html_has_image = function (document) {
 					return "" === document.body.innerText.trim() && !!document.querySelector("img")
 				};
-				const is_html_outputting_single_mage = function (htmlStr) {
+				var is_html_outputting_single_mage = function (htmlStr) {
 					const document = (new DOMParser).parseFromString(htmlStr, "text/html");
 					return _html_has_image(document)
 				};
