@@ -245,7 +245,7 @@
 					return "" === document.body.innerText.trim() && !!document.querySelector("img")
 				};
 				var is_html_outputting_single_mage = function (htmlStr) {
-					const document = (new DOMParser).parseFromString(htmlStr, "text/html");
+					var document = (new DOMParser).parseFromString(htmlStr, "text/html");
 					return _html_has_image(document)
 				};
 				var _clipboard = (e && e.clipboardData) ? e.clipboardData : window.clipboardData;
