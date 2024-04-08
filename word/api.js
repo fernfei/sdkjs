@@ -5082,7 +5082,7 @@ background-repeat: no-repeat;\
 	};
 	asc_docs_api.prototype.asc_RemoveUnusedStyles = function()
 	{
-		this.WordControl.m_oLogicDocument.Remove_AllUnusedStyles();
+		this.WordControl.m_oLogicDocument && this.WordControl.m_oLogicDocument.Remove_AllUnusedStyles();
 	};
 	asc_docs_api.prototype["asc_AddFootnote"]         = asc_docs_api.prototype.asc_AddFootnote;
 	asc_docs_api.prototype["asc_RemoveAllFootnotes"]  = asc_docs_api.prototype.asc_RemoveAllFootnotes;
