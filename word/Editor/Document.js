@@ -12415,19 +12415,39 @@ CDocument.prototype.GetWatermarkProps = function()
 
 CDocument.prototype.SetWatermarkProps = function(oProps)
 {
-	if (!this.CanPerformAction())
-		return;
+	// if (!this.CanPerformAction())
+	// 	return;
 
 	this.StartAction(AscDFH.historydescription_Document_AddWatermark);
-    const aSectEle = this.SectionsInfo.Elements;
-    for (let i = 0; i < aSectEle.length; i++) {
-        const oSectPr = aSectEle[i].SectPr;
-        let oHeader = oSectPr.GetHdrFtr(true,oSectPr.IsTitlePage(),oSectPr.IsEvenAndOdd());
-        if (!oHeader) {
-            oHeader = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
-            oSectPr.Set_Header_Default(oHeader);
+    for (let pageIndex = 0; pageIndex < this.Pages.length; pageIndex++) {
+
+        // Определим четность страницы и является ли она первой в данной секции. Заметим, что четность страницы
+        // отсчитывается от начала текущей секции и не зависит от настроек нумерации страниц для данной секции.
+        var SectionPageInfo = this.Get_SectionPageNumInfo( pageIndex );
+
+        var bFirst = SectionPageInfo.bFirst;
+        var bEven  = SectionPageInfo.bEven;
+
+        // Запросим нужный нам колонтитул
+        var HdrFtr = this.Get_SectionHdrFtr( pageIndex, bFirst, bEven );
+
+        var Header = HdrFtr.Header;
+        var Footer = HdrFtr.Footer;
+        var SectPr = HdrFtr.SectPr;
+
+        if (!Header && SectPr.IsTitlePage()) {
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_First(Header);
+        }else if (!Header && SectPr.IsEvenAndOdd()) {
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_First(Header);
+        } else if(!Header){
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_Default(Header);
         }
-        oHeader.SetWatermarkPropsAction(oProps);
+        if(Header){
+            Header.SetWatermarkPropsAction(oProps);
+        }
     }
 	this.Recalculate();
 	this.Document_UpdateInterfaceState();

@@ -1337,32 +1337,10 @@ CHeaderFooter.prototype.SetWatermarkPropsAction = function (oProps) {
     {
         const oDocState = oLogicDocument.Get_SelectionState2();
         const oContent = this.Content;
-        let oWatermarkCC = null;
-        const aAllContentControls = oContent.GetAllContentControls();
-        const nCount = aAllContentControls.length;
-        for(let nContentControl = 0; nContentControl < nCount; ++nContentControl)
-        {
-            let oContentControl = aAllContentControls[nContentControl];
-            let oDocPart = oContentControl.Pr.DocPartObj;
-            if(oDocPart.Gallery === "Watermarks" && oDocPart.Unique)
-            {
-                oWatermarkCC = oContentControl;
-                break;
-            }
-        }
-        if(!oWatermarkCC)
-        {
-            oWatermarkCC = oContent.AddContentControl(c_oAscSdtLevelType.Inline);
-            oWatermarkCC.SetDocPartObj(undefined, "Watermarks", true);
-        }
-        if(oWatermarkCC.IsBlockLevel())
-        {
-            oWatermarkCC.AddToParagraph(oWatermark);
-        }
-        else
-        {
-            oWatermarkCC.Add(oWatermark);
-        }
+        var paraRun = new ParaRun(null, false);
+        paraRun.Add(oWatermark);
+        var oFirstParagraph = oContent.GetFirstParagraph();
+        oFirstParagraph.AddToContentToEnd(paraRun);
         oLogicDocument.Set_SelectionState2(oDocState);
         return oWatermark;
     }
