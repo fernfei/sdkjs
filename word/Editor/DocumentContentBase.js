@@ -101,7 +101,7 @@ CDocumentContentBase.prototype.getController = function(type)
 		controller = this.Footnotes;
 	else if (docpostype_Endnotes === type)
 		controller = this.Endnotes;
-	
+
 	return controller;
 };
 /**
@@ -968,7 +968,7 @@ CDocumentContentBase.prototype.private_Remove = function(Count, isRemoveWholeEle
 								this.RemoveFromContent(nCurContentPos);
 							}
 						}
-						
+
 						--nCurContentPos;
 						this.Content[nCurContentPos].MoveCursorToEndPos(false);
 					}
@@ -1089,7 +1089,7 @@ CDocumentContentBase.prototype.private_Remove = function(Count, isRemoveWholeEle
 						{
 							++nCurContentPos;
 						}
-						
+
 						this.Content[nCurContentPos].MoveCursorToStartPos(false);
 					}
 					else if (true == this.Content[nCurContentPos].IsEmpty() && nCurContentPos == this.Content.length - 1 && nCurContentPos != 0 && type_Paragraph === this.Content[nCurContentPos - 1].GetType())
@@ -1689,7 +1689,7 @@ CDocumentContentBase.prototype.GetAllParagraphsByNumbering = function(oNumPr)
 	let numberingCollection = logicDocument && logicDocument.IsDocumentEditor() ? logicDocument.GetNumberingCollection() : null;
 	if (numberingCollection)
 		return numberingCollection.GetAllParagraphsByNumbering(oNumPr);
-	
+
 	return this.GetAllParagraphs({Numbering : true, NumPr : oNumPr});
 };
 /**
@@ -1700,6 +1700,10 @@ CDocumentContentBase.prototype.GetAllParagraphsByNumbering = function(oNumPr)
 CDocumentContentBase.prototype.GetAllParagraphsByStyle = function(arrStylesId)
 {
 	return this.GetAllParagraphs({Style : true, StylesId : arrStylesId});
+};
+CDocumentContentBase.prototype.GetAllTablesByStyle = function(arrStylesId)
+{
+	return this.GetAllTables({Style : true, StylesId : arrStylesId});
 };
 /**
  * Получаем массив таблиц по заданному критерию
@@ -2421,13 +2425,13 @@ CDocumentContentBase.prototype.UpdateInterfaceParaPr = function()
 	let api = this.GetApi();
 	if (!api)
 		return;
-	
+
 	let paraPr = this.GetCalculatedParaPr();
 	if (!paraPr)
 		return;
-	
+
 	paraPr.CanAddDropCap = this.CanAddDropCap();
-	
+
 	let logicDocument = this.GetLogicDocument();
 	if (logicDocument)
 	{
@@ -2438,25 +2442,25 @@ CDocumentContentBase.prototype.UpdateInterfaceParaPr = function()
 			paraPr.CanAddImage = false;
 		else if (false !== paraPr.CanAddImage)
 			paraPr.CanAddImage = true;
-		
+
 		if (math && !math.IsInline())
 			paraPr.Jc = math.GetAlign();
-		
+
 		paraPr.CanDeleteBlockCC  = selectedInfo.CanDeleteBlockSdts();
 		paraPr.CanEditBlockCC    = selectedInfo.CanEditBlockSdts();
 		paraPr.CanDeleteInlineCC = selectedInfo.CanDeleteInlineSdts();
 		paraPr.CanEditInlineCC   = selectedInfo.CanEditInlineSdts();
 	}
-	
+
 	if (paraPr.Tabs)
 	{
 		let defaultTab = paraPr.DefaultTab != null ? paraPr.DefaultTab : AscCommonWord.Default_Tab_Stop;
 		api.Update_ParaTab(defaultTab, paraPr.Tabs);
 	}
-	
+
 	if (paraPr.Shd && paraPr.Shd.Unifill)
 		paraPr.Shd.Unifill.check(this.GetTheme(), this.GetColorMap());
-	
+
 	// Если мы находимся внутри автофигуры, тогда нам надо проверить лок параграфа, в котором находится автофигура
 	if (logicDocument
 		&& logicDocument.IsDocumentEditor()
@@ -2467,7 +2471,7 @@ CDocumentContentBase.prototype.UpdateInterfaceParaPr = function()
 		if (drawing)
 			paraPr.Locked = drawing.Lock.Is_Locked();
 	}
-	
+
 	paraPr.StyleName = AscWord.DisplayStyleCalculator.CalculateName(this);
 	api.sync_ParaStyleName(paraPr.StyleName);
 	api.UpdateParagraphProp(paraPr);
@@ -2505,7 +2509,7 @@ CDocumentContentBase.prototype.OnContentChange = function()
 {
 	if (this.Parent && this.Parent.OnContentChange)
 		this.Parent.OnContentChange();
-	
+
 	let shape = this.Is_DrawingShape(true);
 	if (shape
 		&& this.GetLogicDocument()
@@ -2563,7 +2567,7 @@ CDocumentContentBase.prototype.UpdateNumberingCollection = function(elements)
 	let logicDocument = this.GetLogicDocument();
 	if (!logicDocument || !logicDocument.IsDocumentEditor())
 		return;
-	
+
 	let numberingCollection = logicDocument.GetNumberingCollection();
 	for (let iElement = 0, nElements = elements.length; iElement < nElements; ++iElement)
 	{
@@ -2584,14 +2588,14 @@ CDocumentContentBase.prototype.UpdateNumberingCollection = function(elements)
 CDocumentContentBase.prototype.private_RecalculateNumbering = function(elements)
 {
 	this.UpdateNumberingCollection(elements);
-	
+
 	let logicDocument = this.GetLogicDocument();
 	if (!logicDocument || !logicDocument.IsDocumentEditor())
 		return;
-	
+
 	if (true === AscCommon.g_oIdCounter.m_bLoad || true === AscCommon.g_oIdCounter.m_bRead)
 		return;
-	
+
 	let history = logicDocument.GetHistory();
 	for (let iElement = 0, nElements = elements.length; iElement < nElements; ++iElement)
 	{
@@ -2613,20 +2617,20 @@ CDocumentContentBase.prototype.Get_Theme = function()
 {
 	if (this.Parent)
 		return this.Parent.Get_Theme();
-	
+
 	if (this.LogicDocument)
 		return this.LogicDocument.GetTheme();
-	
+
 	return AscFormat.GetDefaultTheme();
 };
 CDocumentContentBase.prototype.Get_ColorMap = function()
 {
 	if (this.Parent)
 		return this.Parent.Get_ColorMap();
-	
+
 	if (this.LogicDocument)
 		return this.LogicDocument.GetColorMap();
-	
+
 	return AscFormat.GetDefaultColorMap();
 };
 CDocumentContentBase.prototype.GetTheme = function()
@@ -2642,7 +2646,7 @@ CDocumentContentBase.prototype.GetSelectedParagraphs = function()
 	let logicDocument = this.GetLogicDocument();
 	if (!logicDocument)
 		return [];
-	
+
 	return logicDocument.GetSelectedParagraphs();
 };
 CDocumentContentBase.prototype.setSelectionStateSilent = function(state)
@@ -2653,9 +2657,9 @@ CDocumentContentBase.prototype.setSelectionStateSilent = function(state)
 
 	if (logicDocument)
 		logicDocument.Start_SilentMode();
-	
+
 	this.SetSelectionState(state);
-	
+
 	if (logicDocument)
 		logicDocument.End_SilentMode(false);
 };
@@ -2663,31 +2667,31 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 {
 	if (!prevState)
 		return null;
-	
+
 	if (action && (action.type !== AscCommon.SpeakerActionType.keyDown || action.event.KeyCode < 33 || action.event.KeyCode > 40))
 		return null;
-	
+
 	// В данном метод предполагается, что curState равен this.GetSelectionState()
 	let curState = this.GetSelectionState();
 	if (!prevState.length || !curState.length)
 		return null;
-	
+
 	let obj  = {};
 	let type = AscCommon.SpeechWorkerCommands.Text;
-	
+
 	this.setSelectionStateSilent(prevState);
 	let prevInfo = this.getSelectionInfo();
-	
+
 	this.setSelectionStateSilent(curState);
 	let curInfo = this.getSelectionInfo();
-	
+
 	let isActionSelectionChange = action && action.type === AscCommon.SpeakerActionType.keyDown && action.event.ShiftKey;
-	
+
 	if (curInfo.docPosType === docpostype_DrawingObjects)
 	{
 		return AscCommon.getSpeechDescription(prevState, curState, action);
 	}
-	
+
 	if (prevInfo.docPosType !== curInfo.docPosType
 		|| !prevInfo.curPos.length
 		|| !curInfo.curPos.length
@@ -2702,7 +2706,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 			case docpostype_DrawingObjects: obj.moveToDrawing = true; break;
 			case docpostype_HdrFtr: obj.moveToHdrFtr = true; break;
 		}
-		
+
 		let paragraph = this.GetCurrentParagraph();
 		obj.text = paragraph.getNextCharacter();
 	}
@@ -2721,7 +2725,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 		{
 			if (prevInfo.isSelection && 0 !== AscWord.CompareDocumentPositions(prevInfo.selectionStart, prevInfo.selectionEnd))
 				obj.cancelSelection = true;
-			
+
 			if (curInfo.isSelection || !action)
 			{
 				if (prevInfo.isSelection && 0 !== AscWord.CompareDocumentPositions(prevInfo.selectionStart, prevInfo.selectionEnd))
@@ -2746,7 +2750,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 				{
 					if (AscCommon.SpeakerActionType.keyDown !== action.type)
 						return null;
-					
+
 					let keyCode = action.event.KeyCode;
 					if (36 === keyCode)
 					{
@@ -2770,7 +2774,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 					{
 						obj.movePageDown = true;
 					}
-					
+
 					if (36 === keyCode || 38 === keyCode || 40 === keyCode)
 						obj.text = paragraph.getTextOnLine();
 					else if ((37 === keyCode || 39 === keyCode) && action.event.CtrlKey)
@@ -2800,7 +2804,7 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 					// type     = AscCommon.SpeechWorkerCommands.TextUnselected;
 					// obj.text = this.GetSelectedText(false);
 					// this.setSelectionStateSilent(curState);
-					
+
 					type     = AscCommon.SpeechWorkerCommands.TextSelected;
 					obj.text = this.GetSelectedText(false);
 				}
@@ -2810,19 +2814,19 @@ CDocumentContentBase.prototype.getSpeechDescription = function(prevState, action
 						&& AscWord.CompareDocumentPositions(curInfo.selectionEnd, prevInfo.selectionEnd) >= 0)
 					|| (AscWord.CompareDocumentPositions(prevInfo.selectionStart, prevInfo.selectionEnd) >= 0
 							&& AscWord.CompareDocumentPositions(curInfo.selectionEnd, prevInfo.selectionEnd) <= 0));
-					
+
 					mainDC.RemoveSelection();
 					mainDC.SetContentSelection(curInfo.selectionEnd, prevInfo.selectionEnd, 0, 0, 0);
-					
+
 					type     = isAdd ? AscCommon.SpeechWorkerCommands.TextSelected : AscCommon.SpeechWorkerCommands.TextUnselected;
 					obj.text = this.GetSelectedText(false);
-					
+
 					this.setSelectionStateSilent(curState);
 				}
 			}
 		}
 	}
-	
+
 	return {obj : obj, type : type};
 };
 CDocumentContentBase.prototype.getSelectionInfo = function()

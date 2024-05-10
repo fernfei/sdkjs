@@ -7531,7 +7531,7 @@ background-repeat: no-repeat;\
 			this.ImageLoader.LoadDocumentImages(this.saveImageMap);
 			return;
 		}
-		this.asc_RemoveUnusedStyles();
+		// this.asc_RemoveUnusedStyles();
 		// this.GenerateStyles();
 
 		if (null != this.WordControl.m_oLogicDocument)

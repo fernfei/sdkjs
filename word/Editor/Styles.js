@@ -9060,7 +9060,7 @@ CStyles.prototype =
     {
         return this.GetName(StyleId);
     },
-	
+
 	GetName : function(styleId)
 	{
 		let style = this.Get(styleId);
@@ -9709,15 +9709,14 @@ CStyles.prototype.Remove_UnusedStyleFromInterface = function(StyleId)
 {
 	var Style = this.Style[StyleId];
 	// Remove Non-Default Style
-	if (!this.LogicDocument.IsStyleDefaultByName(Style.Name)) {
+	if (!this.IsStyleDefaultByName(Style.Name)) {
 		if (this.LogicDocument) {
 			var AllParagraphs = this.LogicDocument.GetAllParagraphsByStyle([StyleId]);
-			var Count = AllParagraphs.length;
-			if (Count <= 0) {
+			var AllTables = this.LogicDocument.GetAllTablesByStyle([StyleId]);
+			if (AllParagraphs.length <= 0 && AllTables.length <= 0 && !this.isBasedOnByOtherStyle(StyleId)) {
 				this.Remove(StyleId);
 			}
 		}
-		this.Update_Interface(StyleId);
 	}
 };
 CStyles.prototype.Remove_StyleFromInterface = function(StyleId)
@@ -9873,12 +9872,18 @@ CStyles.prototype.Remove_AllUnusedStylesFromInterface = function()
 {
 	for (var StyleId in this.Style)
 	{
-		// var style = this.Style[StyleId];
-		// if (style.IsExpressStyle(DocumentStyles)) {
-			this.Remove_UnusedStyleFromInterface(StyleId);
-		// }
+		this.Remove_UnusedStyleFromInterface(StyleId);
 	}
 };
+CStyles.prototype.isBasedOnByOtherStyle = function(styleId){
+	for (var StyleId in this.Style) {
+		var style = this.Style[StyleId];
+		if (style.BasedOn === styleId) {
+			return true;
+		}
+	}
+	return false;
+}
 CStyles.prototype.IsStyleDefaultByName = function(styleName)
 {
 	var styleId = this.GetStyleIdByName(styleName);
