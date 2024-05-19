@@ -5312,6 +5312,22 @@ background-repeat: no-repeat;\
 			this.WordControl.m_oLogicDocument.FinalizeAction();
 		}
 	};
+	asc_docs_api.prototype.autoFitToWindow			= function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			var _props = new Asc.CTableProp();
+			_props.put_Width(-100);
+			this.tblApply(_props)
+		}
+	};
+	asc_docs_api.prototype.autoFitToContent			= function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_AutoFitToContent);
+			this.WordControl.m_oLogicDocument.AutoFitTableContent();
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	};
 	asc_docs_api.prototype.addRowAbove             = function(nCount)
 	{
 		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
@@ -5410,6 +5426,14 @@ background-repeat: no-repeat;\
 			return false;
 		}
 	};
+	asc_docs_api.prototype.switchRowColumn	  = function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_SwitchRowColumn);
+			this.WordControl.m_oLogicDocument.SwitchTableRowColumn();
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	}
 	asc_docs_api.prototype.selectRow               = function()
 	{
 		this.WordControl.m_oLogicDocument.SelectTable(c_oAscTableSelectionType.Row);
@@ -7531,7 +7555,7 @@ background-repeat: no-repeat;\
 			this.ImageLoader.LoadDocumentImages(this.saveImageMap);
 			return;
 		}
-		this.asc_RemoveUnusedStyles();
+		// this.asc_RemoveUnusedStyles();
 		// this.GenerateStyles();
 
 		if (null != this.WordControl.m_oLogicDocument)

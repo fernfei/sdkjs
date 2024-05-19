@@ -15289,6 +15289,74 @@ CTable.prototype.Internal_Get_EndMergedCell = function(StartRow, StartGridCol, G
 
 	return Result;
 };
+CTable.prototype.private_CanCancelSplitCell = function(RowIndex, CellIndex)
+{
+	
+	if (!RowIndex && !CellIndex) {
+		if (false === this.Selection.Use || ( true === this.Selection.Use && table_Selection_Text === this.Selection.Type ))
+		{
+			CellIndex = this.CurCell.Index;
+			RowIndex = this.CurCell.Row.Index;
+		}
+	}
+	if (RowIndex === undefined || CellIndex === undefined) {
+		return 0;
+	}
+	// Сначала проверим данну строку
+	var Row       = this.Content[RowIndex];
+	let oCurCellInfo = Row.Get_CellInfo(CellIndex);
+	let CurXGridStart = oCurCellInfo.X_grid_start;
+	let CurXGridEnd = oCurCellInfo.X_grid_end;
+	
+	let nMaxGridSpan = 0;
+	// vertically upward
+	for (var nRowIndex = RowIndex - 1; nRowIndex >= 0; nRowIndex--) {
+		let GridSpan = 0;
+		for (let nCellIndex = 0; nCellIndex < this.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+			let oCellInfo = this.GetRow(nRowIndex).Get_CellInfo(nCellIndex);
+			if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+				break;
+			}
+			if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+				GridSpan++;
+			}
+			if (nMaxGridSpan < GridSpan) {
+				nMaxGridSpan = GridSpan;
+			}
+		}
+	}
+
+	// vertically downward
+	for (var nRowIndex = RowIndex + 1, Count = this.GetRowsCount(); nRowIndex < Count; nRowIndex++) {
+		let GridSpan = 0;
+		for (let nCellIndex = 0; nCellIndex < this.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+			let oCellInfo = this.GetRow(nRowIndex).Get_CellInfo(nCellIndex);
+			// cell overlap
+			if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+				break;
+			}
+			// cell grid end between cursor cell grid start and end  && no overlap
+			if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+				GridSpan++;
+			}
+			if (nMaxGridSpan < GridSpan) {
+				nMaxGridSpan = GridSpan;
+			}
+		}
+	}
+	return nMaxGridSpan;
+};
+CTable.prototype.private_IsMergedCell = function(RowIndex, StartGridCol, GridSpan)
+{
+	let aCells = this.private_GetMergedCells(RowIndex, StartGridCol, GridSpan);
+	if (aCells.length > 1) {
+		return true;
+	}
+	if(aCells.length === 1) {
+		return false;
+	}
+	return false;
+};
 /**
  * Получаем массив ячеек попадающих в заданное вертикальное объединение
  */
@@ -18518,6 +18586,143 @@ CTable.prototype.GetTablesOfFigures = function(arrComplexFields)
 			oRow.GetCell(nCurCell).Content.GetTablesOfFigures(arrComplexFields);
 		}
 	}
+};
+CTable.prototype.AutoFitToContent = function () {
+	var isApplyToAll = this.ApplyToAll;
+	if (!this.Selection.Use || table_Selection_Text === this.Selection.Type)
+		this.ApplyToAll = true;
+
+	var arrSelectedCells = this.GetSelectionArray();
+	this.ApplyToAll = isApplyToAll;
+	if (arrSelectedCells.length <= 1)
+		return false;
+
+	// TableWidth
+	var TablePr            = this.Get_CompiledPr(false).TablePr;
+	if (tblwidth_Auto !== TablePr.TableW.Type)
+	{
+		this.Set_TableW(tblwidth_Auto, 0);
+	}
+	// TableLayout
+	if (this.GetTableLayout() !== tbllayout_AutoFit) {
+		this.SetTableLayout(( tbllayout_AutoFit ));
+	}
+	// CellWidth
+	var arrRows = [];
+	for (var nIndex = 0, nCount = arrSelectedCells.length; nIndex < nCount; ++nIndex)
+	{
+		var nCurCell = arrSelectedCells[nIndex].Cell;
+		var nCurRow  = arrSelectedCells[nIndex].Row;
+		if (!arrRows[nCurRow])
+		{
+			arrRows[nCurRow] = {
+				Start : nCurCell,
+				End   : nCurCell
+			};
+		}
+		else
+		{
+			if (arrRows[nCurRow].Start > nCurCell)
+				arrRows[nCurRow].Start = nCurCell;
+
+			if (arrRows[nCurRow].End < nCurCell)
+				arrRows[nCurRow].End = nCurCell;
+		}
+	}
+	var arrRowsInfo        = this.private_GetRowsInfo();
+	for (nCurRow in arrRows)
+	{
+		if (!arrRowsInfo[nCurRow] || arrRowsInfo[nCurRow].length <= 0)
+			continue;
+
+		var nStartCell = arrRows[nCurRow].Start;
+		var nEndCell   = arrRows[nCurRow].End;
+
+		for (var nCurCell = nStartCell; nCurCell <= nEndCell; ++nCurCell)
+		{
+			var oCell = this.Content[nCurRow].GetCell(nCurCell);
+			if (oCell) {
+				if (!oCell.GetW().IsAuto()) {
+					oCell.SetW(new CTableMeasurement(tblwidth_Auto, 0));
+				}
+			}
+		}
+		// RowHeight
+		if (!this.Content[nCurRow].GetHeight().IsAuto()) {
+			this.Content[nCurRow].SetHeight(0, Asc.linerule_Auto);
+		}
+	}
+};
+CTable.prototype.SwitchRowColumn = function () {
+	// TableWidth
+	var TablePr            = this.Get_CompiledPr(false).TablePr;
+	if (tblwidth_Pct !== TablePr.TableW.Type)
+	{
+		this.Set_TableW(tblwidth_Pct, 100);
+	}
+	// TableLayout CanSplitTableCells
+	if (this.GetTableLayout() !== tbllayout_AutoFit) {
+		this.SetTableLayout(( tbllayout_AutoFit ));
+	}
+	const arr = new Array(this.GetRowsCount());
+	let oSplitTableCells = {};
+	for (let nCurRowIndex = 0; nCurRowIndex < this.GetRowsCount(); nCurRowIndex++) {
+		const oRow = this.GetRow(nCurRowIndex);
+		arr[nCurRowIndex] = new Array(oRow.GetCellsCount());
+		for (let nCurCellIndex = 0,Index = 0; nCurCellIndex < oRow.GetCellsCount(); nCurCellIndex++,Index++) {
+			const oCell = oRow.GetCell(nCurCellIndex);
+			const StartGridCol = oRow.Get_CellInfo(nCurCellIndex).StartGridCol;
+			var GridSpan = oCell.Get_GridSpan();
+			var VMergeCount = this.Internal_GetVertMergeCount( nCurRowIndex, StartGridCol, GridSpan );
+			
+			if (VMergeCount > 1)
+			{
+				// Берем нижнюю границу нижней ячейки вертикального объединения.
+				var BottomCell = this.Internal_Get_EndMergedCell(nCurRowIndex, StartGridCol, GridSpan);
+				console.log(`【${oCell.Id}】====>【${BottomCell.Id}】`);
+			}
+
+			let content = `【${oCell.Id}】V:${VMergeCount}`;
+			for (let i = 0; i < oCell.Content.Content.length; i++) {
+				content += oCell.Content.Content[i].GetText();
+			}
+			arr[nCurRowIndex][Index] = content;
+			if (oCell.GetGridSpan() > 1) {
+				for (let i = 1; i < oCell.GetGridSpan(); i++) {
+					Index++;
+					arr[nCurRowIndex][Index] = '';
+				}
+			}
+			if (VMergeCount > 1 || this.private_CanCancelSplitCell(nCurRowIndex, nCurCellIndex)) {
+				let oStartCell = this.GetStartMergedCell(nCurCellIndex, nCurRowIndex);
+				if (!oSplitTableCells[oStartCell.Id]) {
+					oSplitTableCells[oStartCell.Id] = {
+						GridSpan: GridSpan,
+						VMergeCount: VMergeCount,
+						oCell: oStartCell
+					};
+				}
+			}
+		}
+	}
+	let result = [];
+	for (let i = 0; i < arr.length; i++) {
+		for (let j = 0; j < arr[i].length; j++) {
+			if (!result[j]) {
+				result[j] = [];
+			}
+			result[j][i] = arr[i][j];
+		}
+	}
+	console.table(arr);
+	console.log('-------------------')
+	console.table(result);
+
+	// for (let key in oSplitTableCells) {
+	// 	const oSplitTableCell = oSplitTableCells[key];
+	// 	this.CurCell = oSplitTableCell.oCell;
+	// 	this.LogicDocument.Api.SplitCell(oSplitTableCell.GridSpan, oSplitTableCell.VMergeCount);
+	// }
 };
 /**
  * Делаем выделенные ячейки равными по ширине
