@@ -7064,6 +7064,21 @@ CDocument.prototype.SelectDrawings = function(arrDrawings, oTargetContent)
 		this.DrawingObjects.selectObject(arrDrawings[i].GraphicObj, 0);
 	}
 };
+CDocument.prototype.AutoFitTableContent = function()
+{
+    this.Controller.AutoFitTableContent();
+    this.Recalculate();
+    this.Document_UpdateInterfaceState();
+    this.Document_UpdateRulersState();
+    this.Document_UpdateSelectionState();
+};
+CDocument.prototype.SwitchTableRowColumn = function () {
+    this.Controller.SwitchTableRowColumn();
+    this.Recalculate();
+    this.Document_UpdateInterfaceState();
+    this.Document_UpdateRulersState();
+    this.Document_UpdateSelectionState();
+};
 CDocument.prototype.SetTableProps = function(Props)
 {
 	this.Controller.SetTableProps(Props);
@@ -20476,6 +20491,26 @@ CDocument.prototype.controller_SetImageProps = function(Props)
 		else
 			this.Content[this.CurPos.ContentPos].SetImageProps(Props);
 	}
+};
+CDocument.prototype.controller_AutoFitTableContent = function () {
+    var Pos = -1;
+    if (true === this.Selection.Use && this.Selection.StartPos == this.Selection.EndPos)
+        Pos = this.Selection.StartPos;
+    else if (false === this.Selection.Use)
+        Pos = this.CurPos.ContentPos;
+
+    if (-1 !== Pos)
+        this.Content[Pos].AutoFitToContent();
+};
+CDocument.prototype.controller_SwitchTableRowColumn = function () {
+    var Pos = -1;
+    if (true === this.Selection.Use && this.Selection.StartPos == this.Selection.EndPos)
+        Pos = this.Selection.StartPos;
+    else if (false === this.Selection.Use)
+        Pos = this.CurPos.ContentPos;
+
+    if (-1 !== Pos)
+        this.Content[Pos].SwitchRowColumn();
 };
 CDocument.prototype.controller_SetTableProps = function(Props)
 {
