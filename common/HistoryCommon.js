@@ -1296,6 +1296,9 @@
 			case AscDFH.historydescription_Document_SwitchRowColumn:
 				sString = "Document_SwitchRowColumn";
 				break;
+			case AscDFH.historydescription_Document_UnmergeCells:
+				sString = "Document_UnmergeCells";
+				break;
 		}
 		return sString;
 	}
@@ -4494,6 +4497,7 @@
 	window['AscDFH'].historydescription_Document_ComplexField_MergeFormat           = 0x01ab;
 	window['AscDFH'].historydescription_Document_AutoFitToContent           		= 0x01ac;
 	window['AscDFH'].historydescription_Document_SwitchRowColumn           			= 0x01ad;
+	window['AscDFH'].historydescription_Document_UnmergeCells           			= 0x01ae;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

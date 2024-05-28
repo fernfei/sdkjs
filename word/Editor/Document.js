@@ -11846,6 +11846,17 @@ CDocument.prototype.SplitTableCells = function(Cols, Rows)
 	this.UpdateSelection();
 	this.UpdateInterface();
 };
+CDocument.prototype.UnmergeCells = function()
+{
+	var isLocalTrackRevisions = this.GetLocalTrackRevisions();
+	this.SetLocalTrackRevisions(false);
+	this.Controller.UnmergeCells();
+	this.SetLocalTrackRevisions(isLocalTrackRevisions);
+	this.Recalculate();
+	this.UpdateSelection();
+	this.UpdateInterface();
+    this.RemoveSelection();
+};
 CDocument.prototype.RemoveTableCells = function()
 {
 	this.Controller.RemoveTableCells();
@@ -21333,6 +21344,11 @@ CDocument.prototype.controller_SplitTableCells = function(nCols, nRows)
 {
 	var nPos = true === this.Selection.Use ? this.Selection.StartPos : this.CurPos.ContentPos;
 	this.Content[nPos].SplitTableCells(nCols, nRows);
+};
+CDocument.prototype.controller_UnmergeCells = function(nCols, nRows)
+{
+	var nPos = true === this.Selection.Use ? this.Selection.StartPos : this.CurPos.ContentPos;
+	this.Content[nPos].UnmergeCells();
 };
 CDocument.prototype.controller_RemoveTableCells = function()
 {

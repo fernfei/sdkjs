@@ -658,6 +658,10 @@ CDocumentContentElementBase.prototype.SplitTableCells = function(nColsCount, nRo
 {
 	return false;
 };
+CDocumentContentElementBase.prototype.UnmergeCells = function()
+{
+	return false;
+};
 CDocumentContentElementBase.prototype.RemoveTableCells = function()
 {
 	return false;

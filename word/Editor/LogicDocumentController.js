@@ -337,6 +337,10 @@ CLogicDocumentController.prototype.SplitTableCells = function(Cols, Rows)
 {
 	this.LogicDocument.controller_SplitTableCells(Cols, Rows);
 };
+CLogicDocumentController.prototype.UnmergeCells = function()
+{
+	this.LogicDocument.controller_UnmergeCells();
+};
 CLogicDocumentController.prototype.RemoveTableCells = function()
 {
 	this.LogicDocument.controller_RemoveTableCells();
