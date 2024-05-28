@@ -5488,6 +5488,15 @@ background-repeat: no-repeat;\
 			this.WordControl.m_oLogicDocument.FinalizeAction();
 		}
 	};
+	asc_docs_api.prototype.UnmergeCells               = function()
+	{
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_UnmergeCells);
+			this.WordControl.m_oLogicDocument.UnmergeCells();
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	};
 	asc_docs_api.prototype.asc_DistributeTableCells = function(isHorizontally)
 	{
 		var oLogicDocument = this.WordControl.m_oLogicDocument;
