@@ -420,18 +420,11 @@ function CDocumentRecalculateHdrFtrPageCountState()
 	this.PageCount = -1;
 }
 
-let lastPageNum = -1;
 function Document_Recalculate_Page()
 {
     var LogicDocument = editor.WordControl.m_oLogicDocument;
-	LogicDocument.FullRecalc.TimerStartTime = performance.now();
+    LogicDocument.FullRecalc.TimerStartTime = performance.now();
     LogicDocument.Recalculate_Page();
-    const oDocument = editor.GetDocument();
-    const nCount = oDocument.GetElementsCount();
-    if (lastPageNum !== -1&&lastPageNum !== oDocument.Document.Content[nCount - 1].PageNum) {
-        LogicDocument._Calculated = true;
-    }
-    lastPageNum = oDocument.Document.Content[nCount - 1].PageNum;
 }
 
 function Document_Recalculate_HdrFtrPageCount()
@@ -4633,6 +4626,7 @@ CDocument.prototype.Recalculate_PageColumn                   = function()
 	}
 	else
 	{
+        this._Calculated = true;
 		this.UpdatePlaceholders();
 	}
 };
@@ -24459,6 +24453,95 @@ CDocument.prototype.AddBlankPage = function()
 			this.FinalizeAction();
 		}
 	}
+};
+CDocument.prototype.AddBlackPage = function (nTargetPos) {
+    if (this.LogicDocumentController === this.Controller)
+    {
+        if (!this.Document_Is_SelectionLocked(AscCommon.changestype_Document_Content))
+        {
+            this.StartAction(AscDFH.historydescription_Document_AddBlankPage);
+
+            if (this.IsSelectionUse())
+            {
+                this.MoveCursorLeft(false, false);
+                this.RemoveSelection();
+            }
+            const nIndex = this.Pages[nTargetPos].EndPos;
+            let nPreIndex = nIndex;
+            if (this.Pages.length >= 2) {
+                nPreIndex = nIndex - 1 <= 0 ? 0 : nIndex - 1;
+            }
+            const oElement = this.Content[nPreIndex];
+            if (oElement.IsParagraph())
+            {
+                const nContentPos = oElement.Index
+                oElement.Content[oElement.CurPos.ContentPos].State.ContentPos = oElement.GetText().length;
+                if (oElement.IsCursorAtEnd())
+                {
+                    const oNextElement = oElement.Next;
+                    let oBreakParagraph = null;
+                    if (oNextElement && oNextElement.Check_PageBreak()) {
+                        oBreakParagraph = oNextElement.Copy(this, this.DrawingDocument, {
+                            SkipComments          : true,
+                            SkipAnchors           : true,
+                            SkipFootnoteReference : true,
+                            SkipComplexFields     : true
+                        });
+                        this.RemoveFromContent(oNextElement.Index);
+                    }
+                    if (!oBreakParagraph) {
+                        oBreakParagraph = oElement.Split();
+                        oBreakParagraph.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Column));
+                    }
+                    let oEmptyParagraph = oElement.Split();
+                    // check if next page is not empty if it is not empty add column break
+                    if (this.Pages[nTargetPos + 1]) {
+                        oEmptyParagraph.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Column));
+                    }
+                    this.AddToContent(nContentPos + 1, oBreakParagraph);
+                    this.AddToContent(nContentPos + 2, oEmptyParagraph);
+
+                    this.CurPos.ContentPos = nContentPos + 2;
+                }
+
+                this.Content[this.CurPos.ContentPos].MoveCursorToStartPos(false);
+            }
+            else if (oElement.IsTable())
+            {
+                var oNewTable = oElement.Split();
+                var oBreak1   = new Paragraph(this.DrawingDocument, this);
+                var oEmpty    = new Paragraph(this.DrawingDocument, this);
+                var oBreak2   = new Paragraph(this.DrawingDocument, this);
+
+                oBreak1.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Page));
+                oBreak2.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Page));
+
+                if (!oNewTable)
+                {
+                    this.AddToContent(this.CurPos.ContentPos, oBreak2);
+                    this.AddToContent(this.CurPos.ContentPos, oEmpty);
+                    this.AddToContent(this.CurPos.ContentPos, oBreak1);
+                    this.CurPos.ContentPos = this.CurPos.ContentPos + 1;
+                }
+                else
+                {
+                    this.AddToContent(this.CurPos.ContentPos + 1, oNewTable);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oBreak2);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oEmpty);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oBreak1);
+                    this.CurPos.ContentPos = this.CurPos.ContentPos + 2;
+                }
+
+                this.Content[this.CurPos.ContentPos].MoveCursorToStartPos(false);
+            }
+
+
+            this.Recalculate();
+            this.UpdateInterface();
+            this.UpdateSelection();
+            this.FinalizeAction();
+        }
+    }
 };
 /**
  * Получаем формулу в текущей ячейке таблицы

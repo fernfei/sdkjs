@@ -13653,6 +13653,13 @@ background-repeat: no-repeat;\
 	{
 		return this.isHandMode && this.isRestrictionForms();
 	};
+	asc_docs_api.prototype.addBlankPage = function (nTargetPageIndex) {
+		let logicDocument = this.private_GetLogicDocument();
+		if (!logicDocument) {
+			return null;
+		}
+		logicDocument.AddBlackPage(nTargetPageIndex);
+	};
 
 	//-------------------------------------------------------------export---------------------------------------------------
 	window['Asc']                                                       = window['Asc'] || {};
