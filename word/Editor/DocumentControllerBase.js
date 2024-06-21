@@ -509,6 +509,12 @@ CDocumentControllerBase.prototype.IncreaseDecreaseIndent = function(bIncrease){}
  * @param Props
  */
 CDocumentControllerBase.prototype.SetImageProps = function(Props){};
+CDocumentControllerBase.prototype.AutoFitTableContent = function () {
+	this.LogicDocument.controller_AutoFitTableContent();
+};
+CDocumentControllerBase.prototype.SwitchTableRowColumn = function () {
+	this.LogicDocument.controller_AutoFitTableContent();
+};
 /**
  * Устанавливаем настройки для таблиц.
  * @param Props

@@ -1299,6 +1299,15 @@
 			case AscDFH.historydescription_Presentation_ShowMasterShapes:
 				sString = "historydescription_Presentation_ShowMasterShapes";
 				break;
+			case AscDFH.historydescription_Document_AutoFitToContent:
+				sString = "Document_AutoFitToContent";
+				break;
+			case AscDFH.historydescription_Document_SwitchRowColumn:
+				sString = "Document_SwitchRowColumn";
+				break;
+			case AscDFH.historydescription_Document_UnmergeCells:
+				sString = "Document_UnmergeCells";
+				break;
 		}
 		return sString;
 	}
@@ -4510,6 +4519,9 @@
 	window['AscDFH'].historydescription_Document_AddRemoveBeforeAfterParagraph      = 0x01b0;
 	window['AscDFH'].historydescription_Document_SectionPageNumFormat               = 0x01b1;
 	window['AscDFH'].historydescription_Document_SetPageColor                       = 0x01b2;
+	window['AscDFH'].historydescription_Document_AutoFitToContent           		= 0x01ac;
+	window['AscDFH'].historydescription_Document_SwitchRowColumn           			= 0x01ad;
+	window['AscDFH'].historydescription_Document_UnmergeCells           			= 0x01ae;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

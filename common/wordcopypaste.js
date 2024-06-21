@@ -2887,7 +2887,7 @@ PasteProcessor.prototype =
 									oPar.AddToContent(0, oRun);
 								}
 							}
-						}	
+						}
 					}
 				}
 				arrNewContent[0].unshift(oElem);
@@ -6266,7 +6266,7 @@ PasteProcessor.prototype =
 
 					tempParagraph.Content.splice(tempParagraph.Content.length - 1, 0, tempParaRun);
 				} else if (isGraphicFrame) {
-					
+
 					var copyObj = drawing.getWordTable();
 					if(copyObj) {
 						copyObj.Set_Inline && copyObj.Set_Inline(true);
@@ -6513,7 +6513,7 @@ PasteProcessor.prototype =
 				var oCurPar = oCurCell.GetContent().GetElement(0);
 				if (!oCurPar || !oCurPar.IsParagraph())
 					continue;
-				
+
 				if (align) {
 					var type = range.getType();
 					if (null != align.hor) {
@@ -9951,7 +9951,7 @@ PasteProcessor.prototype =
 			bAddIfNull = true;
 		}
 
-		var indent; 
+		var indent;
 		var className = node.className;
 		if (className && this.oMsoStylesParser) {
 			var msoClass = this.oMsoStylesParser.getMsoClassByName("." + className);
@@ -10339,7 +10339,7 @@ PasteProcessor.prototype =
 
 				//bIsPreviousSpace - игнорируем несколько пробелов подряд
 				var bIsPreviousSpace = false, clonePr;
-				
+
 				for (var oIterator = value.getUnicodeIterator(); oIterator.check(); oIterator.next()) {
 					if (oThis.needAddCommentStart) {
 						for (var i = 0; i < oThis.needAddCommentStart.length; i++) {
@@ -10996,11 +10996,11 @@ PasteProcessor.prototype =
 				var oOldHyperlink = null;
 				var oOldHyperlinkContentPos = null;
 				var oHyperlink = null;
-			
+
 				if ("a" === sChildNodeName) {
 					href = child.href;
 					if (null != href) {
-						
+
 						/*var sDecoded;
 						//decodeURI может выдавать malformed exception, потому что наш сайт в utf8, а некоторые сайты могут кодировать url в своей кодировке(например windows-1251)
 						try {
@@ -11148,7 +11148,7 @@ PasteProcessor.prototype =
 				var tmp = oThis.aContent;
 				// Меняем контент обратно, для работы вне контента сносок
 				oThis.aContent = oThis.aContentForNotes;
-	
+
 				// Заполняем контент сносок
 				if (oThis.AddedFootEndNotes[node.id]) {
 					for (var i = 0; i < tmp.length; i++) {
@@ -11170,13 +11170,13 @@ PasteProcessor.prototype =
 				if (-1 !== node.name.toLowerCase().indexOf("ftn") || -1 !== node.name.toLowerCase().indexOf("edn")) {
 
 					if (oThis.AddedFootEndNotes) {
-						
+
 						if ((-1 !== node.name.indexOf("_ftnref") || -1 !== node.name.indexOf("_ednref"))
 						&& oThis.AddedFootEndNotes[node.hash.replace("#_", "")] && oThis.AddedFootEndNotes[node.hash.replace("#_", "")].Ref && oThis.AddedFootEndNotes[node.hash.replace("#_", "")].Ref.Run) {
 
 							if (oThis.oCur_rPr && oThis.oCur_rPr.Color && oThis.oCur_rPr.Color.b != null && oThis.oCur_rPr.Color.g != null && oThis.oCur_rPr.Color.r != null && oThis.oCur_rPr.Underline != null
 								&& oThis.oCur_rPr.Color.b === 238 && oThis.oCur_rPr.Color.g === 0 && oThis.oCur_rPr.Color.r === 0 && oThis.oCur_rPr.Underline === true) {
-								
+
 								if (-1 !== node.name.indexOf("_ftnref")) {
 									oThis.AddedFootEndNotes[node.hash.replace("#_", "")].Ref.Run.SetRStyle(oThis.oLogicDocument.GetStyles().GetDefaultFootnoteReference());
 								}
@@ -11190,10 +11190,10 @@ PasteProcessor.prototype =
 						}
 						else if ((-1 !== node.name.indexOf("_ftn") || -1 !== node.name.indexOf("_edn"))
 							&& oThis.AddedFootEndNotes[node.name.replace("_", "")] && oThis.AddedFootEndNotes[node.name.replace("_", "")].Content[0] && oThis.AddedFootEndNotes[node.name.replace("_", "")].Content[0].Content[0]) {
-							
+
 							if (oThis.oCur_rPr && oThis.oCur_rPr.Color && oThis.oCur_rPr.Color.b != null && oThis.oCur_rPr.Color.g != null && oThis.oCur_rPr.Color.r != null && oThis.oCur_rPr.Underline != null
 								&& oThis.oCur_rPr.Color.b === 238 && oThis.oCur_rPr.Color.g === 0 && oThis.oCur_rPr.Color.r === 0 && oThis.oCur_rPr.Underline === true) {
-								
+
 								if (-1 !== node.name.indexOf("_ftnref")) {
 									oThis.AddedFootEndNotes[node.name.replace("_", "")].Content[0].Content[0].SetRStyle(oThis.oLogicDocument.GetStyles().GetDefaultFootnoteReference());
 								}

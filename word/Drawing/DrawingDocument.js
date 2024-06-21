@@ -170,7 +170,7 @@ function CTableOutlineDr()
 		_bounds.Y = _boundsTmp.Top;
 		_bounds.W = (_boundsTmp.Right - _boundsTmp.Left);
 		_bounds.H = (_boundsTmp.Bottom - _boundsTmp.Top);
-		
+
 		return _bounds;
 	}
 
@@ -195,7 +195,7 @@ function CTableOutlineDr()
 	{
 		if (_lastBounds.Page == this.TableOutline.PageNum)
 		{
-			return this.TableOutline.Y;	
+			return this.TableOutline.Y;
 		}
 
 		var _height = this.getFullHeight();
@@ -2688,16 +2688,17 @@ function CDrawingDocument()
 		this.m_oWordControl.m_oApi.sync_SendThemeColors(_ret_array, standart_colors);
 
 		// regenerate styles
-		if (null == this.m_oWordControl.m_oApi._gui_styles)
-		{
-			if (window["NATIVE_EDITOR_ENJINE"] === true)
-			{
-				if (!this.m_oWordControl.m_oApi.asc_checkNeedCallback("asc_onInitEditorStyles"))
-					return;
-			}
-			var StylesPainter = new CStylesPainter();
-			StylesPainter.GenerateStyles(this.m_oWordControl.m_oApi, this.m_oWordControl.m_oLogicDocument.Get_Styles().Style);
-		}
+		// if (null == this.m_oWordControl.m_oApi._gui_styles)
+		// {
+		// 	if (window["NATIVE_EDITOR_ENJINE"] === true)
+		// 	{
+		// 		if (!this.m_oWordControl.m_oApi.asc_checkNeedCallback("asc_onInitEditorStyles"))
+		// 			return;
+		// 	}
+		// 	var StylesPainter = new CStylesPainter();
+		// 	console.log("第二次加载预设样式")
+		// 	StylesPainter.GenerateStyles(this.m_oWordControl.m_oApi, this.m_oWordControl.m_oLogicDocument.Get_Styles().Style);
+		// }
 	};
 
 	this.DrawImageTextureFillShape = function (url)
@@ -6667,7 +6668,7 @@ function CDrawingDocument()
 	{
 		if (this.m_oWordControl.m_oApi.isDocumentRenderer())
 			return;
-			
+
 		for (var i = 0; i < this.m_lPagesCount; i++)
 		{
 			var page = this.m_arrPages[i];

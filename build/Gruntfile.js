@@ -93,35 +93,35 @@ module.exports = function(grunt) {
 
 	CConfig.prototype.append = function (basePath = '') {
 		const pathConfigs = path.join(basePath, 'configs');
-		
+
 		function appendOption(name) {
 			const option = loadConfig(pathConfigs, name);
 			if (!option)
 				return;
-			
+
 			fixPath(option, basePath);
-			
+
 			if (!this[name]) {
 				this[name] = option;
 				return;
 			}
-			
+
 			function mergeProps(base, addon) {
 				for (let prop in addon)
 				{
 					if (Array.isArray(addon[prop])) {
 						base[prop] = Array.isArray(base[prop]) ? base[prop].concat(addon[prop]) : addon[prop];
 					} else {
-						if (!base[prop]) 
+						if (!base[prop])
 							base[prop] = {};
-						mergeProps(base[prop], addon[prop]);						
+						mergeProps(base[prop], addon[prop]);
 					}
 				}
 			}
-			
-			mergeProps(this[name], option);			
+
+			mergeProps(this[name], option);
 		}
-		
+
 		appendOption.call(this, 'externs');
 		appendOption.call(this, 'word');
 		appendOption.call(this, 'cell');
@@ -171,7 +171,8 @@ module.exports = function(grunt) {
 	const cell = path.join(deploy, 'cell');
 	const slide = path.join(deploy, 'slide');
 
-	const level = grunt.option('level') || 'ADVANCED';
+	// const level = grunt.option('level') || 'WHITESPACE_ONLY';
+	const level = 'WHITESPACE_ONLY';
 	const formatting = grunt.option('formatting') || '';
 
 	require('google-closure-compiler').grunt(grunt, {

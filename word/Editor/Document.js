@@ -4665,6 +4665,7 @@ CDocument.prototype.Recalculate_PageColumn                   = function()
 	}
 	else
 	{
+        this._Calculated = true;
 		this.UpdatePlaceholders();
 	}
 };
@@ -7104,6 +7105,21 @@ CDocument.prototype.SelectDrawings = function(arrDrawings, oTargetContent)
 	{
 		this.DrawingObjects.selectObject(arrDrawings[i].GraphicObj, 0);
 	}
+};
+CDocument.prototype.AutoFitTableContent = function()
+{
+    this.Controller.AutoFitTableContent();
+    this.Recalculate();
+    this.Document_UpdateInterfaceState();
+    this.Document_UpdateRulersState();
+    this.Document_UpdateSelectionState();
+};
+CDocument.prototype.SwitchTableRowColumn = function () {
+    this.Controller.SwitchTableRowColumn();
+    this.Recalculate();
+    this.Document_UpdateInterfaceState();
+    this.Document_UpdateRulersState();
+    this.Document_UpdateSelectionState();
 };
 CDocument.prototype.SetTableProps = function(Props)
 {
@@ -10845,6 +10861,17 @@ CDocument.prototype.Remove_AllCustomStyles = function()
 		this.FinalizeAction();
 	}
 };
+CDocument.prototype.Remove_AllUnusedStyles = function()
+{
+	if (false === this.Document_Is_SelectionLocked(AscCommon.changestype_Document_Styles))
+	{
+		this.StartAction(AscDFH.historydescription_Document_RemoveStyle);
+        this.Styles.Remove_AllUnusedStylesFromInterface();
+		this.Recalculate();
+		this.UpdateInterface();
+		this.FinalizeAction();
+	}
+};
 /**
  * Проверяем является ли заданный стиль дефолтовым.
  */
@@ -11896,6 +11923,17 @@ CDocument.prototype.SplitTableCells = function(Cols, Rows)
 	this.UpdateSelection();
 	this.UpdateInterface();
 };
+CDocument.prototype.UnmergeCells = function()
+{
+	var isLocalTrackRevisions = this.GetLocalTrackRevisions();
+	this.SetLocalTrackRevisions(false);
+	this.Controller.UnmergeCells();
+	this.SetLocalTrackRevisions(isLocalTrackRevisions);
+	this.Recalculate();
+	this.UpdateSelection();
+	this.UpdateInterface();
+    this.RemoveSelection();
+};
 CDocument.prototype.RemoveTableCells = function()
 {
 	this.Controller.RemoveTableCells();
@@ -12480,11 +12518,40 @@ CDocument.prototype.GetWatermarkProps = function()
 
 CDocument.prototype.SetWatermarkProps = function(oProps)
 {
-	if (!this.CanPerformAction())
-		return;
+	// if (!this.CanPerformAction())
+	// 	return;
 
 	this.StartAction(AscDFH.historydescription_Document_AddWatermark);
-	this.SetWatermarkPropsAction(oProps);
+    for (let pageIndex = 0; pageIndex < this.Pages.length; pageIndex++) {
+
+        // Определим четность страницы и является ли она первой в данной секции. Заметим, что четность страницы
+        // отсчитывается от начала текущей секции и не зависит от настроек нумерации страниц для данной секции.
+        var SectionPageInfo = this.Get_SectionPageNumInfo( pageIndex );
+
+        var bFirst = SectionPageInfo.bFirst;
+        var bEven  = SectionPageInfo.bEven;
+
+        // Запросим нужный нам колонтитул
+        var HdrFtr = this.Get_SectionHdrFtr( pageIndex, bFirst, bEven );
+
+        var Header = HdrFtr.Header;
+        var Footer = HdrFtr.Footer;
+        var SectPr = HdrFtr.SectPr;
+
+        if (!Header && SectPr.IsTitlePage()) {
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_First(Header);
+        }else if (!Header && SectPr.IsEvenAndOdd()) {
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_First(Header);
+        } else if(!Header){
+            Header = new CHeaderFooter(this.GetHdrFtr(), this, this.Get_DrawingDocument(), hdrftr_Header);
+            SectPr.Set_Header_Default(Header);
+        }
+        if(Header){
+            Header.SetWatermarkPropsAction(oProps);
+        }
+    }
 	this.Recalculate();
 	this.Document_UpdateInterfaceState();
 	this.Document_UpdateSelectionState();
@@ -20542,6 +20609,26 @@ CDocument.prototype.controller_SetImageProps = function(Props)
 			this.Content[this.CurPos.ContentPos].SetImageProps(Props);
 	}
 };
+CDocument.prototype.controller_AutoFitTableContent = function () {
+    var Pos = -1;
+    if (true === this.Selection.Use && this.Selection.StartPos == this.Selection.EndPos)
+        Pos = this.Selection.StartPos;
+    else if (false === this.Selection.Use)
+        Pos = this.CurPos.ContentPos;
+
+    if (-1 !== Pos)
+        this.Content[Pos].AutoFitToContent();
+};
+CDocument.prototype.controller_SwitchTableRowColumn = function () {
+    var Pos = -1;
+    if (true === this.Selection.Use && this.Selection.StartPos == this.Selection.EndPos)
+        Pos = this.Selection.StartPos;
+    else if (false === this.Selection.Use)
+        Pos = this.CurPos.ContentPos;
+
+    if (-1 !== Pos)
+        this.Content[Pos].SwitchRowColumn();
+};
 CDocument.prototype.controller_SetTableProps = function(Props)
 {
 	var Pos = -1;
@@ -21363,6 +21450,11 @@ CDocument.prototype.controller_SplitTableCells = function(nCols, nRows)
 {
 	var nPos = true === this.Selection.Use ? this.Selection.StartPos : this.CurPos.ContentPos;
 	this.Content[nPos].SplitTableCells(nCols, nRows);
+};
+CDocument.prototype.controller_UnmergeCells = function(nCols, nRows)
+{
+	var nPos = true === this.Selection.Use ? this.Selection.StartPos : this.CurPos.ContentPos;
+	this.Content[nPos].UnmergeCells();
 };
 CDocument.prototype.controller_RemoveTableCells = function()
 {
@@ -24478,6 +24570,95 @@ CDocument.prototype.AddBlankPage = function()
 		}
 	}
 };
+CDocument.prototype.AddBlackPage = function (nTargetPos) {
+    if (this.LogicDocumentController === this.Controller)
+    {
+        if (!this.Document_Is_SelectionLocked(AscCommon.changestype_Document_Content))
+        {
+            this.StartAction(AscDFH.historydescription_Document_AddBlankPage);
+
+            if (this.IsSelectionUse())
+            {
+                this.MoveCursorLeft(false, false);
+                this.RemoveSelection();
+            }
+            const nIndex = this.Pages[nTargetPos].EndPos;
+            let nPreIndex = nIndex;
+            if (this.Pages.length >= 2) {
+                nPreIndex = nIndex - 1 <= 0 ? 0 : nIndex - 1;
+            }
+            const oElement = this.Content[nPreIndex];
+            if (oElement.IsParagraph())
+            {
+                const nContentPos = oElement.Index
+                oElement.Content[oElement.CurPos.ContentPos].State.ContentPos = oElement.GetText().length;
+                if (oElement.IsCursorAtEnd())
+                {
+                    const oNextElement = oElement.Next;
+                    let oBreakParagraph = null;
+                    if (oNextElement && oNextElement.Check_PageBreak()) {
+                        oBreakParagraph = oNextElement.Copy(this, this.DrawingDocument, {
+                            SkipComments          : true,
+                            SkipAnchors           : true,
+                            SkipFootnoteReference : true,
+                            SkipComplexFields     : true
+                        });
+                        this.RemoveFromContent(oNextElement.Index);
+                    }
+                    if (!oBreakParagraph) {
+                        oBreakParagraph = oElement.Split();
+                        oBreakParagraph.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Column));
+                    }
+                    let oEmptyParagraph = oElement.Split();
+                    // check if next page is not empty if it is not empty add column break
+                    if (this.Pages[nTargetPos + 1]) {
+                        oEmptyParagraph.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Column));
+                    }
+                    this.AddToContent(nContentPos + 1, oBreakParagraph);
+                    this.AddToContent(nContentPos + 2, oEmptyParagraph);
+
+                    this.CurPos.ContentPos = nContentPos + 2;
+                }
+
+                this.Content[this.CurPos.ContentPos].MoveCursorToStartPos(false);
+            }
+            else if (oElement.IsTable())
+            {
+                var oNewTable = oElement.Split();
+                var oBreak1   = new Paragraph(this.DrawingDocument, this);
+                var oEmpty    = new Paragraph(this.DrawingDocument, this);
+                var oBreak2   = new Paragraph(this.DrawingDocument, this);
+
+                oBreak1.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Page));
+                oBreak2.AddToParagraph(new AscWord.CRunBreak(AscWord.break_Page));
+
+                if (!oNewTable)
+                {
+                    this.AddToContent(this.CurPos.ContentPos, oBreak2);
+                    this.AddToContent(this.CurPos.ContentPos, oEmpty);
+                    this.AddToContent(this.CurPos.ContentPos, oBreak1);
+                    this.CurPos.ContentPos = this.CurPos.ContentPos + 1;
+                }
+                else
+                {
+                    this.AddToContent(this.CurPos.ContentPos + 1, oNewTable);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oBreak2);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oEmpty);
+                    this.AddToContent(this.CurPos.ContentPos + 1, oBreak1);
+                    this.CurPos.ContentPos = this.CurPos.ContentPos + 2;
+                }
+
+                this.Content[this.CurPos.ContentPos].MoveCursorToStartPos(false);
+            }
+
+
+            this.Recalculate();
+            this.UpdateInterface();
+            this.UpdateSelection();
+            this.FinalizeAction();
+        }
+    }
+};
 /**
  * Получаем формулу в текущей ячейке таблицы
  * {boolean} [isReturnField=false] - возвращаем само поле
@@ -26725,6 +26906,19 @@ CDocument.prototype.Search = function(oProps, bDraw)
 	//console.log("Search logic: " + ((performance.now() - nStartTime) / 1000) + " s");
 
 	return this.SearchEngine;
+};
+
+CDocument.prototype.Search2 = function (Paragraph) {
+    var searchSettings = new AscCommon.CSearchSettings();
+    searchSettings.put_Text(Paragraph.GetText().trim());
+    searchSettings.put_MatchCase(false);
+    searchSettings.put_WholeWords(false);
+    if (this.SearchEngine.Compare(searchSettings))
+        return this.SearchEngine;
+    this.SearchEngine.Clear();
+    this.SearchEngine.Set(searchSettings);
+    Paragraph.Search(this.SearchEngine, search_Common);
+    this.SectionsInfo.Search(this.SearchEngine);
 };
 CDocument.prototype.ClearSearch = function()
 {

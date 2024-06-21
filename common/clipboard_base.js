@@ -242,6 +242,13 @@
 			}
 			else
 			{
+				function _html_has_image(document) {
+					return "" === document.body.innerText.trim() && !!document.querySelector("img")
+				};
+				function _is_html_outputting_single_mage(htmlStr) {
+					var document = (new DOMParser).parseFromString(htmlStr, "text/html");
+					return _html_has_image(document)
+				};
 				var _clipboard = (e && e.clipboardData) ? e.clipboardData : window.clipboardData;
 				if (!_clipboard || !_clipboard.getData)
 					return false;
@@ -265,7 +272,7 @@
 				}
 
 				var _html_format = isDisableRawPaste ? "" : this.ClosureParams.getData("text/html");
-				if (_html_format && _html_format != "")
+				if (_html_format && _html_format != "" && !_is_html_outputting_single_mage(_html_format))
 				{
 					var nIndex = _html_format.indexOf("</html>");
 					if (-1 != nIndex)
@@ -351,11 +358,11 @@
 		_private_onbeforepaste : function(e, isAttackEmulate)
 		{
 			this._console_log("onbeforepaste");
-			
+
 			//TODO условие добавил, чтобы не терялся фокус со строки формул при copy/paste. проверить!
 			if (!this.Api.asc_IsFocus(true))
 				return;
-			
+
 			//if (isAttackEmulate === true)
 			{
 				this.CommonDiv = this.CommonDiv_Check();
@@ -389,11 +396,11 @@
 		_private_onbeforecopy : function(e, isAttackEmulate)
 		{
 			this._console_log("onbeforecopy");
-			
+
 			//TODO условие добавил, чтобы не терялся фокус со строки формул при copy/paste. проверить!
 			if (!this.Api.asc_IsFocus(true))
 				return;
-			
+
 			//if (isAttackEmulate === true)
 			{
 				this.CommonDiv = this.CommonDiv_Check();
@@ -1277,12 +1284,12 @@
 			this.Api.asc_SpecialPasteData(props);
 			return true;
 		},
-		
+
 		Clean_SpecialPasteObj : function()
 		{
 			this.specialPasteData = {};
 		},
-		
+
 		Special_Paste_Start : function()
 		{
 			this.specialPasteStart = true;
@@ -1293,7 +1300,7 @@
 				g_clipboardBase.CommonIframe.style.display = "block";
 			}
 		},
-		
+
 		Special_Paste_End : function()
 		{
 			this.specialPasteStart = false;
@@ -1303,7 +1310,7 @@
 				g_clipboardBase.CommonIframe.style.display = "none";
 			}
 		},
-		
+
 		Paste_Process_Start : function(doNotShowButton)
 		{
 			if(doNotShowButton)
@@ -1367,7 +1374,7 @@
 				this.Api._finalizeAction();
 			}
 		},
-		
+
 		SpecialPasteButton_Show : function()
 		{
 			if (!this.Api || this.doNotShowButton || !this.visiblePasteButton)
@@ -1430,12 +1437,12 @@
 				this.CleanButtonInfo();
 			}
 		},
-		
+
 		SpecialPasteButton_Update_Position : function()
 		{
 			if (!this.Api || !this.buttonInfo || this.buttonInfo.isClean())
 				return;
-			
+
 			if(this.showSpecialPasteButton && !this.pasteStart)
 			{
 				this.Api.asc_UpdateSpecialPasteButton();

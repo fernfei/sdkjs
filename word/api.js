@@ -5284,6 +5284,10 @@ background-repeat: no-repeat;\
 	{
 		this.WordControl.m_oLogicDocument.ConvertFootnoteType(isCurrent, isFootnotes, isEndnotes);
 	};
+	asc_docs_api.prototype.asc_RemoveUnusedStyles = function()
+	{
+		this.WordControl.m_oLogicDocument && this.WordControl.m_oLogicDocument.Remove_AllUnusedStyles();
+	};
 	asc_docs_api.prototype["asc_AddFootnote"]         = asc_docs_api.prototype.asc_AddFootnote;
 	asc_docs_api.prototype["asc_RemoveAllFootnotes"]  = asc_docs_api.prototype.asc_RemoveAllFootnotes;
 	asc_docs_api.prototype["asc_GetFootnoteProps"]    = asc_docs_api.prototype.asc_GetFootnoteProps;
@@ -5296,6 +5300,7 @@ background-repeat: no-repeat;\
 	asc_docs_api.prototype["asc_GotoEndnote"]         = asc_docs_api.prototype.asc_GotoEndnote;
 	asc_docs_api.prototype["asc_IsCursorInEndnote"]   = asc_docs_api.prototype.asc_IsCursorInEndnote;
 	asc_docs_api.prototype["asc_ConvertFootnoteType"] = asc_docs_api.prototype.asc_ConvertFootnoteType;
+	asc_docs_api.prototype["asc_RemoveUnusedStyles"] = asc_docs_api.prototype.asc_RemoveUnusedStyles;
 
 
 	asc_docs_api.prototype.put_AddPageBreak              = function()
@@ -5534,6 +5539,22 @@ background-repeat: no-repeat;\
 			this.WordControl.m_oLogicDocument.FinalizeAction();
 		}
 	};
+	asc_docs_api.prototype.autoFitToWindow			= function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			var _props = new Asc.CTableProp();
+			_props.put_Width(-100);
+			this.tblApply(_props)
+		}
+	};
+	asc_docs_api.prototype.autoFitToContent			= function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_AutoFitToContent);
+			this.WordControl.m_oLogicDocument.AutoFitTableContent();
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	};
 	asc_docs_api.prototype.addRowAbove             = function(nCount)
 	{
 		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
@@ -5632,6 +5653,14 @@ background-repeat: no-repeat;\
 			return false;
 		}
 	};
+	asc_docs_api.prototype.switchRowColumn	  = function(){
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_SwitchRowColumn);
+			this.WordControl.m_oLogicDocument.SwitchTableRowColumn();
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	}
 	asc_docs_api.prototype.selectRow               = function()
 	{
 		this.WordControl.m_oLogicDocument.SelectTable(c_oAscTableSelectionType.Row);
@@ -5683,6 +5712,15 @@ background-repeat: no-repeat;\
 		{
 			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_SplitTableCells);
 			this.WordControl.m_oLogicDocument.SplitTableCells(Cols, Rows);
+			this.WordControl.m_oLogicDocument.FinalizeAction();
+		}
+	};
+	asc_docs_api.prototype.UnmergeCells               = function()
+	{
+		if (false === this.WordControl.m_oLogicDocument.Document_Is_SelectionLocked(changestype_Table_Properties))
+		{
+			this.WordControl.m_oLogicDocument.StartAction(AscDFH.historydescription_Document_UnmergeCells);
+			this.WordControl.m_oLogicDocument.UnmergeCells();
 			this.WordControl.m_oLogicDocument.FinalizeAction();
 		}
 	};
@@ -7824,8 +7862,8 @@ background-repeat: no-repeat;\
 			this.ImageLoader.LoadDocumentImages(this.saveImageMap);
 			return;
 		}
-
-		this.GenerateStyles();
+		// this.asc_RemoveUnusedStyles();
+		// this.GenerateStyles();
 
 		if (null != this.WordControl.m_oLogicDocument)
 		{
@@ -14009,8 +14047,16 @@ background-repeat: no-repeat;\
 		
 		return logicDocument.Background.getAscColor();
 	};
-	
-	//-------------------------------------------------------------export---------------------------------------------------
+    asc_docs_api.prototype.addBlankPage = function (nTargetPageIndex) {
+        let logicDocument = this.private_GetLogicDocument();
+        if (!logicDocument) {
+            return null;
+        }
+        logicDocument.AddBlackPage(nTargetPageIndex);
+    };
+
+
+    //-------------------------------------------------------------export---------------------------------------------------
 	window['Asc']                                                       = window['Asc'] || {};
 	CAscSection.prototype['get_PageWidth']                              = CAscSection.prototype.get_PageWidth;
 	CAscSection.prototype['get_PageHeight']                             = CAscSection.prototype.get_PageHeight;

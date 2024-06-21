@@ -211,6 +211,12 @@ CLogicDocumentController.prototype.SetImageProps = function(Props)
 {
 	this.LogicDocument.controller_SetImageProps(Props);
 };
+CLogicDocumentController.prototype.AutoFitTableContent = function () {
+	this.LogicDocument.controller_AutoFitTableContent();
+};
+CLogicDocumentController.prototype.SwitchTableRowColumn = function () {
+	this.LogicDocument.controller_SwitchTableRowColumn();
+};
 CLogicDocumentController.prototype.SetTableProps = function(Props)
 {
 	this.LogicDocument.controller_SetTableProps(Props);
@@ -330,6 +336,10 @@ CLogicDocumentController.prototype.DistributeTableCells = function(isHorizontall
 CLogicDocumentController.prototype.SplitTableCells = function(Cols, Rows)
 {
 	this.LogicDocument.controller_SplitTableCells(Cols, Rows);
+};
+CLogicDocumentController.prototype.UnmergeCells = function()
+{
+	this.LogicDocument.controller_UnmergeCells();
 };
 CLogicDocumentController.prototype.RemoveTableCells = function()
 {
