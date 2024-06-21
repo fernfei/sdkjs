@@ -2764,8 +2764,126 @@ CTableCell.prototype.OnContentChange = function()
 	if (table)
 		table.OnContentChange();
 };
+CTableCell.prototype.GetHMergeCellInfos = function () {
+    let oCellInfos = {};
+    const oCurTable = this.Get_Table();
+    // Сначала проверим данну строку
+    var Row       = this.Row;
+    const RowIndex = Row.Index;
+    let oCurCellInfo = Row.Get_CellInfo(this.Index);
+    let CurXGridStart = oCurCellInfo.X_grid_start;
+    let CurXGridEnd = oCurCellInfo.X_grid_end;
+    // record the last cell info
+    let nGridEndRowIndex = void 0;
+    let nGridEndCellIndex = void 0;
+    // vertically upward
+    for (var nRowIndex = RowIndex - 1; nRowIndex >= 0; nRowIndex--) {
+        let oTempCellInfos = {};
+        for (let nCellIndex = 0; nCellIndex < oCurTable.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+            let oCellInfo = oCurTable.GetRow(nRowIndex).CellsInfo[nCellIndex];
+            if (undefined === oCellInfo.StartGridCol) {
+                continue;
+            }
+            if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+                break;
+            }
+            if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+                oTempCellInfos[oCellInfo.StartGridCol] = oCellInfo;
+                nGridEndRowIndex = nRowIndex;
+                nGridEndCellIndex = nCellIndex + 1 >= oCurTable.Get_Row(nRowIndex).GetCellsCount() - 1 ? oCurTable.Get_Row(nRowIndex).GetCellsCount() - 1 : nCellIndex + 1;
+            }
+            if (Object.keys(oCellInfos).length <= Object.keys(oTempCellInfos).length) {
+                oCellInfos = oTempCellInfos;
+            }
+        }
+    }
 
+    // vertically downward
+    for (var nRowIndex = RowIndex + 1, Count = oCurTable.GetRowsCount(); nRowIndex < Count; nRowIndex++) {
+        let oTempCellInfos = {};
+        for (let nCellIndex = 0; nCellIndex < oCurTable.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+            let oCellInfo = oCurTable.GetRow(nRowIndex).CellsInfo[nCellIndex];
+            if (undefined === oCellInfo.StartGridCol) {
+                continue;
+            }
+            // cell overlap
+            if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+                break;
+            }
+            // cell grid end between cursor cell grid start and end  && no overlap
+            if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+                oTempCellInfos[oCellInfo.StartGridCol] = oCellInfo;
+                nGridEndRowIndex = nRowIndex;
+                nGridEndCellIndex = nCellIndex + 1 >= oCurTable.Get_Row(nRowIndex).GetCellsCount() - 1 ? oCurTable.Get_Row(nRowIndex).GetCellsCount() - 1 : nCellIndex + 1;
+            }
+            if (Object.keys(oCellInfos).length <= Object.keys(oTempCellInfos).length) {
+                oCellInfos = oTempCellInfos;
+            }
+        }
+    }
+    if(nGridEndRowIndex !== undefined && nGridEndCellIndex !== undefined){
+        let oEndCellInfo = oCurTable.Get_Row(nGridEndRowIndex).CellsInfo[nGridEndCellIndex];
+        if (oEndCellInfo.StartGridCol !== undefined) {
+            oCellInfos[oEndCellInfo.StartGridCol] = oEndCellInfo;
+        }
+    }
+    
+    return oCellInfos;
+};
+CTableCell.prototype.GetHMergeCount = function () {
+    const oCurTable = this.Get_Table();
+    // Сначала проверим данну строку
+    var Row       = this.Row;
+    const RowIndex = Row.Index;
+    let oCurCellInfo = Row.Get_CellInfo(this.Index);
+    let CurXGridStart = oCurCellInfo.X_grid_start;
+    let CurXGridEnd = oCurCellInfo.X_grid_end;
 
+    let nMaxGridSpan = 0;
+    // vertically upward
+    for (var nRowIndex = RowIndex - 1; nRowIndex >= 0; nRowIndex--) {
+        let GridSpan = 0;
+        for (let nCellIndex = 0; nCellIndex < oCurTable.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+            let oCellInfo = oCurTable.GetRow(nRowIndex).Get_CellInfo(nCellIndex);
+            if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+                break;
+            }
+            if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+                GridSpan++;
+            }
+            if (nMaxGridSpan < GridSpan) {
+                nMaxGridSpan = GridSpan;
+            }
+        }
+    }
+
+    // vertically downward
+    for (var nRowIndex = RowIndex + 1, Count = oCurTable.GetRowsCount(); nRowIndex < Count; nRowIndex++) {
+        let GridSpan = 0;
+        for (let nCellIndex = 0; nCellIndex < oCurTable.Get_Row(nRowIndex).GetCellsCount(); nCellIndex++) {
+            let oCellInfo = oCurTable.GetRow(nRowIndex).Get_CellInfo(nCellIndex);
+            // cell overlap
+            if (Math.abs(oCellInfo.X_grid_start - CurXGridStart) < 0.001 && Math.abs(oCellInfo.X_grid_end - CurXGridEnd) < 0.001) {
+                break;
+            }
+            // cell grid end between cursor cell grid start and end  && no overlap
+            if (CurXGridStart < oCellInfo.X_grid_end && oCellInfo.X_grid_end < CurXGridEnd && Math.abs(oCellInfo.X_grid_end - CurXGridStart) > 0.001) {
+                GridSpan++;
+            }
+            if (nMaxGridSpan < GridSpan) {
+                nMaxGridSpan = GridSpan;
+            }
+        }
+    }
+    return nMaxGridSpan + 1;
+};
+/**
+ * Whether the merge can be cancelled
+ * @returns {boolean} true yes false no
+ */
+CTableCell.prototype.CanUmMerge = function(){
+    return this.GetHMergeCount() > 1 ;
+}
 function CTableCellRecalculateObject()
 {
     this.BorderInfo = null;

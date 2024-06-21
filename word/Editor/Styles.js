@@ -8736,6 +8736,20 @@ CStyles.prototype.Create_StyleFromInterface = function(oAscStyle, bCheckLink)
 		return oStyle;
 	}
 };
+CStyles.prototype.Remove_UnusedStyleFromInterface = function(StyleId)
+{
+    var Style = this.Style[StyleId];
+    // Remove Non-Default Style
+    if (!this.IsStyleDefaultByName(Style.Name)) {
+        if (this.LogicDocument) {
+            var AllParagraphs = this.LogicDocument.GetAllParagraphsByStyle([StyleId]);
+            var AllTables = this.LogicDocument.GetAllTablesByStyle([StyleId]);
+            if (AllParagraphs.length <= 0 && AllTables.length <= 0 && !this.isBasedOnByOtherStyle(StyleId)) {
+                this.Remove(StyleId);
+            }
+        }
+    }
+};
 CStyles.prototype.Remove_StyleFromInterface = function(styleId)
 {
 	// Если этот стиль не один из стилей по умолчанию, тогда мы просто удаляем этот стиль
@@ -8787,6 +8801,22 @@ CStyles.prototype.Remove_AllCustomStylesFromInterface = function()
 		}
 	}
 };
+CStyles.prototype.Remove_AllUnusedStylesFromInterface = function()
+{
+	for (var StyleId in this.Style)
+	{
+		this.Remove_UnusedStyleFromInterface(StyleId);
+	}
+};
+CStyles.prototype.isBasedOnByOtherStyle = function(styleId){
+	for (var StyleId in this.Style) {
+		var style = this.Style[StyleId];
+		if (style.BasedOn === styleId) {
+			return true;
+		}
+	}
+	return false;
+}
 CStyles.prototype.IsStyleDefaultByName = function(styleName)
 {
 	var styleId = this.GetStyleIdByName(styleName);

@@ -171,7 +171,8 @@ module.exports = function(grunt) {
 	const cell = path.join(deploy, 'cell');
 	const slide = path.join(deploy, 'slide');
 
-	const level = grunt.option('level') || 'ADVANCED';
+	// const level = grunt.option('level') || 'WHITESPACE_ONLY';
+	const level = 'WHITESPACE_ONLY';
 	const formatting = grunt.option('formatting') || '';
 
 	require('google-closure-compiler').grunt(grunt, {

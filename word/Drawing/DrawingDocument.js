@@ -2688,16 +2688,17 @@ function CDrawingDocument()
 		this.m_oWordControl.m_oApi.sync_SendThemeColors(_ret_array, standart_colors);
 
 		// regenerate styles
-		if (null == this.m_oWordControl.m_oApi._gui_styles)
-		{
-			if (window["NATIVE_EDITOR_ENJINE"] === true)
-			{
-				if (!this.m_oWordControl.m_oApi.asc_checkNeedCallback("asc_onInitEditorStyles"))
-					return;
-			}
-			var StylesPainter = new CStylesPainter();
-			StylesPainter.GenerateStyles(this.m_oWordControl.m_oApi, this.m_oWordControl.m_oLogicDocument.Get_Styles().Style);
-		}
+		// if (null == this.m_oWordControl.m_oApi._gui_styles)
+		// {
+		// 	if (window["NATIVE_EDITOR_ENJINE"] === true)
+		// 	{
+		// 		if (!this.m_oWordControl.m_oApi.asc_checkNeedCallback("asc_onInitEditorStyles"))
+		// 			return;
+		// 	}
+		// 	var StylesPainter = new CStylesPainter();
+		// 	console.log("第二次加载预设样式")
+		// 	StylesPainter.GenerateStyles(this.m_oWordControl.m_oApi, this.m_oWordControl.m_oLogicDocument.Get_Styles().Style);
+		// }
 	};
 
 	this.DrawImageTextureFillShape = function (url)

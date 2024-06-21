@@ -1709,6 +1709,10 @@ CDocumentContentBase.prototype.GetAllParagraphsByStyle = function(arrStylesId)
 {
 	return this.GetAllParagraphs({Style : true, StylesId : arrStylesId});
 };
+CDocumentContentBase.prototype.GetAllTablesByStyle = function(arrStylesId)
+{
+	return this.GetAllTables({Style : true, StylesId : arrStylesId});
+};
 /**
  * Получаем массив таблиц по заданному критерию
  * @param oProps
